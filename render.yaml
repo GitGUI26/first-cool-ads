@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: first-cool-ads
+    runtime: node
+    plan: free
+    buildCommand: echo "nothing to build"
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: PROXY_KEY
+        generateValue: true

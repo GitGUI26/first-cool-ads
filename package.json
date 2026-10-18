@@ -1,0 +1,9 @@
+{
+  "name": "first-cool-ads",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Games site with a built-in private browser (proxy)",
+  "main": "server.js",
+  "scripts": { "start": "node server.js" },
+  "engines": { "node": ">=18" }
+}

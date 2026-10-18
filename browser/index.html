@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!-- Google AdSense -->
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-6880459916589446" crossorigin="anonymous"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Home | Rowan County Schools</title>
+<link rel="icon" href="../cuh.png">
+<style>
+:root{--bg:#0f1115;--bar:#181b22;--fg:#e8eaf0;--mut:#8a90a0;--acc:#ff9f1a;--line:#272b35}
+*{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif}
+#app{display:flex;flex-direction:column;height:100%}
+#tabs{display:flex;gap:2px;background:var(--bar);padding:6px 6px 0;overflow-x:auto}
+.tab{display:flex;align-items:center;gap:6px;max-width:200px;min-width:90px;padding:7px 10px;border-radius:8px 8px 0 0;background:#12141a;color:var(--mut);cursor:pointer;white-space:nowrap}
+.tab.on{background:var(--bg);color:var(--fg)}.tab span{overflow:hidden;text-overflow:ellipsis;flex:1}.tab b{opacity:.6;font-weight:400}.tab b:hover{opacity:1}
+#plus{padding:6px 12px;color:var(--mut);cursor:pointer;font-size:18px}
+#bar{display:flex;gap:6px;align-items:center;background:var(--bg);padding:8px;border-bottom:1px solid var(--line)}
+button{background:#1f232c;color:var(--fg);border:1px solid var(--line);border-radius:8px;padding:7px 11px;cursor:pointer;font:inherit}button:hover{border-color:var(--acc)}
+#url{flex:1;background:#12141a;color:var(--fg);border:1px solid var(--line);border-radius:999px;padding:8px 14px;font:inherit;outline:none}#url:focus{border-color:var(--acc)}
+#notice{padding:8px 14px;background:#2a2113;color:#ffd08a;font-size:13px;display:none}
+#notice.bad{background:#2c1616;color:#ffb3b3}
+#views{flex:1;position:relative}iframe{position:absolute;inset:0;width:100%;height:100%;border:0;background:#fff;display:none}iframe.on{display:block}
+#home{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:18px;text-align:center;padding:20px}#home.on{display:flex}
+#home h1{margin:0;font-size:28px}#home p{margin:0;color:var(--mut);max-width:520px;line-height:1.5}
+.q{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}.q a{background:#1f232c;border:1px solid var(--line);color:var(--fg);padding:9px 14px;border-radius:10px;text-decoration:none;cursor:pointer}.q a:hover{border-color:var(--acc)}
+#back2site{margin-left:auto;text-decoration:none;color:var(--mut);padding:7px 10px}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="tabs"></div>
+  <div id="bar">
+    <button id="bk" title="Back">&#8592;</button><button id="fw" title="Forward">&#8594;</button><button id="rl" title="Reload">&#8635;</button><button id="hm" title="Home">&#8962;</button>
+    <input id="url" placeholder="Search or enter address" spellcheck="false" autocomplete="off">
+    <a id="back2site" href="../">&#8592; Site</a>
+  </div>
+  <div id="notice"></div>
+  <div id="views"><div id="home" class="on">
+    <h1>Private Browser</h1>
+    <p>Pages are fetched by this site's server, so websites see the server rather than your device. Cookies and referrers are stripped. It is not a VPN: whoever runs the server can see what you browse.</p>
+    <div class="q"><a data-go="https://duckduckgo.com/html/">DuckDuckGo</a><a data-go="https://www.wikipedia.org/">Wikipedia</a><a data-go="https://news.ycombinator.com/">Hacker News</a><a data-go="https://example.com/">example.com</a></div>
+  </div></div>
+</div>
+<script>
+const SEARCH='https://html.duckduckgo.com/html/?q=';
+const $=s=>document.querySelector(s);let tabs=[],cur=null,uid=0,online=false;
+const enc=u=>'../p?u='+encodeURIComponent(u);
+function norm(v){v=v.trim();if(!v)return'';if(/^[a-z]+:\/\//i.test(v))return v;if(/^[\w-]+(\.[\w-]+)+(:\d+)?(\/.*)?$/.test(v)&&!/\s/.test(v))return'https://'+v;return SEARCH+encodeURIComponent(v)}
+function notice(t,bad){const n=$('#notice');n.textContent=t||'';n.className=bad?'bad':'';n.style.display=t?'block':'none'}
+function newTab(url){const t={id:++uid,title:'New tab',url:'',frame:document.createElement('iframe')};t.frame.setAttribute('referrerpolicy','no-referrer');$('#views').appendChild(t.frame);tabs.push(t);select(t);if(url)go(url);return t}
+function select(t){cur=t;tabs.forEach(x=>x.frame.classList.toggle('on',x===t&&x.url));$('#home').classList.toggle('on',!t.url);$('#url').value=t.url;draw()}
+function draw(){const el=$('#tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');d.className='tab'+(t===cur?' on':'');d.innerHTML='<span></span><b>&#10005;</b>';d.firstChild.textContent=t.title;d.onclick=()=>select(t);d.lastChild.onclick=e=>{e.stopPropagation();close(t)};el.appendChild(d)});const p=document.createElement('div');p.id='plus';p.textContent='+';p.onclick=()=>newTab();el.appendChild(p)}
+function close(t){t.frame.remove();tabs=tabs.filter(x=>x!==t);if(!tabs.length)newTab();else if(cur===t)select(tabs[tabs.length-1]);else draw()}
+function go(raw){if(!cur)return;const u=norm(raw);if(!u)return;if(!online){notice('Proxy server not reachable. Start the site with "node server.js" (static hosting cannot proxy).',true);return}cur.url=u;cur.title=u.replace(/^https?:\/\//,'').split('/')[0];cur.frame.src=enc(u);select(cur)}
+addEventListener('message',e=>{if(!e.data||e.data.type!=='proxy-nav')return;const t=tabs.find(x=>x.frame.contentWindow===e.source);if(!t)return;t.url=e.data.url;if(e.data.title)t.title=e.data.title;if(t===cur)$('#url').value=t.url;draw()});
+$('#url').addEventListener('keydown',e=>{if(e.key==='Enter')go($('#url').value)});
+$('#bk').onclick=()=>{try{cur.frame.contentWindow.history.back()}catch(e){}};$('#fw').onclick=()=>{try{cur.frame.contentWindow.history.forward()}catch(e){}};
+$('#rl').onclick=()=>{if(cur&&cur.url)cur.frame.src=enc(cur.url)};$('#hm').onclick=()=>{cur.url='';cur.title='New tab';cur.frame.src='about:blank';select(cur)};
+document.querySelectorAll('[data-go]').forEach(a=>a.onclick=()=>go(a.dataset.go));
+addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='l'){e.preventDefault();$('#url').select()}});
+async function boot(){newTab();try{let r=await(await fetch('../p/health')).json();online=r.ok;if(r.locked&&!r.authed){const k=prompt('Access key for the proxy:');if(k){const l=await fetch('../p/login?k='+encodeURIComponent(k));if(!l.ok){notice('Wrong access key.',true);online=false}}else{online=false;notice('Access key required.',true)}}}catch(e){online=false}
+ if(!online&&!$('#notice').textContent)notice('Proxy server not detected. Run "node server.js" to enable browsing.',true)}
+boot();
+</script>
+</body>
+</html>
