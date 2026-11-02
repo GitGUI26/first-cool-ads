@@ -379,7 +379,7 @@ function serveStatic(req, res, pathname) {
   function send(f, st) {
     const type = MIME[path.extname(f).toLowerCase()] || 'application/octet-stream';
     const h = { 'content-type': type, 'accept-ranges': 'bytes', 'last-modified': st.mtime.toUTCString() };
-    h['cache-control'] = /^(text\/html)/.test(type) ? 'no-cache' : 'public, max-age=3600';
+    h['cache-control'] = 'no-cache';
     const ims = req.headers['if-modified-since'];
     if (ims && new Date(ims) >= new Date(st.mtime.toUTCString())) { res.writeHead(304, h); return res.end(); }
 
