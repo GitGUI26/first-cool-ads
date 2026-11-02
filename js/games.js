@@ -550,5 +550,5 @@ const games = [
   { title: "Wordle", desc: "Word guessing puzzle", url: "games/176.html", image: "images/183.jpg" },
   { title: "Monkey Mart", desc: "Store management tycoon", url: "games/175.html", image: "images/184.jpg" },
   { title: "Short Life", desc: "Quick racing challenges", url: "games/174.html", image: "images/185.jpg" },
-  { title: "Five Nights at Epstein", desc: "A secret escape game where you navigate through mysterious locations", url: "games/2019.html", secret: true }
+  { title: "Five Nights at Epstein", desc: "A secret escape game where you navigate through mysterious locations", url: "games/2019.html", image: "images/g_five-nights-at-epstein.jpg", secret: true }
 ];
