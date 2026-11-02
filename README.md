@@ -29,12 +29,8 @@ Doesn't: encrypt anything from whoever runs the server, or work on heavy sites (
 builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scramjet on this same server.
 
 ## Ads
-All ad code lives in `js/ads.js` (your Adsterra codes + on/off switches at the top). `index.html` calls it in three spots:
-a banner under the header (728x90 / 320x50, picked to fit the screen), a 300x250 above the games list, a native banner under the list,
-only. No popunders, social bars or other intrusive formats. Ads skip localhost, games,
-and the proxy browser. Every ad runs inside its own sandboxed iframe, so ad code can't redirect the page, hook clicks
-on the site, or open tabs by itself (clicking the ad itself still opens the advertiser). Games also run in a sandboxed
-frame (no popups, no page redirects) - see `ensureActiveGameSession` in `js/main.js`. Remove everything by deleting `<script src="js/ads.js">` and the `CoolAds.*` lines in `index.html`.
+
+There are none. The site ships without Adsterra units, AdSense tags or an `ads.txt`.
 
 ## Thumbnails for the added games
 113 games were added (`games/pack/` and `games/mgg/`). Most have a generated title-card thumbnail; to replace them with

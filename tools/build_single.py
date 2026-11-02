@@ -65,7 +65,6 @@ html = html.replace('src="images/logo.png"', 'src=""')
 html = sub1(html, "onclick=\"window.location.href='browser/'\"", 'onclick="openBuiltInBrowser()"')
 
 # ---- ads script in <head> ----
-html = sub1(html, '<script src="js/ads.js"></script>', '<script>\n' + safe_js(read('js/ads.js')) + '\n</script>')
 
 # ---- config + early setup, first thing in <head> ----
 config = '''<script>
