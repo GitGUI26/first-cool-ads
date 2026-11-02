@@ -37,7 +37,7 @@
   <meta content="unblocked games, tutoring, math help, educational games, student resources, online learning"
     name="keywords">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<link href="css/style.css?v=4" rel="stylesheet">
+<link href="css/style.css?v=5" rel="stylesheet">
   <style>
     .popup-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; display: none; align-items: center; justify-content: center; font-family: 'Courier New', monospace; }
     .popup-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
@@ -136,11 +136,8 @@
     </header>
     <div class="ad-slot ad-slot-top">
       <script>
-        if (window.innerWidth >= 768) {
+        if (window.matchMedia('(min-width: 820px)').matches) {
           writeAd('3dfb504a3be1a57a2b674ecf2bc0d2bd', 728, 90);
-        }
-        else {
-          writeAd('640192fb270e94b2eed0eb1ffc4bddac', 320, 50);
         }
       </script>
     </div>
@@ -154,6 +151,13 @@
         <p class="home-subtitle"><span id="typing-quote"></span><span class="cursor">|</span></p>
       </div>
     </section>
+    <div class="ad-slot ad-slot-hero">
+      <script>
+        if (window.matchMedia('(min-width: 600px)').matches) {
+          writeAd('3313fa7c1217bab1ba47f1e00e070586', 468, 60);
+        }
+      </script>
+    </div>
     <section id="all-lessons">
       <h2>ALL LESSONS</h2>
       <div class="search-container">
@@ -172,22 +176,27 @@
           <div class="custom-arrow">▼</div>
         </div>
       </div>
-      <div class="ad-slot ad-slot-rect">
-        <script>
-          writeAd('cf302e89f6a183752cc396043460fc22', 300, 250);
-        </script>
-      </div>
-      <div class="lessons-grid" id="allLessonsGrid"></div>
-      <div class="ad-slot ad-slot-row">
-        <script>
-          writeAd('ff8b51f3e239de6830774a80d719e14d', 160, 600);
-          writeAd('301a368811a1568839aec19fa9f165e0', 160, 300);
-        </script>
-      </div>
-      <div class="ad-slot ad-slot-banner">
-        <script>
-          writeAd('3313fa7c1217bab1ba47f1e00e070586', 468, 60);
-        </script>
+      <div class="lessons-layout">
+        <div class="lessons-main">
+          <div class="ad-slot ad-slot-rect">
+            <script>
+              writeAd('cf302e89f6a183752cc396043460fc22', 300, 250);
+            </script>
+          </div>
+          <div class="lessons-grid" id="allLessonsGrid"></div>
+          <div class="ad-slot ad-slot-rect160">
+            <script>
+              writeAd('301a368811a1568839aec19fa9f165e0', 160, 300);
+            </script>
+          </div>
+        </div>
+        <aside aria-label="Advertisement" class="ad-rail">
+          <script>
+            if (window.matchMedia('(min-width: 1100px)').matches) {
+              writeAd('ff8b51f3e239de6830774a80d719e14d', 160, 600);
+            }
+          </script>
+        </aside>
       </div>
     </section>
     <section id="settings-section">
@@ -395,6 +404,15 @@
       if (e.target.classList.contains('popup-overlay')) closeStaticPopup();
     });
   </script>
+  <div class="ad-mobile-sticky" id="adMobileSticky">
+    <button aria-label="Close advertisement" class="ad-mobile-close" type="button"
+      onclick="document.getElementById('adMobileSticky').classList.add('ad-mobile-sticky-hidden')">×</button>
+    <script>
+      if (window.matchMedia('(max-width: 819px)').matches) {
+        writeAd('640192fb270e94b2eed0eb1ffc4bddac', 320, 50);
+      }
+    </script>
+  </div>
   <script>
     if (adsAllowed()) {
       document.write('<script data-cfasync="false" src="https://bauval.org/14/86554ac3db337c5a48f3c92458523f86"><\/script>');
