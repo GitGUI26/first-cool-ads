@@ -30,11 +30,7 @@ builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scra
 
 ## Ads
 
-All ad code lives in `js/ads.js` and `index.html` places it in six spots: a 728x90 banner under the header
-(320x50 on phones), a 468x60 under the hero, a 300x250 above the lessons grid, a native banner under the grid,
-and 160x300 / 160x600 sidebars that only appear wider than 1500px. The site-wide `bauval.org/14/...` script is in the page head.
-Every unit runs inside its own sandboxed iframe, so ad code cannot rewrite the page, hook clicks or open tabs on its own.
-To remove everything, delete `js/ads.js` and the `CoolAds.*` / `bauval` lines in `index.html`.
+There are none. The site ships without Adsterra units, AdSense tags or an `ads.txt`.
 
 ## Thumbnails for the added games
 113 games were added (`games/pack/` and `games/mgg/`). Most have a generated title-card thumbnail; to replace them with

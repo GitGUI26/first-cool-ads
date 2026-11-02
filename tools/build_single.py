@@ -52,20 +52,19 @@ buf = io.BytesIO(); im.save(buf, 'PNG', optimize=True)
 logo = 'data:image/png;base64,' + base64.b64encode(buf.getvalue()).decode()
 
 # ---- CSS ----
-html = sub1(html, '<link href="css/style.css?v=3" rel="stylesheet">', '<style>\n' + safe_css(read('css/style.css')) + '\n</style>')
+html = sub1(html, '<link href="css/style.css" rel="stylesheet">', '<style>\n' + safe_css(read('css/style.css')) + '\n</style>')
 
 # ---- startup loader: inline instead of loading loader.html ----
 html = sub1(html, 'src="loader.html"', 'id="siteStartupLoaderFrame"')
 
 # ---- logo in markup (set from script so the data URI is stored only once) ----
-assert 'src="images/logo.png?v=2"' in html
-html = html.replace('src="images/logo.png?v=2"', 'src=""')
+assert 'src="images/logo.png"' in html
+html = html.replace('src="images/logo.png"', 'src=""')
 
 # ---- BROWSER tab: open the built-in browser instead of going to browser/ ----
 html = sub1(html, "onclick=\"window.location.href='browser/'\"", 'onclick="openBuiltInBrowser()"')
 
 # ---- ads script in <head> ----
-html = sub1(html, '<script src="js/ads.js?v=4"></script>', '<script>\n' + safe_js(read('js/ads.js')) + '\n</script>')
 
 # ---- config + early setup, first thing in <head> ----
 config = '''<script>
@@ -83,7 +82,7 @@ html = sub1(html, '<head>', '<head>\n' + config)
 # ---- bottom scripts ----
 games_js = read('js/games.js')
 main_js = read('js/main.js')
-main_js = main_js.replace('"images/logo.png?v=2"', 'window.__LOGO')
+main_js = main_js.replace('"images/logo.png"', 'window.__LOGO')
 
 loader_html = read('loader.html')
 browser_html = read('browser/index.html')
