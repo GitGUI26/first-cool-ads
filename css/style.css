@@ -6591,3 +6591,52 @@ body.chat-active #chat-section #chatAppShell.chat-app-shell {
     grid-template-columns: 1fr;
   }
 }
+
+
+/* ads (adsterra) */
+.ad-slot {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.ad-slot-row {
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: flex-start;
+}
+
+.ad-unit {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  margin: 10px 0 20px;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.ad-unit iframe {
+  border: 0;
+  max-width: 100%;
+}
+
+.ad-unit-label {
+  font-size: 0.6rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--gray-text);
+  opacity: 0.6;
+}
+
+.ad-slot-native .ad-unit {
+  width: min(728px, 100%);
+}
+
+@media (max-width: 767px) {
+  .ad-slot-top .ad-unit {
+    margin-bottom: 12px;
+  }
+}
