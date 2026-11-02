@@ -294,8 +294,8 @@ function injectWatermark(htmlContent, gameTitle) {
 		                        <!-- Downloaded From Cool's Tutoring Hub -->
 		                        <style>
 		                            @keyframes subtleGlow {
-		                                0%, 100% { box-shadow: 0 0 10px rgba(194, 124, 21, 0.4) !important; }
-		                                50% { box-shadow: 0 0 20px rgba(194, 124, 21, 0.6) !important; }
+		                                0%, 100% { box-shadow: 0 0 10px rgba(124, 140, 255, 0.4) !important; }
+		                                50% { box-shadow: 0 0 20px rgba(124, 140, 255, 0.6) !important; }
 		                            }
 		                        <\/style>
 		                        <div id="cools-watermark"
@@ -305,13 +305,13 @@ function injectWatermark(htmlContent, gameTitle) {
 		                                bottom: 10px !important;
 		                                right: 10px !important;
 		                                background: rgba(0, 0, 0, 0.85) !important;
-		                                color: #c27c15 !important;
+		                                color: #7c8cff !important;
 		                                padding: 8px 12px !important;
 		                                border-radius: 5px !important;
 		                                font-family: 'Courier New', monospace !important;
 		                                font-size: 12px !important;
 		                                z-index: 2147483647 !important;
-		                                border: 1px solid #c27c15 !important;
+		                                border: 1px solid #7c8cff !important;
 		                                opacity: 0.9 !important;
 		                                pointer-events: auto !important;
 		                                cursor: pointer !important;
@@ -319,7 +319,7 @@ function injectWatermark(htmlContent, gameTitle) {
 		                                align-items: center !important;
 		                                gap: 8px !important;
 		                                backdrop-filter: blur(4px) !important;
-		                                box-shadow: 0 0 15px rgba(194, 124, 21, 0.4) !important;
+		                                box-shadow: 0 0 15px rgba(124, 140, 255, 0.4) !important;
 		                                animation: subtleGlow 3s ease-in-out infinite !important;
 		                                user-select: none !important;
 		                            ">
@@ -341,8 +341,8 @@ function injectWatermark(htmlContent, gameTitle) {
 		                                
 		                                setInterval(protectWatermark, 1000);
 		                                
-		                                console.log('%c🎮 Game: "' + gameTitle + '"', 'color: #c27c15; font-weight: bold;');
-		                                console.log('%c📚 Downloaded from Cool\'s Tutoring Hub', 'color: #e69500;');
+		                                console.log('%c🎮 Game: "' + gameTitle + '"', 'color: #7c8cff; font-weight: bold;');
+		                                console.log('%c📚 Downloaded from Cool\'s Tutoring Hub', 'color: #22d3ee;');
 		                            })();
 		                        <\/script>
 		                    `;
@@ -358,7 +358,7 @@ function injectWatermark(htmlContent, gameTitle) {
     return htmlContent;
 }
 const style = document.createElement('style');
-style.textContent = '@keyframes subtleGlow { 0%, 100% { box-shadow: 0 0 10px rgba(194, 124, 21, 0.4) !important; } 50% { box-shadow: 0 0 20px rgba(194, 124, 21, 0.6) !important; } } #cools-watermark { animation: subtleGlow 3s ease-in-out infinite !important; } #cools-watermark:hover { animation: none !important; box-shadow: 0 0 25px rgba(194, 124, 21, 0.8) !important; }';
+style.textContent = '@keyframes subtleGlow { 0%, 100% { box-shadow: 0 0 10px rgba(124, 140, 255, 0.4) !important; } 50% { box-shadow: 0 0 20px rgba(124, 140, 255, 0.6) !important; } } #cools-watermark { animation: subtleGlow 3s ease-in-out infinite !important; } #cools-watermark:hover { animation: none !important; box-shadow: 0 0 25px rgba(124, 140, 255, 0.8) !important; }';
 document.head.appendChild(style);
 function generateGameCards() {
     const allContainer = document.getElementById('allLessonsGrid');
@@ -572,7 +572,7 @@ function initCursorHover() {
     });
 }
 window.pageLoadTime = Date.now();
-window.matrixColor = '#c27c15';
+window.matrixColor = '#7c8cff';
 const canvas = document.getElementById('matrix-bg');
 const ctx = canvas ? canvas.getContext('2d') : null;
 const pathsLayer = document.getElementById('paths-layer');
@@ -594,7 +594,7 @@ const backgroundState = {
 function hexToRgbObject(hex) {
     const cleanHex = (hex || '').replace('#', '');
     if (!/^[0-9a-fA-F]{6}$/.test(cleanHex))
-        return { r: 194, g: 124, b: 21 };
+        return { r: 124, g: 140, b: 255 };
     return {
         r: parseInt(cleanHex.slice(0, 2), 16),
         g: parseInt(cleanHex.slice(2, 4), 16),
@@ -609,15 +609,15 @@ function rgbStringToObject(rgbValue) {
 }
 function getThemePrimaryColor() {
     const cssColor = getComputedStyle(document.body)
-        .getPropertyValue('--primary-orange')
+        .getPropertyValue('--primary-accent')
         .trim();
     if (!cssColor)
-        return '#c27c15';
+        return '#7c8cff';
     if (cssColor.startsWith('#'))
         return cssColor;
     const parsedRgb = rgbStringToObject(cssColor);
     if (!parsedRgb)
-        return '#c27c15';
+        return '#7c8cff';
     return `#${[parsedRgb.r, parsedRgb.g, parsedRgb.b]
         .map(v => Math.max(0, Math.min(255, v)).toString(16).padStart(2, '0'))
         .join('')}`;
@@ -1857,7 +1857,7 @@ window.addEventListener('beforeunload', (event) => {
 let cursorEnabled = true;
 let cursorStyle = 'ring';
 const themeColors = {
-    'default': '#c27c15',
+    'default': '#7c8cff',
     'theme-rainbow': '#ff0080',
     'theme-cyber-green': '#00ff00',
     'theme-ice-blue': '#00ccff',
@@ -1980,14 +1980,14 @@ function applySavedTheme(themeName) {
         body.classList.add(`theme-${themeName}`);
     }
     if (themeName === 'custom') {
-        const customColor = localStorage.getItem('customThemeColor') || '#c27c15';
+        const customColor = localStorage.getItem('customThemeColor') || '#7c8cff';
         applyCustomThemeColors(customColor);
         document.getElementById('customColorInput').style.display = 'flex';
     }
     else {
-        document.documentElement.style.removeProperty('--primary-orange');
-        document.documentElement.style.removeProperty('--primary-orange-rgb');
-        document.documentElement.style.removeProperty('--accent-orange');
+        document.documentElement.style.removeProperty('--primary-accent');
+        document.documentElement.style.removeProperty('--primary-accent-rgb');
+        document.documentElement.style.removeProperty('--accent');
         document.getElementById('customColorInput').style.display = 'none';
     }
     const savedBackground = normalizeBackgroundStyle(localStorage.getItem('selectedBackground') || 'matrix');
@@ -2005,14 +2005,14 @@ function selectPresetTheme(themeName) {
         body.classList.add(`theme-${themeName}`);
     }
     if (themeName === 'custom') {
-        const customColor = localStorage.getItem('customThemeColor') || '#c27c15';
+        const customColor = localStorage.getItem('customThemeColor') || '#7c8cff';
         applyCustomThemeColors(customColor);
         document.getElementById('customColorInput').style.display = 'flex';
     }
     else {
-        document.documentElement.style.removeProperty('--primary-orange');
-        document.documentElement.style.removeProperty('--primary-orange-rgb');
-        document.documentElement.style.removeProperty('--accent-orange');
+        document.documentElement.style.removeProperty('--primary-accent');
+        document.documentElement.style.removeProperty('--primary-accent-rgb');
+        document.documentElement.style.removeProperty('--accent');
         document.getElementById('customColorInput').style.display = 'none';
     }
     localStorage.setItem('selectedTheme', themeName);
@@ -2070,9 +2070,9 @@ function applyCustomThemeColors(hexColor) {
     const accentG = Math.min(255, Math.floor(g * 1.2));
     const accentB = Math.min(255, Math.floor(b * 1.2));
     const accentColor = `rgb(${accentR}, ${accentG}, ${accentB})`;
-    document.documentElement.style.setProperty('--primary-orange', hexColor);
-    document.documentElement.style.setProperty('--primary-orange-rgb', rgb);
-    document.documentElement.style.setProperty('--accent-orange', accentColor);
+    document.documentElement.style.setProperty('--primary-accent', hexColor);
+    document.documentElement.style.setProperty('--primary-accent-rgb', rgb);
+    document.documentElement.style.setProperty('--accent', accentColor);
     window.matrixColor = hexColor;
     updateMatrixTheme();
     return true;
@@ -2084,7 +2084,7 @@ function applyCustomTheme() {
         return;
     const hexColor = hexInput.value.trim();
     if (!applyCustomThemeColors(hexColor)) {
-        alert('Please enter a valid hex color (e.g., #c27c15)');
+        alert('Please enter a valid hex color (e.g., #7c8cff)');
         hexInput.style.borderColor = '#ff4444';
         setTimeout(() => hexInput.style.borderColor = '', 1000);
         return;
@@ -2100,7 +2100,7 @@ function applyCustomTheme() {
         option.classList.remove('active');
     });
     document.querySelector('.theme-option[data-theme="custom"]').classList.add('active');
-    hexInput.style.borderColor = 'var(--accent-orange)';
+    hexInput.style.borderColor = 'var(--accent)';
     setTimeout(() => {
         hexInput.style.borderColor = '';
     }, 1000);
@@ -2171,8 +2171,8 @@ function applyInactiveTabSettings() {
     const applyBtn = event.target;
     const originalText = applyBtn.innerHTML;
     applyBtn.innerHTML = '<i class="fas fa-check"><\/i> Applied!';
-    applyBtn.style.borderColor = 'var(--accent-orange)';
-    applyBtn.style.background = 'rgba(var(--primary-orange-rgb), 0.3)';
+    applyBtn.style.borderColor = 'var(--accent)';
+    applyBtn.style.background = 'rgba(var(--primary-accent-rgb), 0.3)';
     setTimeout(() => {
         applyBtn.innerHTML = originalText;
         applyBtn.style.borderColor = '';
@@ -2200,8 +2200,8 @@ function handleLogoUpload(event) {
         const fileBtn = event.target.parentElement;
         const originalHTML = fileBtn.innerHTML;
         fileBtn.innerHTML = '<i class="fas fa-check"><\/i> Logo Uploaded!';
-        fileBtn.style.borderColor = 'var(--accent-orange)';
-        fileBtn.style.background = 'rgba(var(--primary-orange-rgb), 0.3)';
+        fileBtn.style.borderColor = 'var(--accent)';
+        fileBtn.style.background = 'rgba(var(--primary-accent-rgb), 0.3)';
         setTimeout(() => {
             fileBtn.innerHTML = originalHTML;
             fileBtn.style.borderColor = '';
@@ -2215,15 +2215,15 @@ function updateCursorColors() {
     if (!cursor)
         return;
     const primaryColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--primary-orange')
+        .getPropertyValue('--primary-accent')
         .trim();
     const primaryRGB = primaryColor.startsWith('#') ?
         hexToRgb(primaryColor) :
         getComputedStyle(document.documentElement)
-            .getPropertyValue('--primary-orange-rgb')
+            .getPropertyValue('--primary-accent-rgb')
             .trim();
     const accentColor = getComputedStyle(document.documentElement)
-        .getPropertyValue('--accent-orange')
+        .getPropertyValue('--accent')
         .trim();
     function hexToRgb(hex) {
         const r = parseInt(hex.slice(1, 3), 16);
@@ -2242,7 +2242,7 @@ function tintLogoElementExact(logoEl, r, g, b) {
         return;
     const currentTheme = localStorage.getItem('selectedTheme') || 'default';
     const isDefaultTheme = currentTheme === 'default';
-    const isDefaultColor = r === 194 && g === 124 && b === 21;
+    const isDefaultColor = r === 124 && g === 140 && b === 255;
     if (isDefaultTheme || isDefaultColor) {
         const baseSrc = logoEl.dataset.baseSrc ||
             "images/logo.png";
@@ -2347,7 +2347,7 @@ function revertLogo() {
     const originalText = revertBtn.innerHTML;
     revertBtn.innerHTML = '<i class="fas fa-check"><\/i> Logo Reverted!';
     revertBtn.style.background = 'rgba(0, 255, 0, 0.2)';
-    revertBtn.style.borderColor = 'var(--accent-orange)';
+    revertBtn.style.borderColor = 'var(--accent)';
     setTimeout(() => {
         revertBtn.innerHTML = originalText;
         revertBtn.style.background = '';
@@ -2373,7 +2373,7 @@ function revertFavicon() {
     const originalText = revertBtn.innerHTML;
     revertBtn.innerHTML = '<i class="fas fa-check"><\/i> Favicon Reverted!';
     revertBtn.style.background = 'rgba(0, 255, 0, 0.2)';
-    revertBtn.style.borderColor = 'var(--accent-orange)';
+    revertBtn.style.borderColor = 'var(--accent)';
     setTimeout(() => {
         revertBtn.innerHTML = originalText;
         revertBtn.style.background = '';
@@ -2396,13 +2396,13 @@ function initializeSettings() {
             body.classList.add(`theme-${savedTheme}`);
         }
         if (savedTheme === 'custom') {
-            const customColor = localStorage.getItem('customThemeColor') || '#c27c15';
+            const customColor = localStorage.getItem('customThemeColor') || '#7c8cff';
             applyCustomThemeColors(customColor);
         }
         else {
-            document.documentElement.style.removeProperty('--primary-orange');
-            document.documentElement.style.removeProperty('--primary-orange-rgb');
-            document.documentElement.style.removeProperty('--accent-orange');
+            document.documentElement.style.removeProperty('--primary-accent');
+            document.documentElement.style.removeProperty('--primary-accent-rgb');
+            document.documentElement.style.removeProperty('--accent');
         }
     }
     const savedBackground = normalizeBackgroundStyle(localStorage.getItem('selectedBackground') || 'matrix');
@@ -3061,7 +3061,7 @@ function getAllSettings() {
         settings: {
             selectedTheme: localData.selectedTheme || 'default',
             selectedBackground: localData.selectedBackground || 'matrix',
-            customThemeColor: localData.customThemeColor || '#c27c15',
+            customThemeColor: localData.customThemeColor || '#7c8cff',
             cursorEnabled: localData.cursorEnabled || 'true',
             cursorStyle: localData.cursorStyle || 'ring',
             inactiveTabTitle: localData.inactiveTabTitle || DEFAULT_TAB_TITLE,
@@ -3204,7 +3204,7 @@ function applyImportedSettings(importedSettings) {
         : {
             selectedTheme: localStorage.getItem('selectedTheme') || 'default',
             selectedBackground: localStorage.getItem('selectedBackground') || 'matrix',
-            customThemeColor: localStorage.getItem('customThemeColor') || '#c27c15',
+            customThemeColor: localStorage.getItem('customThemeColor') || '#7c8cff',
             cursorEnabled: localStorage.getItem('cursorEnabled') || 'true',
             cursorStyle: localStorage.getItem('cursorStyle') || 'ring',
             inactiveTabTitle: localStorage.getItem('inactiveTabTitle') || DEFAULT_TAB_TITLE,
@@ -3233,7 +3233,7 @@ function applyImportedSettings(importedSettings) {
         body.classList.add(`theme-${selectedTheme}`);
     }
     if (selectedTheme === 'custom') {
-        const customColor = settings.customThemeColor || '#c27c15';
+        const customColor = settings.customThemeColor || '#7c8cff';
         applyCustomThemeColors(customColor);
         const colorPreview = document.getElementById('colorPreview');
         const hexInput = document.getElementById('customHexInput');
@@ -3243,9 +3243,9 @@ function applyImportedSettings(importedSettings) {
             hexInput.value = customColor;
     }
     else {
-        document.documentElement.style.removeProperty('--primary-orange');
-        document.documentElement.style.removeProperty('--primary-orange-rgb');
-        document.documentElement.style.removeProperty('--accent-orange');
+        document.documentElement.style.removeProperty('--primary-accent');
+        document.documentElement.style.removeProperty('--primary-accent-rgb');
+        document.documentElement.style.removeProperty('--accent');
     }
     updateMatrixTheme();
     const selectedBackground = normalizeBackgroundStyle(settings.selectedBackground || 'matrix');
@@ -3299,7 +3299,7 @@ function showImportStatus(message, type) {
         return;
     statusDiv.textContent = message;
     statusDiv.style.display = 'block';
-    statusDiv.style.color = type === 'success' ? 'var(--accent-orange)' : '#ff4444';
+    statusDiv.style.color = type === 'success' ? 'var(--accent)' : '#ff4444';
     setTimeout(() => {
         statusDiv.style.display = 'none';
     }, 5000);
@@ -3312,7 +3312,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const statusDiv = document.getElementById('settingsImportStatus');
                 statusDiv.textContent = `Selected: ${this.files[0].name}`;
                 statusDiv.style.display = 'block';
-                statusDiv.style.color = 'var(--primary-orange)';
+                statusDiv.style.color = 'var(--primary-accent)';
             }
         });
     }
@@ -3351,7 +3351,7 @@ function createGameLoadingScreen(gameTitle) {
     let primaryColor, accentColor, darkColor;
     const currentTheme = localStorage.getItem('selectedTheme') || 'default';
     if (currentTheme === 'custom') {
-        const customColor = localStorage.getItem('customThemeColor') || '#c27c15';
+        const customColor = localStorage.getItem('customThemeColor') || '#7c8cff';
         primaryColor = customColor;
         const hex = customColor.replace('#', '');
         const r = parseInt(hex.slice(0, 2), 16);
@@ -3368,7 +3368,7 @@ function createGameLoadingScreen(gameTitle) {
     }
     else {
         const themeColors = {
-            'default': { primary: '#c27c15', accent: '#e69500', dark: '#1a1a1a' },
+            'default': { primary: '#7c8cff', accent: '#22d3ee', dark: '#1a1a1a' },
             'rainbow': { primary: '#ff0080', accent: '#ff00ff', dark: '#0a0a0a' },
             'cyber-green': { primary: '#00ff00', accent: '#00cc00', dark: '#000000' },
             'ice-blue': { primary: '#00ccff', accent: '#0088cc', dark: '#001122' },
@@ -3391,7 +3391,7 @@ function createGameLoadingScreen(gameTitle) {
                 return hex.length === 1 ? '0' + hex : hex;
             }).join('');
         }
-        return '#c27c15';
+        return '#7c8cff';
     }
     function rgbToNumber(color) {
         if (color.startsWith('#')) {
@@ -3401,7 +3401,7 @@ function createGameLoadingScreen(gameTitle) {
             const rgb = color.match(/\d+/g);
             return (parseInt(rgb[0]) << 16) + (parseInt(rgb[1]) << 8) + parseInt(rgb[2]);
         }
-        return 0xc27c15;
+        return 0x7c8cff;
     }
     const primaryHex = colorToHex(primaryColor);
     const accentHex = colorToHex(accentColor);

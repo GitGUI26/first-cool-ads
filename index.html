@@ -9,7 +9,7 @@
   <link href="cuh.png" id="siteFavicon" rel="icon" type="image/x-icon">
   <link href="cuh.png" rel="shortcut icon">
   <link href="cuh.png" rel="apple-touch-icon">
-  <meta content="#c27c15" name="theme-color">
+  <meta content="#7c8cff" name="theme-color">
   <meta content="Cool's Tutoring Hub" property="og:site_name">
   <meta content="Cool's Tutoring Hub | 400+ Unblocked Games & Lessons" property="og:title">
   <meta
@@ -42,19 +42,19 @@
     .popup-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; display: none; align-items: center; justify-content: center; font-family: 'Courier New', monospace; }
     .popup-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
     .popup-container { position: relative; width: min(450px, 90%); z-index: 100000; animation: popupSlideIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.2); }
-    .popup-content { background: linear-gradient(145deg, rgba(20, 20, 20, 0.95), rgba(10, 10, 10, 0.98)); border: 2px solid var(--primary-orange); border-radius: 18px; padding: 0; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(var(--primary-orange-rgb), 0.4); overflow: hidden; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-    .popup-header { display: flex; align-items: center; padding: 18px 20px; border-bottom: 1px solid rgba(var(--primary-orange-rgb), 0.3); position: relative; }
-    .popup-title { color: var(--primary-orange); letter-spacing: 2px; font-size: 1.35rem; flex: 0 1 auto; text-align: center; text-shadow: 0 0 10px rgba(var(--primary-orange-rgb), 0.5); margin: 0 auto; }
+    .popup-content { background: linear-gradient(145deg, rgba(17, 24, 43, 0.95), rgba(9, 14, 26, 0.98)); border: 2px solid var(--primary-accent); border-radius: 18px; padding: 0; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(var(--primary-accent-rgb), 0.4); overflow: hidden; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+    .popup-header { display: flex; align-items: center; padding: 18px 20px; border-bottom: 1px solid rgba(var(--primary-accent-rgb), 0.3); position: relative; }
+    .popup-title { color: var(--primary-accent); letter-spacing: 2px; font-size: 1.35rem; flex: 0 1 auto; text-align: center; text-shadow: 0 0 10px rgba(var(--primary-accent-rgb), 0.5); margin: 0 auto; }
     .popup-body { padding: 22px 20px; color: var(--light-text); font-size: 1rem; line-height: 1.6; }
-    .popup-highlight { color: var(--primary-orange); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 8px rgba(var(--primary-orange-rgb), 0.5); }
-    .popup-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--primary-orange-rgb), 0.4), transparent); margin: 18px 0; }
-    .popup-live-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 18px; background: rgba(var(--primary-orange-rgb), 0.15); border: 2px solid var(--primary-orange); border-radius: 12px; color: var(--primary-orange); font-size: 1rem; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; transition: all 0.3s ease; cursor: none !important; margin: 8px 0; box-sizing: border-box; }
-    .popup-live-btn i { font-size: 1.4rem; color: var(--primary-orange); filter: drop-shadow(0 0 5px rgba(var(--primary-orange-rgb), 0.5)); }
-    .popup-live-btn:hover { background: rgba(var(--primary-orange-rgb), 0.25); transform: translateY(-3px); box-shadow: 0 10px 20px rgba(var(--primary-orange-rgb), 0.3); border-color: var(--accent-orange); }
+    .popup-highlight { color: var(--primary-accent); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 8px rgba(var(--primary-accent-rgb), 0.5); }
+    .popup-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--primary-accent-rgb), 0.4), transparent); margin: 18px 0; }
+    .popup-live-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 18px; background: rgba(var(--primary-accent-rgb), 0.15); border: 2px solid var(--primary-accent); border-radius: 12px; color: var(--primary-accent); font-size: 1rem; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; transition: all 0.3s ease; cursor: none !important; margin: 8px 0; box-sizing: border-box; }
+    .popup-live-btn i { font-size: 1.4rem; color: var(--primary-accent); filter: drop-shadow(0 0 5px rgba(var(--primary-accent-rgb), 0.5)); }
+    .popup-live-btn:hover { background: rgba(var(--primary-accent-rgb), 0.25); transform: translateY(-3px); box-shadow: 0 10px 20px rgba(var(--primary-accent-rgb), 0.3); border-color: var(--accent); }
     .popup-footer { padding: 15px 20px 20px; text-align: center; }
-    .popup-continue-btn { background: rgba(var(--primary-orange-rgb), 0.1); border: 1px solid var(--primary-orange); border-radius: 50px; padding: 12px 24px; color: var(--primary-orange); font-size: 0.95rem; font-weight: bold; letter-spacing: 0.5px; cursor: none !important; transition: all 0.3s ease; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
+    .popup-continue-btn { background: rgba(var(--primary-accent-rgb), 0.1); border: 1px solid var(--primary-accent); border-radius: 50px; padding: 12px 24px; color: var(--primary-accent); font-size: 0.95rem; font-weight: bold; letter-spacing: 0.5px; cursor: none !important; transition: all 0.3s ease; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
     .popup-continue-btn i { transition: transform 0.3s ease; }
-    .popup-continue-btn:hover { background: rgba(var(--primary-orange-rgb), 0.2); box-shadow: 0 0 20px rgba(var(--primary-orange-rgb), 0.3); }
+    .popup-continue-btn:hover { background: rgba(var(--primary-accent-rgb), 0.2); box-shadow: 0 0 20px rgba(var(--primary-accent-rgb), 0.3); }
     .popup-continue-btn:hover i { transform: translateX(5px); }
     @keyframes popupSlideIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -162,7 +162,7 @@
             </div>
             <div class="theme-preview">
               <div class="theme-option active" data-theme="default" onclick="selectPresetTheme('default')"
-                title="Default Orange"></div>
+                title="Default Frost"></div>
               <div class="theme-option" data-theme="rainbow" onclick="selectPresetTheme('rainbow')" title="Rainbow">
               </div>
               <div class="theme-option" data-theme="cyber-green" onclick="selectPresetTheme('cyber-green')"
@@ -181,7 +181,7 @@
             </div>
             <div class="color-input-container" id="customColorInput" style="display: none;">
               <div class="color-preview" id="colorPreview"></div><input class="color-input" id="customHexInput"
-                maxlength="7" placeholder="#c27c15" type="text"> <button class="apply-btn"
+                maxlength="7" placeholder="#7c8cff" type="text"> <button class="apply-btn"
                 onclick="applyCustomTheme()">Apply Color</button>
             </div>
           </div>
@@ -269,7 +269,7 @@
                 Settings File</label>
             </div>
             <div id="settingsImportStatus"
-              style="margin-top: 10px; color: var(--accent-orange); font-size: 0.9rem; display: none;"></div>
+              style="margin-top: 10px; color: var(--accent); font-size: 0.9rem; display: none;"></div>
           </div>
         </div>
       </div>
