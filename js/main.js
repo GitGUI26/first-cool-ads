@@ -291,7 +291,7 @@ function injectWatermark(htmlContent, gameTitle) {
     htmlContent = htmlContent.replace(/<div[^>]*id="vanta-bg"[^>]*>.*?<\/div>/gis, '');
     htmlContent = htmlContent.replace(/<div[^>]*class="loading-content"[^>]*>.*?<\/div>/gis, '');
     const watermarkHTML = `
-		                        <!-- Downloaded From Cool's Tutoring Hub -->
+		                        <!-- Downloaded From Cool Tutoring Hub -->
 		                        <style>
 		                            @keyframes subtleGlow {
 		                                0%, 100% { box-shadow: 0 0 10px rgba(124, 140, 255, 0.4) !important; }
@@ -324,9 +324,9 @@ function injectWatermark(htmlContent, gameTitle) {
 		                                user-select: none !important;
 		                            ">
 		                            <img src="cuh.png"
-		                                 alt="Cool's Tutoring Hub"
+		                                 alt="Cool Tutoring Hub"
 		                                 style="width: 16px !important; height: 16px !important; border-radius: 3px !important; pointer-events: none !important;">
-		                            <span style="pointer-events: none !important;">Downloaded from Cool's Tutoring Hub<\/span>
+		                            <span style="pointer-events: none !important;">Downloaded from Cool Tutoring Hub<\/span>
 		                        <\/div>
 		                        <script>
 		                            (function() {
@@ -3054,7 +3054,7 @@ function getAllSettings() {
     return {
         version: '2.0',
         exportDate: new Date().toISOString(),
-        siteName: "Cool's Tutoring Hub",
+        siteName: "Cool Tutoring Hub",
         exportType: 'site-data',
         localStorageData: localData,
         sessionStorageData: sessionData,
