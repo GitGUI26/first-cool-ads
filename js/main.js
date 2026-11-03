@@ -2858,7 +2858,9 @@ function ensureActiveGameSession(title, url) {
 function injectFreezeHarnessIntoHtml(html, gameUrl) {
     if (!html || typeof html !== 'string') return html;
     let baseTag = '';
-    try { baseTag = '<base href="' + new URL(gameUrl, location.href).href.replace(/"/g, '%22') + '">'; } catch (e) {}
+    if (!/<base[\s>]/i.test(html)) {
+        try { baseTag = '<base href="' + new URL(gameUrl, location.href).href.replace(/"/g, '%22') + '">'; } catch (e) {}
+    }
     const harness = baseTag + getGameFreezeHarnessScript();
     const urlShim = '<script>try{Object.defineProperty(document,"URL",{configurable:true,get:function(){return document.baseURI||"https://cdn.jsdelivr.net/";}});}catch(e){}<\/script>';
     if (/<head[^>]*>/i.test(html)) {
