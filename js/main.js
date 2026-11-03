@@ -2858,7 +2858,7 @@ function ensureActiveGameSession(title, url) {
 function injectFreezeHarnessIntoHtml(html, gameUrl) {
     if (!html || typeof html !== 'string') return html;
     let baseTag = '';
-    if (!/<base[\s>]/i.test(html)) {
+    if (!/<base\b[^>]*\bhref\s*=/i.test(html)) {
         try { baseTag = '<base href="' + new URL(gameUrl, location.href).href.replace(/"/g, '%22') + '">'; } catch (e) {}
     }
     const harness = baseTag + getGameFreezeHarnessScript();
