@@ -37,7 +37,7 @@
   <meta content="unblocked games, tutoring, math help, educational games, student resources, online learning"
     name="keywords">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<link href="css/style.css?v=5" rel="stylesheet">
+<link href="css/style.css?v=6" rel="stylesheet">
   <style>
     .popup-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; display: none; align-items: center; justify-content: center; font-family: 'Courier New', monospace; }
     .popup-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
@@ -129,7 +129,9 @@
           <div class="nav-tabs">
             <div class="nav-tab active" id="lessonsTab" onclick="switchTab('lessons')">LESSONS</div>
             <div class="nav-tab" id="settingsTab" onclick="switchTab('settings')">SETTINGS</div>
-            <div class="nav-tab" id="browserTab" onclick="window.location.href='browser/'">BROWSER</div>
+            <div class="nav-tab" id="browserTab" onclick="openBrowserOverlay()" role="button" tabindex="0"
+              aria-expanded="false"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBrowserOverlay();}">BROWSER</div>
           </div>
         </div>
       </div>
@@ -369,6 +371,15 @@
     <div class="context-menu-item" onclick="window.location.reload()"><i class="fas fa-redo"></i> <span>Refresh</span>
       <span class="menu-shortcut">F5</span></div>
   </div>
+  <div class="browser-overlay" id="browserOverlay" aria-hidden="true" aria-label="Private browser" hidden>
+    <div class="browser-overlay-bar">
+      <span class="browser-overlay-title"><i class="fas fa-globe"></i> Private Browser</span>
+      <button class="browser-overlay-close" id="browserOverlayClose" type="button"
+        aria-label="Close browser">Close <i class="fas fa-xmark"></i></button>
+    </div>
+    <iframe id="browserOverlayFrame" title="Private Browser"
+      allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+  </div>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=3"></script>
   <script src="js/main.js?v=3"></script>
@@ -417,6 +428,56 @@
     if (adsAllowed()) {
       document.write('<script data-cfasync="false" src="https://bauval.org/14/86554ac3db337c5a48f3c92458523f86"><\/script>');
     }
+  </script>
+  <script>
+    (function () {
+      const overlay = document.getElementById('browserOverlay');
+      const frame = document.getElementById('browserOverlayFrame');
+      const closeButton = document.getElementById('browserOverlayClose');
+      const browserTab = document.getElementById('browserTab');
+      if (!overlay || !frame || !closeButton) return;
+      let loaded = false;
+
+      function openBrowserOverlay() {
+        if (!loaded) {
+          frame.src = 'browser/index.html';
+          loaded = true;
+        }
+        overlay.hidden = false;
+        overlay.classList.add('active');
+        overlay.setAttribute('aria-hidden', 'false');
+        document.body.classList.add('browser-overlay-open');
+        if (browserTab) browserTab.setAttribute('aria-expanded', 'true');
+        closeButton.focus();
+      }
+
+      function closeBrowserOverlay() {
+        overlay.classList.remove('active');
+        overlay.hidden = true;
+        overlay.setAttribute('aria-hidden', 'true');
+        document.body.classList.remove('browser-overlay-open');
+        if (browserTab) {
+          browserTab.setAttribute('aria-expanded', 'false');
+          browserTab.focus();
+        }
+      }
+
+      window.openBrowserOverlay = openBrowserOverlay;
+      window.closeBrowserOverlay = closeBrowserOverlay;
+      closeButton.addEventListener('click', closeBrowserOverlay);
+      window.addEventListener('message', function (event) {
+        if (frame.contentWindow && event.source === frame.contentWindow &&
+          event.data && event.data.type === 'proxy-close') {
+          closeBrowserOverlay();
+        }
+      });
+      document.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && overlay.classList.contains('active')) {
+          event.preventDefault();
+          closeBrowserOverlay();
+        }
+      });
+    })();
   </script>
 </body>
 

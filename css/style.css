@@ -6739,3 +6739,60 @@ body.chat-active #chat-section #chatAppShell.chat-app-shell {
 
 /* sticky ad rail: overflow-x hidden on body traps position: sticky */
 body { overflow-x: clip; }
+
+/* In-page private browser */
+body.browser-overlay-open { overflow: hidden !important; }
+.browser-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000000;
+  display: none;
+  flex-direction: column;
+  background: #0f1115;
+}
+.browser-overlay.active { display: flex; }
+.browser-overlay-bar {
+  flex: 0 0 48px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 14px;
+  background: #181b22;
+  border-bottom: 1px solid #272b35;
+  color: #e8eaf0;
+}
+.browser-overlay-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 14px/1 system-ui, sans-serif;
+  letter-spacing: .02em;
+}
+.browser-overlay-title i { color: #7c8cff; }
+.browser-overlay-close {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 7px 11px;
+  border: 1px solid #272b35;
+  border-radius: 8px;
+  background: #1f232c;
+  color: #e8eaf0;
+  font: inherit;
+  cursor: pointer;
+}
+.browser-overlay-close:hover { border-color: #7c8cff; }
+.browser-overlay iframe {
+  flex: 1 1 auto;
+  width: 100%;
+  min-height: 0;
+  display: block;
+  border: 0;
+  background: #fff;
+}
+@media (max-width: 600px) {
+  .browser-overlay-bar { flex-basis: 44px; padding: 0 8px; }
+  .browser-overlay-title { font-size: 13px; }
+  .browser-overlay-close { padding: 6px 9px; }
+}

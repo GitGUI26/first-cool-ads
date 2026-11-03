@@ -63,6 +63,15 @@ document.querySelectorAll('[data-go]').forEach(a=>a.onclick=()=>go(a.dataset.go)
 addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='l'){e.preventDefault();$('#url').select()}});
 async function boot(){newTab();try{let r=await(await fetch(PROXY+'/p/health',{cache:'no-store'})).json();online=r.ok;if(r.locked&&!r.authed){const k=prompt('Access key for the proxy:');if(k){const l=await fetch(PROXY+'/p/login?k='+encodeURIComponent(k));if(!l.ok){notice('Wrong access key.',true);online=false}}else{online=false;notice('Access key required.',true)}}}catch(e){online=false}
  if(!online&&!$('#notice').textContent)notice('Proxy service not detected. Try again in a moment.',true)}
+try {
+  if (window.parent !== window) {
+    const back = document.getElementById('back2site');
+    if (back) back.style.display = 'none';
+    addEventListener('keydown', e => {
+      if (e.key === 'Escape') parent.postMessage({ type: 'proxy-close' }, '*');
+    });
+  }
+} catch (e) {}
 boot();
 </script>
 </body>
