@@ -1677,7 +1677,7 @@ document.addEventListener('DOMContentLoaded', function () {
         hideScrollbar();
     }, 3000);
 });
-const DEFAULT_TAB_TITLE = "Home | Rowan County Schools";
+const DEFAULT_TAB_TITLE = "Home - Classroom";
 const schoolSubjects = ["Math", "Science", "English", "History", "Biology", "Chemistry", "Physics", "Calculus", "Algebra", "Geometry", "Literature", "Spanish", "French", "Art", "Music", "Computer Science", "Economics", "Psychology", "Statistics"];
 const activeIcon = "cuh.png";
 const inactiveIcon = "cuh.png";
