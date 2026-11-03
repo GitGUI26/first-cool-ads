@@ -1,4 +1,5 @@
 const games = [
+  { title: "Jacksmith", desc: "Forge custom weapons as a determined donkey blacksmith and lead your warriors into battle against Dudley.", url: "games/jacksmith.html", image: "images/g_jacksmith.jpg" },
   { title: "Amanda the Adventurer", desc: "A found-footage horror puzzle game about a cheerful children's show hiding a terrifying secret.", url: "games/amanda-the-adventurer.html", image: "images/g_amanda-the-adventurer.jpg" },
   { title: "FNAF 4: Halloween Edition", desc: "The Halloween update to Five Nights at Freddy's 4, with new animatronic horrors and extra challenges.", url: "games/fnaf-4-halloween.html", image: "images/g_fnaf-4-halloween.jpg" },
   { title: "Geometry Dash Lite", desc: "The free lite edition of the rhythm platformer. Jump and fly through spike-filled levels.", url: "games/geometry-dash-lite.html", image: "images/g_geometry-dash-lite.jpg" },

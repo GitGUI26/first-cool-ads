@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Jacksmith</title>
+  <style>
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: #000;
+    }
+    #flash-container {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+    ruffle-player {
+      display: block;
+      width: 100%;
+      height: 100%;
+      background: #000;
+    }
+    #status {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      color: #f4d77a;
+      background: #000;
+      font: 600 18px/1.4 Georgia, serif;
+      text-align: center;
+      pointer-events: none;
+      z-index: 2;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/@ruffle-rs/ruffle@0.2.0-nightly.2025.10.2/ruffle.min.js"></script>
+</head>
+<body>
+  <div id="flash-container">
+    <div id="status">Loading Jacksmith&hellip;</div>
+  </div>
+  <script>
+    (function () {
+      const container = document.getElementById('flash-container');
+      const status = document.getElementById('status');
+
+      function fitGame() {
+        const aspectRatio = 4 / 3;
+        const availableWidth = window.innerWidth;
+        const availableHeight = window.innerHeight;
+        let width = availableWidth;
+        let height = Math.floor(width / aspectRatio);
+        if (height > availableHeight) {
+          height = availableHeight;
+          width = Math.floor(height * aspectRatio);
+        }
+        container.style.width = width + 'px';
+        container.style.height = height + 'px';
+      }
+
+      function resolveSwfUrl() {
+        let base = document.baseURI || window.location.href;
+        if (!base || base.indexOf('about:') === 0) {
+          try {
+            base = window.parent.location.href;
+          }
+          catch (error) {
+            base = window.location.href;
+          }
+        }
+        const path = new URL(base).pathname;
+        const relativeSwf = /\/games\/jacksmith\.html?$/i.test(path)
+          ? 'jacksmith.swf'
+          : 'games/jacksmith.swf';
+        return new URL(relativeSwf, base).href;
+      }
+
+      function showError(message) {
+        status.textContent = message;
+        status.style.pointerEvents = 'auto';
+        status.style.background = 'rgba(0, 0, 0, 0.82)';
+      }
+
+      window.addEventListener('resize', fitGame);
+      window.addEventListener('load', function () {
+        fitGame();
+        const ruffle = window.RufflePlayer && window.RufflePlayer.newest
+          ? window.RufflePlayer.newest()
+          : null;
+        if (!ruffle) {
+          showError('Ruffle could not be loaded. Please refresh the page.');
+          return;
+        }
+
+        const player = ruffle.createPlayer();
+        player.style.width = '100%';
+        player.style.height = '100%';
+        player.style.background = '#000';
+        container.appendChild(player);
+
+        const swfUrl = resolveSwfUrl();
+        player.load(swfUrl).then(function () {
+          if (status && status.parentNode) {
+            status.remove();
+          }
+        }).catch(function (error) {
+          console.error('Jacksmith failed to load:', error);
+          showError('Jacksmith could not start. Please refresh the page.');
+        });
+      });
+    })();
+  </script>
+</body>
+</html>
