@@ -1,4 +1,5 @@
 const games = [
+  { title: "Dead Plate", desc: "A short horror RPG about a waiter's final shift at a sinister restaurant.", url: "games/dead-plate/index.html", image: "images/g_dead-plate.jpg" },
   { title: "Evil Glitch", desc: "Play Evil Glitch.", url: "games/pack/evil-glitch.html", image: "images/g_evil-glitch.jpg" },
   { title: "2048", desc: "Play 2048.", url: "games/pack/2048.html", image: "images/g_2048.jpg" },
   { title: "Coreball", desc: "Play Coreball.", url: "games/pack/coreball.html", image: "images/g_coreball.jpg" },
