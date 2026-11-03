@@ -1,4 +1,9 @@
 const games = [
+  { title: "Amanda the Adventurer", desc: "A found-footage horror puzzle game about a cheerful children's show hiding a terrifying secret.", url: "games/amanda-the-adventurer.html", image: "images/g_amanda-the-adventurer.jpg" },
+  { title: "FNAF 4: Halloween Edition", desc: "The Halloween update to Five Nights at Freddy's 4, with new animatronic horrors and extra challenges.", url: "games/fnaf-4-halloween.html", image: "images/g_fnaf-4-halloween.jpg" },
+  { title: "Geometry Dash Lite", desc: "The free lite edition of the rhythm platformer. Jump and fly through spike-filled levels.", url: "games/geometry-dash-lite.html", image: "images/g_geometry-dash-lite.jpg" },
+  { title: "Super Mario 63", desc: "A fan-made 2.5D Mario adventure with 64-style moves, secret stars, and huge levels.", url: "games/super-mario-63.html", image: "images/g_super-mario-63.jpg" },
+  { title: "Undertale Yellow", desc: "A fan-made Undertale prequel following the yellow soul through the Underground.", url: "games/undertale-yellow.html", image: "images/g_undertale-yellow.jpg" },
   { title: "Dead Plate", desc: "A short horror RPG about a waiter's final shift at a sinister restaurant.", url: "games/dead-plate/index.html", image: "images/g_dead-plate.jpg" },
   { title: "Evil Glitch", desc: "Play Evil Glitch.", url: "games/pack/evil-glitch.html", image: "images/g_evil-glitch.jpg" },
   { title: "2048", desc: "Play 2048.", url: "games/pack/2048.html", image: "images/g_2048.jpg" },
