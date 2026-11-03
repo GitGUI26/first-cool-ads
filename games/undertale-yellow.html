@@ -359,68 +359,188 @@
       </div>
     </div>
     <script>
-      function mergeFiles(fileParts) {
-          return new Promise((resolve, reject) => {
-              let buffers = [];
+      (function () {
+        var RAW_BASE = 'https://raw.githubusercontent.com/genizy/web-port/main/undertale-yellow/';
+        var MIRROR_BASE = 'https://cdn.statically.io/gh/genizy/web-port@main/undertale-yellow/';
+        var PART_COUNT = 12;
+        var CONCURRENCY = 4;
+        var parts = [];
+        for (var i = 1; i <= PART_COUNT; i++) {
+          parts.push([RAW_BASE + 'game.unx.part' + i, MIRROR_BASE + 'game.unx.part' + i]);
+        }
 
-              function fetchPart(index) {
-                  if (index >= fileParts.length) {
-                      let mergedBlob = new Blob(buffers);
-                      let mergedFileUrl = URL.createObjectURL(mergedBlob);
-                      resolve(mergedFileUrl);
-                      return;
-                  }
-                  fetch(fileParts[index]).then((response) => response.arrayBuffer()).then((data) => {
-                      buffers.push(data);
-                      fetchPart(index + 1);
-                  }).catch(reject);
-              }
-              fetchPart(0);
-          });
-      }
+        var partBlobs = new Array(PART_COUNT);
+        var loaded = 0;
+        var total = 0;
+        var statusEl = document.getElementById('status');
+        var progressEl = document.getElementById('progress');
+        var loadingEl = document.querySelector('.loading');
 
-      function getParts(file, start, end) {
-          let parts = [];
-          for (let i = start; i <= end; i++) {
-              parts.push(file + ".part" + i);
+        function mb(n) { return (n / 1048576).toFixed(1); }
+
+        function render() {
+          if (total) {
+            var pct = Math.min(100, Math.round((loaded / total) * 100));
+            progressEl.hidden = false;
+            progressEl.value = pct;
+            statusEl.textContent = 'Downloading\u2026 ' + mb(loaded) + ' MB / ' + mb(total) + ' MB (' + pct + '%)';
+          } else {
+            statusEl.textContent = 'Downloading\u2026 ' + mb(loaded) + ' MB';
           }
-          return parts;
-      }
+        }
 
-      mergeFiles(getParts("game.unx", 1, 12)).then(async url => {
-          window.gameUnxUrl = url;
-
-          const originalFetch = window.fetch;
-          window.fetch = async function (...args) {
-              let [url, options] = args;
-              if (typeof url === 'string' && url.includes("game.unx")) {
-                  console.log("fetch:", url);
-                  url = window.gameUnxUrl;
-              } else if (url instanceof Request && url.url.includes("game.unx")) {
-                  console.log("fetch request:", url.url);
-                  url = new Request(window.gameUnxUrl, url);
+        function headSize(urls, index) {
+          index = index || 0;
+          if (index >= urls.length) return Promise.resolve(0);
+          return new Promise(function (resolve) {
+            var settled = false;
+            var controller = new AbortController();
+            var timer = setTimeout(function () {
+              if (!settled) { settled = true; controller.abort(); resolve(0); }
+            }, 8000);
+            fetch(urls[index], { method: 'HEAD', cache: 'force-cache', signal: controller.signal }).then(function (res) {
+              if (settled) return;
+              settled = true;
+              clearTimeout(timer);
+              if (res.ok && res.headers.get('content-length')) {
+                resolve(Number(res.headers.get('content-length')) || 0);
+              } else {
+                resolve(headSize(urls, index + 1));
               }
-              return originalFetch.call(this, url, options);
-          };
+            }).catch(function () {
+              if (!settled) { settled = true; clearTimeout(timer); resolve(headSize(urls, index + 1)); }
+            });
+          });
+        }
 
-          const originalOpen = XMLHttpRequest.prototype.open;
-          XMLHttpRequest.prototype.open = function (method, url, ...rest) {
-              if (url.includes("game.unx")) {
-                  console.log("XHR:", url);
-                  url = window.gameUnxUrl;
+        function fetchPart(urls, attempt) {
+          attempt = attempt || 0;
+          var url = urls[attempt % urls.length];
+          return new Promise(function (resolve, reject) {
+            var controller = new AbortController();
+            var timer = setTimeout(function () { controller.abort(); }, 45000);
+            fetch(url, { cache: 'force-cache', signal: controller.signal }).then(function (res) {
+              if (!res.ok) throw new Error('HTTP ' + res.status);
+              var reader = res.body.getReader();
+              var chunks = [];
+              function pump() {
+                return reader.read().then(function (step) {
+                  if (step.done) return new Blob(chunks);
+                  chunks.push(step.value);
+                  loaded += step.value.length;
+                  render();
+                  return pump();
+                });
               }
-              return originalOpen.call(this, method, url, ...rest);
-          };
-          let index = document.createElement("script");
-          index.src = "index.js";
-          document.body.appendChild(index);
+              return pump();
+            }).then(function (blob) {
+              clearTimeout(timer);
+              resolve(blob);
+            }).catch(function (error) {
+              clearTimeout(timer);
+              if (attempt < 3) {
+                setTimeout(function () {
+                  fetchPart(urls, attempt + 1).then(resolve, reject);
+                }, 800 * (attempt + 1));
+              } else {
+                reject(error);
+              }
+            });
+          });
+        }
 
-          let runner = document.createElement("script");
-          runner.src = "runner.js";
-          document.body.appendChild(runner);
-      }).catch(error => {
-          console.error("Failed to merge files:", error);
-      });
+        function start() {
+          render();
+          return Promise.all(parts.map(function (urls) { return headSize(urls); })).then(function (sizes) {
+            total = sizes.reduce(function (a, b) { return a + b; }, 0);
+            render();
+            var next = 0;
+            var workers = [];
+            for (var w = 0; w < CONCURRENCY; w++) {
+              workers.push((function run() {
+                if (next >= parts.length) return Promise.resolve();
+                var index = next++;
+                return fetchPart(parts[index]).then(function (blob) {
+                  partBlobs[index] = blob;
+                  render();
+                  return run();
+                });
+              })());
+            }
+            return Promise.all(workers);
+          }).then(function () {
+            var merged = new Blob(partBlobs);
+            window.gameUnxUrl = URL.createObjectURL(merged);
+            window.__uyBytes = loaded;
+
+            function mapAsset(url) {
+              if (typeof url !== 'string') return url;
+              if (url.indexOf('game.unx') !== -1) return window.gameUnxUrl;
+              if (url.indexOf('runner.data') !== -1) return RAW_BASE + 'runner.data';
+              if (url.indexOf('runner.wasm') !== -1) return RAW_BASE + 'runner.wasm';
+              return url;
+            }
+
+            var originalFetch = window.fetch;
+            window.fetch = function (input, init) {
+              if (typeof input === 'string' || input instanceof URL) {
+                input = mapAsset(String(input));
+              } else if (input instanceof Request) {
+                var mapped = mapAsset(input.url);
+                if (mapped !== input.url) input = new Request(mapped, input);
+              }
+              return originalFetch.call(this, input, init);
+            };
+
+            var originalOpen = XMLHttpRequest.prototype.open;
+            XMLHttpRequest.prototype.open = function (method, url) {
+              var mapped = mapAsset(String(url));
+              if (mapped !== url) arguments[1] = mapped;
+              return originalOpen.apply(this, arguments);
+            };
+
+            function loadScript(name) {
+              return fetch(RAW_BASE + name).then(function (res) {
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                return res.text();
+              }).then(function (code) {
+                return new Promise(function (resolve, reject) {
+                  var script = document.createElement('script');
+                  script.src = URL.createObjectURL(new Blob([code], { type: 'text/javascript' }));
+                  script.onload = resolve;
+                  script.onerror = reject;
+                  document.body.appendChild(script);
+                });
+              }).catch(function () {
+                return new Promise(function (resolve, reject) {
+                  var script = document.createElement('script');
+                  script.src = name;
+                  script.onload = resolve;
+                  script.onerror = reject;
+                  document.body.appendChild(script);
+                });
+              });
+            }
+
+            loadScript('index.js').then(function () {
+              return loadScript('runner.js');
+            }).catch(function (error) {
+              console.error('Failed to start game:', error);
+              statusEl.textContent = 'Download failed. Tap here to retry.';
+            });
+          });
+        }
+
+        start().catch(function (error) {
+          console.error('Failed to download game data:', error);
+          statusEl.textContent = 'Download failed. Tap here to retry.';
+          if (loadingEl) {
+            loadingEl.style.pointerEvents = 'auto';
+            loadingEl.style.cursor = 'pointer';
+            loadingEl.addEventListener('click', function () { location.reload(); });
+          }
+        });
+      })();
   </script>
   </body>
 </html>
