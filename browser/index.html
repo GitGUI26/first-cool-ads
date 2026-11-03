@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Home | Rowan County Schools</title>
 <link rel="icon" href="../cuh.png">
+<link rel="preconnect" href="https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page" crossorigin>
+<link rel="preconnect" href="https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page">
+<link rel="dns-prefetch" href="https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page">
 <style>
 :root{--bg:#0f1115;--bar:#181b22;--fg:#e8eaf0;--mut:#8a90a0;--acc:#7c8cff;--line:#272b35}
 *{box-sizing:border-box}html,body{height:100%;margin:0;background:var(--bg);color:var(--fg);font:14px system-ui,sans-serif}
@@ -36,29 +39,30 @@ button{background:#1f232c;color:var(--fg);border:1px solid var(--line);border-ra
   <div id="notice"></div>
   <div id="views"><div id="home" class="on">
     <h1>Private Browser</h1>
-    <p>Pages are fetched by this site's server, so websites see the server rather than your device. Cookies and referrers are stripped. It is not a VPN: whoever runs the server can see what you browse.</p>
+    <p>Pages are fetched by the site's edge proxy, so websites see the proxy rather than your device. Cookies and referrers are stripped. It is not a VPN: the proxy operator can see what you browse.</p>
     <div class="q"><a data-go="https://duckduckgo.com/html/">DuckDuckGo</a><a data-go="https://www.wikipedia.org/">Wikipedia</a><a data-go="https://news.ycombinator.com/">Hacker News</a><a data-go="https://example.com/">example.com</a></div>
   </div></div>
 </div>
 <script>
 const SEARCH='https://html.duckduckgo.com/html/?q=';
-const $=s=>document.querySelector(s);let tabs=[],cur=null,uid=0,online=false;
-const enc=u=>'../p?u='+encodeURIComponent(u);
+const PROXY='https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page';
+const $=s=>document.querySelector(s);let tabs=[],cur=null,uid=0,online=true;
+const enc=u=>PROXY+'/p?u='+encodeURIComponent(u);
 function norm(v){v=v.trim();if(!v)return'';if(/^[a-z]+:\/\//i.test(v))return v;if(/^[\w-]+(\.[\w-]+)+(:\d+)?(\/.*)?$/.test(v)&&!/\s/.test(v))return'https://'+v;return SEARCH+encodeURIComponent(v)}
 function notice(t,bad){const n=$('#notice');n.textContent=t||'';n.className=bad?'bad':'';n.style.display=t?'block':'none'}
 function newTab(url){const t={id:++uid,title:'New tab',url:'',frame:document.createElement('iframe')};t.frame.setAttribute('referrerpolicy','no-referrer');$('#views').appendChild(t.frame);tabs.push(t);select(t);if(url)go(url);return t}
 function select(t){cur=t;tabs.forEach(x=>x.frame.classList.toggle('on',x===t&&x.url));$('#home').classList.toggle('on',!t.url);$('#url').value=t.url;draw()}
 function draw(){const el=$('#tabs');el.innerHTML='';tabs.forEach(t=>{const d=document.createElement('div');d.className='tab'+(t===cur?' on':'');d.innerHTML='<span></span><b>&#10005;</b>';d.firstChild.textContent=t.title;d.onclick=()=>select(t);d.lastChild.onclick=e=>{e.stopPropagation();close(t)};el.appendChild(d)});const p=document.createElement('div');p.id='plus';p.textContent='+';p.onclick=()=>newTab();el.appendChild(p)}
 function close(t){t.frame.remove();tabs=tabs.filter(x=>x!==t);if(!tabs.length)newTab();else if(cur===t)select(tabs[tabs.length-1]);else draw()}
-function go(raw){if(!cur)return;const u=norm(raw);if(!u)return;if(!online){notice('Proxy server not reachable. Start the site with "node server.js" (static hosting cannot proxy).',true);return}cur.url=u;cur.title=u.replace(/^https?:\/\//,'').split('/')[0];cur.frame.src=enc(u);select(cur)}
+function go(raw){if(!cur)return;const u=norm(raw);if(!u)return;if(!online){notice('Proxy service not reachable. Try again in a moment.',true);return}cur.url=u;cur.title=u.replace(/^https?:\/\//,'').split('/')[0];cur.frame.src=enc(u);select(cur)}
 addEventListener('message',e=>{if(!e.data||e.data.type!=='proxy-nav')return;const t=tabs.find(x=>x.frame.contentWindow===e.source);if(!t)return;t.url=e.data.url;if(e.data.title)t.title=e.data.title;if(t===cur)$('#url').value=t.url;draw()});
 $('#url').addEventListener('keydown',e=>{if(e.key==='Enter')go($('#url').value)});
 $('#bk').onclick=()=>{try{cur.frame.contentWindow.history.back()}catch(e){}};$('#fw').onclick=()=>{try{cur.frame.contentWindow.history.forward()}catch(e){}};
 $('#rl').onclick=()=>{if(cur&&cur.url)cur.frame.src=enc(cur.url)};$('#hm').onclick=()=>{cur.url='';cur.title='New tab';cur.frame.src='about:blank';select(cur)};
 document.querySelectorAll('[data-go]').forEach(a=>a.onclick=()=>go(a.dataset.go));
 addEventListener('keydown',e=>{if((e.ctrlKey||e.metaKey)&&e.key==='l'){e.preventDefault();$('#url').select()}});
-async function boot(){newTab();try{let r=await(await fetch('../p/health')).json();online=r.ok;if(r.locked&&!r.authed){const k=prompt('Access key for the proxy:');if(k){const l=await fetch('../p/login?k='+encodeURIComponent(k));if(!l.ok){notice('Wrong access key.',true);online=false}}else{online=false;notice('Access key required.',true)}}}catch(e){online=false}
- if(!online&&!$('#notice').textContent)notice('Proxy server not detected. Run "node server.js" to enable browsing.',true)}
+async function boot(){newTab();try{let r=await(await fetch(PROXY+'/p/health',{cache:'no-store'})).json();online=r.ok;if(r.locked&&!r.authed){const k=prompt('Access key for the proxy:');if(k){const l=await fetch(PROXY+'/p/login?k='+encodeURIComponent(k));if(!l.ok){notice('Wrong access key.',true);online=false}}else{online=false;notice('Access key required.',true)}}}catch(e){online=false}
+ if(!online&&!$('#notice').textContent)notice('Proxy service not detected. Try again in a moment.',true)}
 boot();
 </script>
 </body>

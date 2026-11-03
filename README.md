@@ -1,16 +1,20 @@
 # Site + private browser
 
 ## Run it
+    python3 -m http.server 8300  # static site; the BROWSER tab uses the edge proxy
+    # open http://localhost:8300
+
+Or run the original Node server for a self-hosted local proxy:
     node server.js            # Node 18+, no npm install needed
-    # open http://localhost:8080   (BROWSER tab in the top bar = proxy browser)
+    # open http://localhost:8080
 
-Optional: `PROXY_KEY=somesecret node server.js` makes the proxy ask for a key (do this if you host it publicly,
-otherwise anyone can use your server as an open proxy). `PORT=3000` changes the port.
+Optional: `PROXY_KEY=somesecret node server.js` makes the local proxy ask for a key. `PORT=3000` changes its port.
 
-Hosting: needs a Node host (Render, Railway, Fly, a VPS, your own PC). Static hosts (GitHub Pages, Cloudflare Pages)
-serve the games fine but the browser tab will say the proxy isn't reachable.
+Hosting: GitHub Pages, Cloudflare Pages and other static hosts serve the games and the BROWSER tab. The BROWSER tab
+uses the hosted edge proxy at `https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page`; its source is in `proxy/`.
+To use a Node proxy instead, run `server.js` and change `PROXY` in `browser/index.html` to that origin.
 
-## Deploy free on Render
+## Optional: deploy a Node proxy on Render
 1. Push this folder to GitHub.
 2. render.com -> New -> Blueprint (it reads `render.yaml`) or New -> Web Service (Runtime Node, Start Command `node server.js`, Free plan).
 3. Set the `PROXY_KEY` environment variable (the blueprint generates one; find it under Environment). Visitors to the BROWSER tab are asked for it once.
@@ -24,9 +28,9 @@ Duplicates are detected by normalized title and by identical file contents, agai
 within the new ones. Re-running is safe.
 
 ## What the proxy does / doesn't do
-Does: sites see the server instead of your device; cookies + referrers are stripped; private/local addresses are blocked.
-Doesn't: encrypt anything from whoever runs the server, or work on heavy sites (YouTube, Google login, anything that
-builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scramjet on this same server.
+Does: sites see the edge proxy instead of your device; cookies + referrers are stripped; private/local addresses are blocked.
+Doesn't: encrypt anything from whoever runs the proxy, or work on heavy sites (YouTube, Google login, anything that
+builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scramjet on the same proxy.
 
 ## Ads
 
