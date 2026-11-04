@@ -134,7 +134,8 @@ const $ = (s) => document.querySelector(s);
 let tabs = [], cur = null, uid = 0, online = true, fallback = false;
 const HEALTH_TIMEOUT = 6000;
 const HEALTH_ATTEMPTS = 3;
-const FALLBACK = 'https://www.croxyproxy.com/';
+const FALLBACK = 'https://www.4everproxy.com/';
+const FALLBACK_QUERY = 'https://www.4everproxy.com/query';
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -205,8 +206,35 @@ function notice(t, bad, withFallback) {
   n.className = bad ? 'bad' : '';
   n.style.display = t ? 'block' : 'none';
 }
-function openFallback() {
-  return window.open(FALLBACK, '_blank', 'noopener');
+function openFallback(url) {
+  const win = window.open('about:blank', '_blank');
+  if (!win) return false;
+  const doc = win.document;
+  doc.open();
+  doc.write('<!doctype html><title>Opening public fallback…</title><body style="margin:0;background:#060a14;color:#eef2ff;font:14px sans-serif">Opening public fallback…</body>');
+  doc.close();
+  const form = doc.createElement('form');
+  form.method = 'POST';
+  form.action = FALLBACK_QUERY;
+  const fields = {
+    u: url,
+    u_default: 'https://www.google.com/',
+    customip: '',
+    server_name: 'qc',
+    selip: 'random',
+    allowCookies: 'on'
+  };
+  Object.entries(fields).forEach(([name, value]) => {
+    const input = doc.createElement('input');
+    input.type = 'hidden';
+    input.name = name;
+    input.value = value;
+    form.appendChild(input);
+  });
+  doc.body.appendChild(form);
+  form.submit();
+  try { win.opener = null; } catch (error) {}
+  return true;
 }
 function newTab(url) {
   const t = { id: ++uid, title: 'New tab', url: '', frame: document.createElement('iframe') };
@@ -254,10 +282,10 @@ function go(raw) {
   const u = norm(raw);
   if (!u) return;
   if (fallback) {
-    const opened = openFallback();
+    const opened = openFallback(u);
     notice(opened
-      ? 'Private proxy is blocked here. Opened the public fallback in a new tab; paste the address there.'
-      : 'Private proxy is blocked here. Open the public fallback and paste the address there.', !opened, true);
+      ? 'Private proxy is blocked here. Opened this site in the public fallback tab.'
+      : 'Private proxy is blocked here. Open the public fallback tab to continue.', !opened, true);
     return;
   }
   if (!online) {
