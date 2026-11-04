@@ -131,6 +131,25 @@ const SEARCH = 'https://html.duckduckgo.com/html/?q=';
 const PROXY = 'https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page';
 const $ = (s) => document.querySelector(s);
 let tabs = [], cur = null, uid = 0, online = true;
+const HEALTH_TIMEOUT = 6000;
+const HEALTH_ATTEMPTS = 3;
+
+function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
+
+async function readProxyHealth() {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), HEALTH_TIMEOUT);
+  try {
+    const res = await fetch(PROXY + '/p/health?t=' + Date.now(), {
+      cache: 'no-store',
+      signal: controller.signal
+    });
+    if (!res.ok) throw new Error('Health check returned ' + res.status);
+    return await res.json();
+  } finally {
+    clearTimeout(timer);
+  }
+}
 
 function applyParentTheme() {
   try {
@@ -260,28 +279,34 @@ addEventListener('keydown', e => {
 });
 async function boot() {
   newTab();
-  try {
-    const r = await (await fetch(PROXY + '/p/health', { cache: 'no-store' })).json();
-    online = r.ok;
-    if (r.locked && !r.authed) {
-      const k = prompt('Access key for the proxy:');
-      if (k) {
-        const l = await fetch(PROXY + '/p/login?k=' + encodeURIComponent(k));
-        if (!l.ok) {
-          notice('Wrong access key.', true);
+  for (let attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++) {
+    try {
+      const r = await readProxyHealth();
+      online = r.ok !== false;
+      if (r.locked && !r.authed) {
+        const k = prompt('Access key for the proxy:');
+        if (k) {
+          const l = await fetch(PROXY + '/p/login?k=' + encodeURIComponent(k));
+          if (!l.ok) {
+            notice('Wrong access key.', true);
+            online = false;
+          }
+        } else {
           online = false;
+          notice('Access key required.', true);
         }
-      } else {
-        online = false;
-        notice('Access key required.', true);
       }
+      if (!online && !$('#notice').textContent) {
+        notice('Proxy service unavailable. Try again in a moment.', true);
+      }
+      return;
+    } catch (e) {
+      if (attempt < HEALTH_ATTEMPTS) await sleep(650 * attempt);
     }
-  } catch (e) {
-    online = false;
   }
-  if (!online && !$('#notice').textContent) {
-    notice('Proxy service not detected. Try again in a moment.', true);
-  }
+  // A failed health check is not proof that page requests will fail. Keep the
+  // browser usable and let the page load try instead of locking it out.
+  online = true;
 }
 try {
   if (window.parent !== window) {
