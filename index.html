@@ -42,6 +42,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=7" rel="stylesheet">
 <link href="css/refresh.css?v=3" rel="stylesheet">
+<link href="css/browser.css?v=1" rel="stylesheet">
   <script>
     // Ad placements (Adsterra). Each slot writes its own atOptions + invoke pair
     // while the page is parsing, so every unit is served at its own size.
@@ -364,14 +365,32 @@
     <div class="context-menu-item" onclick="window.location.reload()"><i class="fas fa-redo"></i> <span>Refresh</span>
       <span class="menu-shortcut">F5</span></div>
   </div>
-  <div class="browser-overlay" id="browserOverlay" aria-hidden="true" aria-label="Private browser" hidden>
-    <div class="browser-overlay-bar">
-      <span class="browser-overlay-title"><i class="fas fa-globe"></i> Private Browser</span>
-      <button class="browser-overlay-close" id="browserOverlayClose" type="button"
-        aria-label="Close browser">Close <i class="fas fa-xmark"></i></button>
-    </div>
-    <iframe id="browserOverlayFrame" title="Private Browser"
-      allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+  <div class="browser-overlay" id="browserOverlay" role="dialog" aria-modal="true"
+    aria-labelledby="browserOverlayTitle" aria-hidden="true" hidden>
+    <section class="browser-window" id="browserWindow">
+      <div class="browser-window-bar">
+        <div class="browser-window-identity">
+          <span class="browser-window-lights" aria-hidden="true"><span></span><span></span><span></span></span>
+          <span class="browser-window-icon" aria-hidden="true"><i class="fas fa-compass"></i></span>
+          <div class="browser-window-copy">
+            <span class="browser-window-kicker">Cool / Private Session</span>
+            <h2 class="browser-window-title" id="browserOverlayTitle">Browser</h2>
+          </div>
+        </div>
+        <div class="browser-window-actions">
+          <button class="browser-window-action" id="browserOverlayFullscreen" type="button"
+            aria-label="Enter fullscreen" aria-pressed="false">
+            <i class="fas fa-expand" aria-hidden="true"></i><span>Fullscreen</span>
+          </button>
+          <button class="browser-window-action browser-window-action-close" id="browserOverlayClose" type="button"
+            aria-label="Close browser"><i class="fas fa-xmark" aria-hidden="true"></i><span>Close</span></button>
+        </div>
+      </div>
+      <div class="browser-window-stage">
+        <iframe id="browserOverlayFrame" title="Private Browser"
+          allow="clipboard-read; clipboard-write; fullscreen"></iframe>
+      </div>
+    </section>
   </div>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=9"></script>
@@ -388,15 +407,78 @@
   <script>
     (function () {
       const overlay = document.getElementById('browserOverlay');
+      const windowEl = document.getElementById('browserWindow');
       const frame = document.getElementById('browserOverlayFrame');
       const closeButton = document.getElementById('browserOverlayClose');
+      const fullscreenButton = document.getElementById('browserOverlayFullscreen');
       const browserTab = document.getElementById('browserTab');
-      if (!overlay || !frame || !closeButton) return;
+      if (!overlay || !windowEl || !frame || !closeButton || !fullscreenButton) return;
       let loaded = false;
+      let fallbackFullscreen = false;
+
+      function nativeFullscreenElement() {
+        return document.fullscreenElement || document.webkitFullscreenElement || document.msFullscreenElement;
+      }
+
+      function isBrowserFullscreen() {
+        return nativeFullscreenElement() === windowEl || fallbackFullscreen;
+      }
+
+      function renderFullscreenControl() {
+        const active = isBrowserFullscreen();
+        windowEl.classList.toggle('is-fullscreen', fallbackFullscreen);
+        overlay.classList.toggle('browser-overlay--fullscreen', fallbackFullscreen);
+        fullscreenButton.classList.toggle('is-active', active);
+        fullscreenButton.setAttribute('aria-pressed', active ? 'true' : 'false');
+        fullscreenButton.setAttribute('aria-label', active ? 'Exit fullscreen' : 'Enter fullscreen');
+        fullscreenButton.innerHTML = '<i class="fas fa-' + (active ? 'compress' : 'expand') +
+          '" aria-hidden="true"></i><span>' + (active ? 'Exit fullscreen' : 'Fullscreen') + '</span>';
+      }
+
+      function enterBrowserFullscreen() {
+        fallbackFullscreen = false;
+        const request = windowEl.requestFullscreen || windowEl.webkitRequestFullscreen || windowEl.msRequestFullscreen;
+        if (!request) {
+          fallbackFullscreen = true;
+          renderFullscreenControl();
+          return;
+        }
+        try {
+          const result = request.call(windowEl);
+          if (result && typeof result.catch === 'function') {
+            result.catch(function () {
+              fallbackFullscreen = true;
+              renderFullscreenControl();
+            });
+          }
+        } catch (error) {
+          fallbackFullscreen = true;
+        }
+        renderFullscreenControl();
+      }
+
+      function exitBrowserFullscreen() {
+        fallbackFullscreen = false;
+        if (nativeFullscreenElement()) {
+          const exit = document.exitFullscreen || document.webkitExitFullscreen || document.msExitFullscreen;
+          if (exit) {
+            try {
+              const result = exit.call(document);
+              if (result && typeof result.catch === 'function') result.catch(function () {});
+            } catch (error) {}
+          }
+        }
+        renderFullscreenControl();
+      }
+
+      function toggleBrowserFullscreen() {
+        if (isBrowserFullscreen()) exitBrowserFullscreen();
+        else enterBrowserFullscreen();
+      }
 
       function openBrowserOverlay() {
         if (!loaded) {
-          frame.src = 'browser/index.html';
+          frame.src = 'browser/index.html?v=2';
           loaded = true;
         }
         overlay.hidden = false;
@@ -404,10 +486,12 @@
         overlay.setAttribute('aria-hidden', 'false');
         document.body.classList.add('browser-overlay-open');
         if (browserTab) browserTab.setAttribute('aria-expanded', 'true');
+        renderFullscreenControl();
         closeButton.focus();
       }
 
       function closeBrowserOverlay() {
+        if (isBrowserFullscreen()) exitBrowserFullscreen();
         overlay.classList.remove('active');
         overlay.hidden = true;
         overlay.setAttribute('aria-hidden', 'true');
@@ -421,18 +505,27 @@
       window.openBrowserOverlay = openBrowserOverlay;
       window.closeBrowserOverlay = closeBrowserOverlay;
       closeButton.addEventListener('click', closeBrowserOverlay);
+      fullscreenButton.addEventListener('click', toggleBrowserFullscreen);
+      ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(function (name) {
+        document.addEventListener(name, function () {
+          if (!nativeFullscreenElement()) fallbackFullscreen = false;
+          renderFullscreenControl();
+        });
+      });
       window.addEventListener('message', function (event) {
         if (frame.contentWindow && event.source === frame.contentWindow &&
           event.data && event.data.type === 'proxy-close') {
-          closeBrowserOverlay();
+          if (isBrowserFullscreen()) exitBrowserFullscreen();
+          else closeBrowserOverlay();
         }
       });
       document.addEventListener('keydown', function (event) {
-        if (event.key === 'Escape' && overlay.classList.contains('active')) {
-          event.preventDefault();
-          closeBrowserOverlay();
-        }
+        if (event.key !== 'Escape' || !overlay.classList.contains('active')) return;
+        event.preventDefault();
+        if (isBrowserFullscreen()) exitBrowserFullscreen();
+        else closeBrowserOverlay();
       });
+      renderFullscreenControl();
     })();
   </script>
 </body>
