@@ -67,6 +67,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 #back2site:hover { color: var(--fg); }
 #notice { display: none; padding: 9px 14px; background: rgba(255, 193, 114, 0.1); border-bottom: 1px solid rgba(255, 193, 114, 0.2); color: #ffd08a; font-size: 12px; }
 #notice.bad { background: rgba(255, 120, 120, 0.1); border-bottom-color: rgba(255, 120, 120, 0.18); color: #ffbcbc; }
+#notice a { color: inherit; font-weight: 600; text-decoration: underline; text-underline-offset: 2px; }
 #views { position: relative; flex: 1; min-height: 0; background: #fff; }
 #views iframe { position: absolute; inset: 0; display: none; width: 100%; height: 100%; border: 0; background: #fff; }
 #views iframe.on { display: block; }
@@ -130,9 +131,10 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 const SEARCH = 'https://html.duckduckgo.com/html/?q=';
 const PROXY = 'https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page';
 const $ = (s) => document.querySelector(s);
-let tabs = [], cur = null, uid = 0, online = true;
+let tabs = [], cur = null, uid = 0, online = true, fallback = false;
 const HEALTH_TIMEOUT = 6000;
 const HEALTH_ATTEMPTS = 3;
+const FALLBACK = 'https://www.croxyproxy.com/';
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -189,11 +191,22 @@ function norm(v) {
   if (/^[\w-]+(\.[\w-]+)+((:\d+)?(\/.*)?)$/.test(v) && !/\s/.test(v)) return 'https://' + v;
   return SEARCH + encodeURIComponent(v);
 }
-function notice(t, bad) {
+function notice(t, bad, withFallback) {
   const n = $('#notice');
   n.textContent = t || '';
+  if (withFallback) {
+    const a = document.createElement('a');
+    a.href = FALLBACK;
+    a.target = '_blank';
+    a.rel = 'noopener';
+    a.textContent = 'Open public browser';
+    n.append(' ', a);
+  }
   n.className = bad ? 'bad' : '';
   n.style.display = t ? 'block' : 'none';
+}
+function openFallback() {
+  return window.open(FALLBACK, '_blank', 'noopener');
 }
 function newTab(url) {
   const t = { id: ++uid, title: 'New tab', url: '', frame: document.createElement('iframe') };
@@ -240,6 +253,13 @@ function go(raw) {
   if (!cur) return;
   const u = norm(raw);
   if (!u) return;
+  if (fallback) {
+    const opened = openFallback();
+    notice(opened
+      ? 'Private proxy is blocked here. Opened the public fallback in a new tab; paste the address there.'
+      : 'Private proxy is blocked here. Open the public fallback and paste the address there.', !opened, true);
+    return;
+  }
   if (!online) {
     notice('Proxy service not reachable. Try again in a moment.', true);
     return;
@@ -283,6 +303,7 @@ async function boot() {
     try {
       const r = await readProxyHealth();
       online = r.ok !== false;
+      fallback = false;
       if (r.locked && !r.authed) {
         const k = prompt('Access key for the proxy:');
         if (k) {
@@ -296,17 +317,22 @@ async function boot() {
           notice('Access key required.', true);
         }
       }
-      if (!online && !$('#notice').textContent) {
-        notice('Proxy service unavailable. Try again in a moment.', true);
+      if (!online) {
+        fallback = true;
+        online = true;
+        notice('Private proxy is blocked on this network. Use the public fallback to continue.', false, true);
       }
       return;
     } catch (e) {
       if (attempt < HEALTH_ATTEMPTS) await sleep(650 * attempt);
     }
   }
-  // A failed health check is not proof that page requests will fail. Keep the
-  // browser usable and let the page load try instead of locking it out.
+  // The private host can be blocked by a local network even when the backend is
+  // healthy. CroxyProxy refuses to run in an iframe, so its fallback opens as a
+  // top-level tab instead.
+  fallback = true;
   online = true;
+  notice('Private proxy is blocked on this network. Use the public fallback to continue.', false, true);
 }
 try {
   if (window.parent !== window) {
