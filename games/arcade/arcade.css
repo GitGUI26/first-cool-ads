@@ -1,0 +1,368 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap');
+
+:root {
+  --arc-bg: #05080f;
+  --arc-panel: rgba(12, 19, 35, 0.86);
+  --arc-line: rgba(148, 174, 255, 0.16);
+  --arc-text: #eef3ff;
+  --arc-muted: #8d9bbd;
+  --arc-cyan: #22d3ee;
+  --arc-indigo: #7c8cff;
+  --arc-gold: #f6c453;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  min-height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background:
+    radial-gradient(ellipse 70% 55% at 50% 0%, rgba(34, 211, 238, 0.09), transparent 65%),
+    radial-gradient(ellipse 55% 45% at 100% 100%, rgba(124, 140, 255, 0.1), transparent 70%),
+    var(--arc-bg);
+  color: var(--arc-text);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0.32;
+  background-image:
+    linear-gradient(rgba(130, 155, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(130, 155, 255, 0.08) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(ellipse at center, #000 20%, transparent 78%);
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 20%, transparent 78%);
+}
+
+.arcade-shell {
+  position: relative;
+  z-index: 1;
+  width: min(1120px, 100%);
+  margin: 0 auto;
+}
+
+.arcade-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 12px;
+  padding: 10px 12px 10px 15px;
+  border: 1px solid var(--arc-line);
+  border-radius: 16px;
+  background: rgba(8, 13, 25, 0.78);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.28);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.arcade-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  color: var(--arc-text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.arcade-brand .mark {
+  display: grid;
+  place-items: center;
+  width: 27px;
+  height: 27px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, var(--arc-cyan), var(--arc-indigo));
+  color: #041017;
+  font-size: 0.9rem;
+  box-shadow: 0 0 18px rgba(34, 211, 238, 0.35);
+}
+
+.arcade-hud {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.hud-chip {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 74px;
+  padding: 6px 9px;
+  border: 1px solid var(--arc-line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.035);
+}
+
+.hud-chip span {
+  color: var(--arc-muted);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.53rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.hud-chip b {
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.arcade-btn {
+  min-height: 34px;
+  padding: 0 12px;
+  border: 1px solid var(--arc-line);
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.045);
+  color: var(--arc-text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.59rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.arcade-btn:hover {
+  border-color: rgba(34, 211, 238, 0.6);
+  background: rgba(34, 211, 238, 0.1);
+  transform: translateY(-1px);
+}
+
+.arcade-btn.primary {
+  min-height: 44px;
+  padding: 0 24px;
+  border: 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--arc-cyan), var(--arc-indigo));
+  color: #041017;
+  font-size: 0.72rem;
+  box-shadow: 0 12px 32px rgba(34, 211, 238, 0.22);
+}
+
+.arcade-stage {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border: 1px solid rgba(148, 174, 255, 0.2);
+  border-radius: 18px;
+  background: #050a13;
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, 0.45),
+    0 0 0 1px rgba(34, 211, 238, 0.05),
+    inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+#stage {
+  display: block;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.arcade-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(4, 8, 16, 0.58);
+  backdrop-filter: blur(9px);
+  -webkit-backdrop-filter: blur(9px);
+  transition: opacity 0.2s ease;
+}
+
+.arcade-overlay.is-hidden {
+  display: none;
+}
+
+.overlay-card {
+  width: min(460px, 100%);
+  padding: 28px 24px 24px;
+  border: 1px solid rgba(148, 174, 255, 0.22);
+  border-radius: 18px;
+  background: linear-gradient(160deg, rgba(16, 25, 46, 0.96), rgba(7, 12, 23, 0.96));
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.45);
+  text-align: center;
+}
+
+.overlay-kicker {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--arc-cyan);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.56rem;
+  font-weight: 600;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+}
+
+.overlay-card h1 {
+  margin: 0 0 8px;
+  color: #fff;
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: clamp(1.6rem, 4.5vw, 2.2rem);
+  font-weight: 700;
+  letter-spacing: -0.04em;
+  line-height: 1;
+}
+
+.overlay-card p {
+  max-width: 340px;
+  margin: 0 auto 20px;
+  color: var(--arc-muted);
+  font-size: 0.8rem;
+  line-height: 1.55;
+}
+
+.arcade-foot {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 3px 0;
+  color: var(--arc-muted);
+  font-size: 0.66rem;
+}
+
+.arcade-tag {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.55rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  opacity: 0.6;
+}
+
+/* on-screen controls */
+
+.touch-pad {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  gap: 18px;
+  margin-top: 12px;
+  touch-action: none;
+}
+
+.pad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 42px);
+  grid-template-rows: repeat(3, 42px);
+  gap: 5px;
+}
+
+.pad-grid button,
+.pad-action {
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--arc-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--arc-text);
+  font-size: 1rem;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: none;
+}
+
+.pad-grid button:active,
+.pad-action:active {
+  border-color: var(--arc-cyan);
+  background: rgba(34, 211, 238, 0.15);
+}
+
+.pad-grid [data-dir="up"] { grid-column: 2; grid-row: 1; }
+.pad-grid [data-dir="left"] { grid-column: 1; grid-row: 2; }
+.pad-grid [data-dir="down"] { grid-column: 2; grid-row: 3; }
+.pad-grid [data-dir="right"] { grid-column: 3; grid-row: 2; }
+
+.pad-action {
+  width: 58px;
+  height: 58px;
+  border-radius: 50%;
+  border-color: rgba(34, 211, 238, 0.34);
+  background: rgba(34, 211, 238, 0.09);
+  color: var(--arc-cyan);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.55rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.flag-toggle {
+  display: none;
+  margin: 12px auto 0;
+  min-height: 40px;
+  padding: 0 18px;
+  border: 1px solid var(--arc-line);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--arc-text);
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.flag-toggle.is-active {
+  border-color: var(--arc-cyan);
+  background: rgba(34, 211, 238, 0.14);
+  color: var(--arc-cyan);
+}
+
+@media (pointer: coarse) {
+  .touch-pad { display: flex; }
+  .flag-toggle { display: block; }
+}
+
+@media (max-width: 720px) {
+  body { padding: 8px; }
+  .arcade-bar { gap: 8px; padding: 8px 9px 8px 11px; }
+  .arcade-brand { font-size: 0.58rem; letter-spacing: 0.12em; }
+  .arcade-brand .mark { width: 24px; height: 24px; }
+  .hud-chip { min-width: 58px; padding: 5px 7px; }
+  .hud-chip span { font-size: 0.46rem; }
+  .hud-chip b { font-size: 0.72rem; }
+  .arcade-btn { min-height: 30px; padding: 0 9px; font-size: 0.52rem; }
+  .arcade-stage { border-radius: 13px; }
+  .arcade-foot { font-size: 0.58rem; }
+  .arcade-tag { display: none; }
+  .overlay-card { padding: 20px 16px 18px; }
+  .overlay-card p { font-size: 0.74rem; margin-bottom: 16px; }
+}
+
+@media (max-width: 460px) {
+  .arcade-brand span:last-child { display: none; }
+  .arcade-hud { gap: 4px; }
+  .hud-chip { min-width: 0; }
+  .hud-chip span { display: none; }
+  .hud-chip b { font-size: 0.78rem; }
+  .arcade-btn { padding: 0 8px; }
+  .arcade-bar { border-radius: 12px; }
+}

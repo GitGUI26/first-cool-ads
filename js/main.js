@@ -28,7 +28,7 @@ document.addEventListener('DOMContentLoaded', function () {
         return;
     }
     const startedAt = Date.now();
-    const minimumVisibleMs = 2600;
+    const minimumVisibleMs = 1600;
     let loaderHidden = false;
     const hideLoader = () => {
         if (loaderHidden) {
@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
     if (frame) {
         frame.addEventListener('load', hideLoader, { once: true });
     }
-    setTimeout(hideLoader, 4200);
+    setTimeout(hideLoader, 3200);
 });
 function performSearch(searchTerm) {
     const allContainer = document.getElementById('allLessonsGrid');
@@ -117,9 +117,9 @@ function performSearch(searchTerm) {
     if (searchStats) {
         const totalCount = searchableCards.length;
         if (searchTermLower === '') {
-            searchStats.textContent = `Showing ${totalCount} lessons`;
+            searchStats.textContent = `Showing ${totalCount} games`;
         } else {
-            searchStats.textContent = `Found ${visibleCount} of ${totalCount} lessons for "${String(searchTerm || '').trim()}"`;
+            searchStats.textContent = `Found ${visibleCount} of ${totalCount} games for "${String(searchTerm || '').trim()}"`;
         }
     }
 }
@@ -342,7 +342,7 @@ function injectWatermark(htmlContent, gameTitle) {
 		                                setInterval(protectWatermark, 1000);
 		                                
 		                                console.log('%c🎮 Game: "' + gameTitle + '"', 'color: #7c8cff; font-weight: bold;');
-		                                console.log('%c📚 Downloaded from Cool\'s Tutoring Hub', 'color: #22d3ee;');
+		                                console.log('%c📚 Downloaded from Cool Tutoring Hub', 'color: #22d3ee;');
 		                            })();
 		                        <\/script>
 		                    `;
@@ -375,6 +375,17 @@ function getRandomGame() {
     const pool = games.filter(game => !game.secret);
     return pool[Math.floor(Math.random() * pool.length)] || games[Math.floor(Math.random() * games.length)];
 }
+function openRandomGame() {
+    const pick = getRandomGame();
+    if (pick) {
+        openLesson(pick.title, pick.url);
+    }
+}
+function escapeHtml(value) {
+    return String(value === null || value === undefined ? '' : value).replace(/[&<>"']/g, function (ch) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[ch];
+    });
+}
 function setSiteLogos(src) {
     document.querySelectorAll('.logo, .home-logo').forEach(logoEl => {
         logoEl.dataset.baseSrc = src;
@@ -384,30 +395,50 @@ function setSiteLogos(src) {
 }
 function createGameCard(game, isRandom = false) {
     const card = document.createElement('div');
-    card.className = 'lesson-card';
+    card.className = 'lesson-card' + (isRandom ? ' lesson-card-random' : '');
+    card.tabIndex = 0;
+    card.setAttribute('role', 'button');
     if (isRandom) {
         card.setAttribute('data-random-game', 'true');
+        card.setAttribute('aria-label', 'Play a random game');
+        card.title = 'Let fate pick your next game';
     }
+    else {
+        card.setAttribute('aria-label', 'Play ' + game.title);
+        card.title = game.title + (game.desc ? ' — ' + game.desc : '');
+    }
+    const displayTitle = isRandom ? 'Random' : game.title;
     card.innerHTML = `
     <div class="card-inner">
-      <img src="${game.image}" alt="${isRandom ? 'Random Lesson' : game.title}" class="lesson-image ${isRandom ? 'flash-image' : ''}">
-      <div class="card-overlay">
-        <h3 class="lesson-title">${isRandom ? 'Random' : game.title}</h3>
+      <div class="card-cover">
+        <img src="${escapeHtml(game.image)}" alt="${escapeHtml(displayTitle)} cover art" class="lesson-image ${isRandom ? 'flash-image' : ''}" loading="${isRandom ? 'eager' : 'lazy'}" decoding="async">
+        ${isRandom ? '<span class="card-badge card-badge-random">Random</span>' : (game.tag ? `<span class="card-badge">${escapeHtml(game.tag)}</span>` : '')}
+        <div class="card-play" aria-hidden="true"><i class="fas fa-play"></i></div>
+      </div>
+      <div class="card-body">
+        <h3 class="lesson-title">${escapeHtml(displayTitle)}</h3>
+        <i class="fas fa-arrow-right card-arrow" aria-hidden="true"></i>
       </div>
     </div>
   `;
-    if (isRandom) {
-        card.onclick = function (e) {
-            e.stopPropagation();
+    const launch = function () {
+        if (isRandom) {
             const newRandomGame = getRandomGame();
-            openLesson(newRandomGame.title, newRandomGame.url);
-        };
-    }
-    else {
-        card.onclick = function () {
+            if (newRandomGame) {
+                openLesson(newRandomGame.title, newRandomGame.url);
+            }
+        }
+        else {
             openLesson(game.title, game.url);
-        };
-    }
+        }
+    };
+    card.onclick = launch;
+    card.addEventListener('keydown', function (event) {
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            launch();
+        }
+    });
     return card;
 }
 function startHomeCarouselAutoplay(carousel) {
@@ -551,6 +582,51 @@ function buildHomePopularCarousel() {
     carousel.appendChild(track);
     startHomeCarouselAutoplay(carousel);
 }
+function updateGameCounts() {
+    const total = games.filter(game => !game.secret).length;
+    document.querySelectorAll('[data-game-count]').forEach(function (element) {
+        element.textContent = String(total);
+    });
+    const searchInput = document.getElementById('searchInput');
+    if (searchInput) {
+        searchInput.placeholder = `Search ${total} games...`;
+    }
+}
+function setupSearchClear() {
+    const input = document.getElementById('searchInput');
+    const clear = document.getElementById('searchClear');
+    if (!input || !clear)
+        return;
+    const sync = function () {
+        clear.hidden = input.value.length === 0;
+    };
+    input.addEventListener('input', sync);
+    clear.addEventListener('click', function () {
+        input.value = '';
+        sync();
+        if (typeof applySorting === 'function') {
+            applySorting();
+        }
+        input.focus();
+    });
+    input.addEventListener('keydown', function (event) {
+        if (event.key === 'Escape' && input.value) {
+            input.value = '';
+            sync();
+            if (typeof applySorting === 'function') {
+                applySorting();
+            }
+        }
+    });
+    document.addEventListener('keydown', function (event) {
+        const tag = (document.activeElement && document.activeElement.tagName) || '';
+        if (event.key === '/' && !/INPUT|TEXTAREA|SELECT/.test(tag)) {
+            event.preventDefault();
+            input.focus();
+        }
+    });
+    sync();
+}
 function updateSearchStats() {
     const allContainer = document.getElementById('allLessonsGrid');
     if (!allContainer)
@@ -558,7 +634,7 @@ function updateSearchStats() {
     const nonRandomCards = document.querySelectorAll('#allLessonsGrid .lesson-card:not([data-random-game="true"])');
     const searchStats = document.getElementById('searchStats');
     if (searchStats) {
-        searchStats.textContent = `Showing ${nonRandomCards.length} lessons`;
+        searchStats.textContent = `Showing ${nonRandomCards.length} games`;
     }
 }
 function initCursorHover() {
@@ -1516,9 +1592,11 @@ function switchTab(tab) {
     });
 })();
 document.addEventListener('DOMContentLoaded', function () {
+    updateGameCounts();
     generateGameCards();
     buildHomePopularCarousel();
     initHomeLogoTilt();
+    setupSearchClear();
     switchTab('lessons');
 });
 document.addEventListener('DOMContentLoaded', function () {
@@ -2036,7 +2114,7 @@ function selectPresetTheme(themeName) {
 }
 function updateLogoForCurrentTheme() {
     const currentTheme = localStorage.getItem('selectedTheme') || 'default';
-    const defaultLogo = "images/logo.png?v=2";
+    const defaultLogo = "images/logo.png?v=4";
     document.querySelectorAll('.logo, .home-logo').forEach(logoEl => {
         logoEl.src = defaultLogo;
         logoEl.dataset.baseSrc = defaultLogo;
@@ -2245,7 +2323,7 @@ function tintLogoElementExact(logoEl, r, g, b) {
     const isDefaultColor = r === 124 && g === 140 && b === 255;
     if (isDefaultTheme || isDefaultColor) {
         const baseSrc = logoEl.dataset.baseSrc ||
-            "images/logo.png?v=2";
+            "images/logo.png?v=4";
         if (logoEl.src !== baseSrc) {
             logoEl.src = baseSrc;
         }
@@ -2317,7 +2395,7 @@ function tintLogoElementExact(logoEl, r, g, b) {
 function syncLogoThemeTone() {
     const currentTheme = localStorage.getItem('selectedTheme') || 'default';
     if (currentTheme === 'default') {
-        const defaultLogo = "images/logo.png?v=2";
+        const defaultLogo = "images/logo.png?v=4";
         document.querySelectorAll('.logo, .home-logo').forEach(logoEl => {
             if (logoEl.src !== defaultLogo) {
                 logoEl.src = defaultLogo;
@@ -2335,7 +2413,7 @@ function updateMatrixTheme() {
     refreshActiveBackground();
 }
 function revertLogo() {
-    const defaultLogo = "images/logo.png?v=2";
+    const defaultLogo = "images/logo.png?v=4";
     const logoPreview = document.getElementById('logoPreview');
     const previewImg = logoPreview.querySelector('img');
     previewImg.src = defaultLogo;
@@ -2471,7 +2549,7 @@ function getGameShellElements() {
         title: document.getElementById('gameSessionTitle')
     };
 }
-function updateGameSessionTitle(title = 'Select a lesson') {
+function updateGameSessionTitle(title = 'Select a game') {
     const titleEl = getGameShellElements().title;
     if (!titleEl)
         return;
@@ -3272,7 +3350,7 @@ function applyImportedSettings(importedSettings) {
         setSiteLogos(settings.customLogo);
     }
     else {
-        const defaultLogo = "images/logo.png?v=2";
+        const defaultLogo = "images/logo.png?v=4";
         const logoPreview = document.getElementById('logoPreview');
         setSiteLogos(defaultLogo);
         if (logoPreview) {
@@ -3413,189 +3491,18 @@ function createGameLoadingScreen(gameTitle) {
     const lowlightColor = rgbToNumber(accentColor);
     const baseColor = rgbToNumber(darkColor);
     const quotes = [
-        "Cmon we all know that Marval Rivals is overrated",
-        "Everyone knows ur a furry buddy",
-        "For the love of god go touch some grass",
-        "Are you enjoying the site? You better be or else...",
-        "Call 911!! Whats the Number?",
-        "Access Denied - You are Gay",
-        "HELPPPPPPP HELPPPP MEEE",
-        "Linganguliguliwatalingagoolingangoo",
-        "Make sure the one homie that doesnt hop on knows who hate him",
-        "Make sure you do your homework buddy im watching you",
-        "Does your mom know you're gay?",
-        "If you can read this you're too close",
-        "I see you looking at my code",
-        "This game is way better than Fortnite",
-        "This game is way worse than Fortnite",
-        "I like turtles",
-        "Why are you still reading these?",
-        "Press F to thank the bus driver",
-        "I said wait mf....",
-        "Fun fact: your chopped",
-        "Yoooo whats up",
-        "Isnt this loading screen cool?",
-        "This site was made with love <3",
-        "FAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
-        "These edibles ain't shit",
-        "Game will load in just a moment",
-        "Are we there yet",
-        "You know I have to type of of these",
-        "I wish my dad came back with the milk",
-        "Uhhh my mom said I have to do my homework first",
-        "Hey siri whats the name of this site",
-        "Should've used adblock",
-        "That's what she said",
-        "Who made this piece of shit",
-        "It's not a bug it's a feature",
-        "The numbers Mason, what do they mean",
-        "Mila wheela the greatest!!",
-        "Bacon Bacon Bacon",
-        "My name is anderdingus",
-        "Goo goo ga ga",
-        "Why is this taking so long?",
-        "Mane fawk you mama huevo",
-        "Ill give you 5$ to say the n-word",
-        "Meow",
-        "Take your pants off in 3... 2... 1...",
-        "Is it okay if I touch you....?",
-        "AAAAAAAAAAAAAHHHHHHHHHHHHHHHHHH",
-        "did you know Thugalicious is a young cracka?",
-        "all hail daddy T (thugalicious)",
-        "I hope you like my games",
-        "getting thuggy wit it by King. T",
-        "not the hub😎😎😎",
-        "fih",
-        "sponsored by Benjamin N.",
-        "Securly is a bitch",
-        "ion want no damn pickle",
-        "I WAKE UP TO GO TO SLEEP",
-        "I drink soda I eat pizza!",
-        "Dude just said \"I drink soda I eat pizza\"",
-        "Someone make a black pill edit of me",
-        "Go to bed it's a school night",
-        "I am not in danger skyler, I am the danger",
-        "Guys stop saying im in the files",
-        "focking glizzy just bit me man",
-        "just a heads up this game is pretty bad ngl",
-        "I hope you like this loading screen because it took way too long to make",
-        "quotes are hard to come up with",
-        "I should be working on my next game but here we are",
-        "I have to type out 50 of these for the loading screen",
-        "cmon just load the game already",
-        "this is the last quote I promise",
-        "uhhh I ran out of quotes",
-        "MIII BOMBOCLATTTT",
-        "my name is retep and I hate...",
-        "ay why yall put cheese on my cheese burger?",
-        "Yeah, its my birthday, what can i get for free? Uhh nothing? You a BICTH",
-        "that focking bird that I hate",
-        "I am Tanka Jahari but I would NEVER order a whole pizza for myself.",
-        "Vat is dis? I did not vant dis!",
-        "Is it was almond of the Walnut?",
-        "Is they squeezing it out of the penut?",
-        "I swear its bigger, its really cold",
-        "fun Fact, twerking burns 285.43 calories a second, make sure to send proof in the typing section!",
-        "dame tu culo",
-        "ronaldo is the best soccer player ever",
-        "im gay -joseph beltran",
-        "this is all a simulation, ur not real",
-        "are u alright? No! You are all left",
-        "What is the difference between a baked potato and an apple? Im very homosexual!",
-        "you lie! I crack your ass",
-        "messi is better than ronaldo",
-        "if theres a hole theres a goal",
-        "they ripped off my pepino",
-        "your chromebook will self destruct in 5 seconds",
-        "Virus installing....",
-        "uploading device to epstein files...",
-        "digging in ass...",
-        "hey siri how do you pronnounce spontaneity?",
-        "everyday we eatin good",
-        "it wraps around not ONCE, not TWICE, but THRICE!",
-        "shutup MOMMMMMM, silence from YOUU, your cut OFF from TALKING",
-        "Do everything like your name is on it -Joya",
-        "eh pretty cool site",
-        "in the big 2026",
-        "big yahu",
-        "sink let that in",
-        "This site won't give you a virus trust",
-        "giggity",
-        "read this if you like boys",
-        "jiggle my balls to niagra falls and before u do that, take off my drawls",
-        "I heard if you type in epstein something CRAZY happens...",
-        "You can't be shit if you don't start shit",
-        "You can’t spell thug without hug",
-        "2026 is the new 2016",
-        "made by the thugs for the thugs",
-        "u can touch shit and shit will be on your hands -holydih120",
-        "play our games",
-        "Some people don’t realize there worth until their worth nothing -joe",
-        "Anything but doing work",
-        "Sometimes you gotta fart in order to shart",
-        "black on black on black",
-        "Keep calm and swag on",
-        "can’t let go is the hardest geometry dash level -holydih120",
-        "call me thugalicious cus all my homies cant keep their hands to themselves 🥵",
-        "HE CANT KEEP GETTING AWAY WITH THISSSS",
-        "Dany Slicer will take down this site",
-        "Yall need to stop spiking my corisol frl",
-        "can I please have a water, please?",
-        "Clavicular CASSUALY ran in to ASU frat leader and gets BRUTALLY frame mogged",
-        "But when IIIIIIII win a 40v1 I get -1000 AURAAAAA",
-        "lwk gotta take a shit brb",
-        "Call me DL the way I can’t get out the closet” -Bae da Philosopher",
-        "my homies ask if im gay, but the closet is made of glass.",
-        "Big yahu, DESTROY HIM",
-        "i’m really horny -98corbins",
-        "BOMBOCLATTTTTTTT",
-        "It is better to shit in the sink... than to sink... in the shit...",
-        "You know it's cold outside, when you go outside, and it's cold",
-        "deltarune tomorrow",
-        "I woke up today in this morning in the morning I woke up this morning I woke up and remember that every morning that I wake up",
-        "Never back down never what -nick eh 30",
-        "ts website lowk comp",
-        "Keep you head down and your chin up",
-        "lil bro hop off ma dihh",
-        "this is this, and that is that",
-        "If im gay you're gay too",
-        "Ima be under your bed tonight, be ready",
-        "Who TF lives in Nebraska",
-        "Better to cum in the sink, than sink in the cum -Gdkbeetlethugaming",
-        "My teacher ate his own shit",
-        "did he just say his last name's BURDER?",
-        "does he come with a side of FRIES?",
-        "Cake is cake even if it has a candle",
-        "Hope you have a nice gaming session -NRGmason48",
-        "if this was real life you’d be dead -angelmag1980",
-        "vete para alla -angelmag1980",
-        "i like men -Raul ulloa",
-        "I am kevin G btw",
-        "thug should pay me",
-        "I should be payed frfr",
-        "teachers literally behind you",
-        "some dude in the back of the walmart told me to suck his dih for a 2 dollar bill, idek know who would take that deal, anyway i found this 2 dollar bill -midgetfucker53",
-        "ay bro, u tryna f*ck?",
-        "lemme crack -thugalicious120",
-        "If u goon in class goon quietly",
-        "make sure your teacher aint lookin gang -jubihat",
-        "thugalicious is a femboy in disguise",
-        "alt+tab to get away from the teachers catching you playing gamrs",
-        "if you get caught you get caught",
-        "contentkeeper sucks",
-        "Jay likes diddy partys",
-        "I have to go to the bathroom but I also want to keep playing",
-        "Do your work gng",
-        "Math class is boring why do you think i made this site?",
-        "If a black person got BBC, then what does a white person have?",
-        "They would have a BWC",
-        "You should be listening to the teacher.",
-        "If you don't do your work, you will never succeed in life.",
-        "This site is for educational purposes only, please don't get in trouble.",
-        "I hope you learn something new today",
-        "I want goth babe",
-        "CTRL+D bookmark this shi",
-        "thugalicious abuses me",
+        "Hundreds of games. Zero downloads. One click away.",
+        "Pick a game and get straight into the action.",
+        "Built for the bell. Ready when you are.",
+        "No installs. No sign-ups. Just play.",
+        "Your next favourite game is already here.",
+        "Fresh games added all the time.",
+        "The quickest way to find something fun.",
+        "If anyone asks, this is a research project.",
+        "Take a break. You have earned it.",
+        "One more round? We won't tell.",
+        "Made for school days and slow afternoons.",
+        "Press play and see where the day goes.",
     ];
     const loadingSteps = [
         { status: "Stealing Lesson....", progress: 15, time: 800 },
@@ -3908,86 +3815,18 @@ function updateGameDisplay(games) {
 }
 document.addEventListener('DOMContentLoaded', function () {
     const quotes = [
-        "Check out all these amazing lessons (none of these are actually lessons)",
-        "400+ unblocked games for when the teacher isn't looking",
-        "Your favorite games, all in one place... unlike your grades",
-        "The ultimate school gaming hub for professional procrastinators",
-        "Play now, learn never",
-        "Better than doing homework, trust me I checked",
-        "Teacher won't even notice, just keep that tab ready to switch",
-        "Secret games are hidden... you gotta find the secret word...",
-        "Made by the thugs, for the thugs",
-        "Your #1 source for unblocked lessons and bad life choices",
-        "Game on, or whatever the kids say these days",
-        "Chat, is this real?",
-        "Yk people think you actually learn on here?",
-        "If anyone asks, this is a research project",
-        "Hopefully your teacher doesnt check your browser history",
-        "If the site crashes, it's actually a feature",
-        "The code is held together by hopes and prayers",
-        "If you find a bug, just ignore it and keep playing",
-        "This site is 100% safe, I promise",
-        "Heyyyyyy this isnt your math homework",
-        "BOMBOCLATTTTTTTTTTTTTTTTTTTTT",
-        "Look at the cool backrounds @builder267 made",
-        "Ouuuuuh you not my type a lil shitttt",
-        "Ohhhh la laaaaa look at this new site design",
-        "Whats cookin good lookin?",
-        "Youuuuu are feeling VERYYYYY bored... and you want to play MOREEEE games",
-        "Hey google show me this guys balls please",
-        "My name is anderdingus",
-        "Yo speed my reboot card expires in...",
-        "Yo yo yo its hump day, what ima need you to do is tag three big di-",
-        "Wait what if cool is really black tho...?",
-        "Hey Alexa how do you say purple in english?",
-        "Put the yager black ice in my ass",
-        "If this site doesnt work out im making an only fans",
-        "I try to add games as quick as possible",
-        "PLEASEEEE DONT WHIP ME ANYMORE",
-        "I miss the old kanye",
-        "Yo who can slide me their penjamin",
-        "Fadded than a hoe fadded than a hoe fadded than a hoe",
-        "If you're seeing this message its for seahanna heheheheh",
-        "shush baka!~ your so mean to me thug-kun.. this is peak!",
-        "AHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
-        "What if we kissed at the cools tutoring loading screen? Haha jk... unless?",
-        "My lawyer has advised me not to finish this senten—",
-        "Im changing my bloodline with this site frl",
-        "I can see your ip (thats a joke please dont sue me)",
-        "If you want to know my favorite game its bedwars on minecraft",
-        "You miss 95% of the shots you dont take",
-        "95% of gamblers give up right before they win",
-        "You're in a simulation GET OUT GET OUT GET OUT GET OUT GET OUT GET OUT GET OUT GET OUT GET OUT",
-        "We ALL going to tel aviv",
-        "Yo grok show me this guy with his pants off",
-        "Hey google show me this guys balls please",
-        "If your reading this crtl+shift+q+q ur homies chromie",
-        "blah blah blah bleh bleh bleh blue blue blueeee",
-        "a fawk u mama huevo",
-        "japan is turning footseps into electricity",
-        "SHE GON CALL ME BABY BOO",
-        "ts so crispy",
-        "I WANNA BE A THUGGIE WUGGY",
-        "Do it jiggle doe?",
-        "Im bouta do a money spread",
-        "Teach me how to duggy teach me teach me how to duggy",
-        "W speed ❤️",
-        "Hello im the little goblin thats chained up and writing these quotes",
-        "Theres bug under your skin GET THEM OUT NOW",
-        "Too much radio not enough head",
-        "To be ballin you gotta b-all-in",
-        "lowkey im just better",
-        "It be the ones closest to you with the sharpest fangs",
-        "Yall be complaining about ads when you can LITERALLY turn them off in settings",
-        "Life is hard but im harder",
-        "Hoes mad",
-        "jarvis, more alcohol",
-        "I AM the lion",
-        "If one man can hold you down TWO can....",
-        "B.D.K.M.V",
-        "Dont make me up the pole on you mf",
-        "Alr bro ts was not the wind",
-        "Banana",
+        "Hundreds of games. Zero downloads. One click away.",
+        "Pick a game and get straight into the action.",
+        "Built for the bell. Ready when you are.",
+        "No installs. No sign-ups. Just play.",
+        "Your next favourite game is already here.",
+        "Fresh games added all the time.",
+        "The quickest way to find something fun.",
+        "If anyone asks, this is a research project.",
+        "Take a break. You have earned it.",
+        "One more round? We won't tell.",
+        "Made for school days and slow afternoons.",
+        "Press play and see where the day goes.",
     ];
     const typingElement = document.getElementById('typing-quote');
     if (!typingElement)

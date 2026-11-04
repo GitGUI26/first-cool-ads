@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Sky Hopper — Cool Arcade</title>
+  <meta name="theme-color" content="#05080f">
+  <link rel="stylesheet" href="arcade.css">
+</head>
+<body data-game="flappy">
+  <div class="arcade-shell">
+    <header class="arcade-bar">
+      <a class="arcade-brand" href="../../index.html" target="_top"><span class="mark">C</span><span>Cool Arcade</span></a>
+      <div class="arcade-hud">
+        <div class="hud-chip"><span id="scoreLabel">Score</span><b id="scoreValue">0</b></div>
+        <div class="hud-chip"><span id="bestLabel">Best</span><b id="bestValue">—</b></div>
+        <button class="arcade-btn" id="restartBtn" type="button">Restart</button>
+      </div>
+    </header>
+    <main class="arcade-stage">
+      <canvas id="stage" width="960" height="540" aria-label="Sky Hopper game"></canvas>
+      <div class="arcade-overlay" id="overlay">
+        <div class="overlay-card">
+          <span class="overlay-kicker" id="overlayKicker">Cool Arcade</span>
+          <h1 id="overlayTitle">Sky Hopper</h1>
+          <p id="overlayText">Thread the neon skyline one flap at a time. Gravity is not your friend.</p>
+          <button class="arcade-btn primary" id="startBtn" type="button">Play</button>
+        </div>
+      </div>
+    </main>
+    <footer class="arcade-foot">
+      <span id="controlsHint">Click / tap / space to flap</span>
+      <span class="arcade-tag">Original · built for Cool</span>
+    </footer>
+    <div class="touch-pad" id="touchPad"></div>
+  </div>
+  <script src="arcade.js"></script>
+</body>
+</html>

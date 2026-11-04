@@ -37,7 +37,11 @@
   <meta content="unblocked games, tutoring, math help, educational games, student resources, online learning"
     name="keywords">
   <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
-<link href="css/style.css?v=6" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="css/style.css?v=7" rel="stylesheet">
+<link href="css/refresh.css?v=2" rel="stylesheet">
   <style>
     .popup-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; display: none; align-items: center; justify-content: center; font-family: 'Courier New', monospace; }
     .popup-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
@@ -83,24 +87,6 @@
 </head>
 
 <body>
-  <div id="staticPopup" class="popup-modal">
-    <div class="popup-overlay"></div>
-    <div class="popup-container">
-      <div class="popup-content">
-        <div class="popup-header">
-          <h2 class="popup-title">WELCOME</h2>
-        </div>
-        <div class="popup-body">
-          <p>Welcome — this version is completely static and runs from its own files.</p>
-        </div>
-        <div class="popup-footer">
-          <button class="popup-continue-btn" onclick="closeStaticPopup()">
-            Continue to this version <i class="fas fa-arrow-right"></i>
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
   <div class="site-startup-loader" id="siteStartupLoader" aria-hidden="false">
     <iframe class="site-startup-loader-frame" src="loader.html" title="Loading Cool Tutoring"></iframe>
   </div>
@@ -123,16 +109,19 @@
         <div class="logo-container" onclick="switchTab('lessons')" role="button" tabindex="0"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('lessons');}">
           <img alt="Cool Tutoring Hub" class="logo"
-            src="images/logo.png?v=2">
+            src="images/logo.png?v=4">
         </div>
         <div class="top-nav-actions">
           <div class="nav-tabs">
-            <div class="nav-tab active" id="lessonsTab" onclick="switchTab('lessons')">LESSONS</div>
+            <div class="nav-tab active" id="lessonsTab" onclick="switchTab('lessons')">GAMES</div>
             <div class="nav-tab" id="settingsTab" onclick="switchTab('settings')">SETTINGS</div>
             <div class="nav-tab" id="browserTab" onclick="openBrowserOverlay()" role="button" tabindex="0"
               aria-expanded="false"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBrowserOverlay();}">BROWSER</div>
           </div>
+          <button class="nav-random" type="button" onclick="openRandomGame()" title="Play a random game" aria-label="Play a random game">
+            <i class="fas fa-shuffle"></i><span>Random</span>
+          </button>
         </div>
       </div>
     </header>
@@ -145,12 +134,28 @@
     </div>
     <section id="home-section">
       <div class="home-hero">
-        <div class="home-logo-wrap" id="homeLogoWrap">
-          <img alt="Cool Tutoring Hub" class="home-logo"
-            src="images/logo.png?v=2">
-          <div class="home-logo-shine" id="homeLogoShine"></div>
+        <div class="home-hero-copy">
+          <div class="hero-eyebrow"><span class="pulse-dot"></span> 567 games · no downloads · free forever</div>
+          <div class="home-logo-wrap" id="homeLogoWrap">
+            <img alt="Cool Tutoring Hub" class="home-logo"
+              src="images/logo.png?v=4">
+            <div class="home-logo-shine" id="homeLogoShine"></div>
+          </div>
+          <p class="home-subtitle"><span id="typing-quote"></span><span class="cursor">|</span></p>
+          <div class="hero-stats">
+            <div class="hero-stat"><b data-game-count>567+</b><span>games</span></div>
+            <div class="hero-stat"><b>1 click</b><span>to play</span></div>
+            <div class="hero-stat"><b>$0</b><span>forever</span></div>
+          </div>
+          <div class="hero-cta">
+            <button class="btn-primary" type="button" onclick="document.getElementById('all-lessons').scrollIntoView({behavior:'smooth'})"><i class="fas fa-gamepad"></i> Browse games</button>
+            <button class="btn-ghost" type="button" onclick="openRandomGame()"><i class="fas fa-shuffle"></i> Surprise me</button>
+          </div>
         </div>
-        <p class="home-subtitle"><span id="typing-quote"></span><span class="cursor">|</span></p>
+        <div class="home-hero-showcase">
+          <div class="showcase-head"><span>Trending now</span><span class="showcase-hint">auto-playing</span></div>
+          <div class="home-carousel" id="homePopularCarousel"></div>
+        </div>
       </div>
     </section>
     <div class="ad-slot ad-slot-hero">
@@ -161,21 +166,31 @@
       </script>
     </div>
     <section id="all-lessons">
-      <h2>ALL LESSONS</h2>
-      <div class="search-container">
-        <input class="search-box" id="searchInput" placeholder="Search lessons..." type="text">
-        <div class="search-icon"><i class="fas fa-search"></i></div>
+      <div class="library-head">
+        <div class="library-heading">
+          <span class="section-kicker">The library</span>
+          <h2>ALL GAMES</h2>
+        </div>
+        <div class="library-count"><b data-game-count>567+</b> games · always free</div>
       </div>
-      <div class="search-stats" id="searchStats"></div>
-      <div class="sorter-section">
-        <div class="sorter-wrapper">
-          <select class="sort-select" id="sortSelect">
-            <option value="default">[A - Z]</option>
-            <option value="newest">[NEWEST]</option>
-            <option value="reverse">[Z - A]</option>
-            <option value="random">[RANDOMIZED]</option>
-          </select>
-          <div class="custom-arrow">▼</div>
+      <div class="search-container">
+        <input class="search-box" id="searchInput" placeholder="Search 567 games..." type="text" autocomplete="off">
+        <div class="search-icon"><i class="fas fa-search"></i></div>
+        <button class="search-clear" id="searchClear" type="button" aria-label="Clear search" hidden><i class="fas fa-xmark"></i></button>
+      </div>
+      <div class="library-toolbar">
+        <div class="search-stats" id="searchStats"></div>
+        <div class="sorter-section">
+          <span class="sort-label">Sort</span>
+          <div class="sorter-wrapper">
+            <select class="sort-select" id="sortSelect" aria-label="Sort games">
+              <option value="default">A – Z</option>
+              <option value="newest">Newest</option>
+              <option value="reverse">Z – A</option>
+              <option value="random">Random</option>
+            </select>
+            <div class="custom-arrow">▼</div>
+          </div>
         </div>
       </div>
       <div class="lessons-layout">
@@ -339,17 +354,16 @@
     </div>
     <footer class="site-footer">
       <div class="site-footer-left">
-        <p>© 2026 a cool RCMS student.</p>
-        <p>site skidded by the most awesome sauce kid at rcms from noahs tutoring
+        <p>© 2026 Cool Tutoring Hub.</p>
       </div>
-
+      <p class="footer-credit">site skidded by the most awesome sauce kid at school</p>
     </footer>
   </div>
   <div class="game-page" id="gamePage">
     <div class="game-browser">
       <div class="game-tabbar">
         <div class="game-session-meta">
-          <span class="game-session-title" id="gameSessionTitle">Select a lesson</span>
+          <span class="game-session-title" id="gameSessionTitle">Select a game</span>
         </div>
         <div class="game-toolbar">
           <button class="btn refresh-btn" onclick="refreshGame()" title="Reload Game"><i
@@ -381,8 +395,8 @@
       allow="clipboard-read; clipboard-write; fullscreen"></iframe>
   </div>
   <script src="scripts/starfield.js?v=3"></script>
-  <script src="js/games.js?v=6"></script>
-  <script src="js/main.js?v=3"></script>
+  <script src="js/games.js?v=9"></script>
+  <script src="js/main.js?v=8"></script>
   <script>
     function showStaticPopup() {
       const popup = document.getElementById('staticPopup');
