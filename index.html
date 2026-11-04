@@ -42,27 +42,6 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=7" rel="stylesheet">
 <link href="css/refresh.css?v=2" rel="stylesheet">
-  <style>
-    .popup-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 99999; display: none; align-items: center; justify-content: center; font-family: 'Courier New', monospace; }
-    .popup-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0, 0, 0, 0.7); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); animation: fadeIn 0.3s ease; }
-    .popup-container { position: relative; width: min(450px, 90%); z-index: 100000; animation: popupSlideIn 0.4s cubic-bezier(0.2, 0.8, 0.2, 1.2); }
-    .popup-content { background: linear-gradient(145deg, rgba(17, 24, 43, 0.95), rgba(9, 14, 26, 0.98)); border: 2px solid var(--primary-accent); border-radius: 18px; padding: 0; box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6), 0 0 30px rgba(var(--primary-accent-rgb), 0.4); overflow: hidden; backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
-    .popup-header { display: flex; align-items: center; padding: 18px 20px; border-bottom: 1px solid rgba(var(--primary-accent-rgb), 0.3); position: relative; }
-    .popup-title { color: var(--primary-accent); letter-spacing: 2px; font-size: 1.35rem; flex: 0 1 auto; text-align: center; text-shadow: 0 0 10px rgba(var(--primary-accent-rgb), 0.5); margin: 0 auto; }
-    .popup-body { padding: 22px 20px; color: var(--light-text); font-size: 1rem; line-height: 1.6; }
-    .popup-highlight { color: var(--primary-accent); font-weight: bold; text-transform: uppercase; letter-spacing: 1px; text-shadow: 0 0 8px rgba(var(--primary-accent-rgb), 0.5); }
-    .popup-divider { height: 1px; background: linear-gradient(90deg, transparent, rgba(var(--primary-accent-rgb), 0.4), transparent); margin: 18px 0; }
-    .popup-live-btn { display: flex; align-items: center; justify-content: center; gap: 12px; width: 100%; padding: 14px 18px; background: rgba(var(--primary-accent-rgb), 0.15); border: 2px solid var(--primary-accent); border-radius: 12px; color: var(--primary-accent); font-size: 1rem; font-weight: bold; letter-spacing: 0.5px; text-decoration: none; transition: all 0.3s ease; cursor: none !important; margin: 8px 0; box-sizing: border-box; }
-    .popup-live-btn i { font-size: 1.4rem; color: var(--primary-accent); filter: drop-shadow(0 0 5px rgba(var(--primary-accent-rgb), 0.5)); }
-    .popup-live-btn:hover { background: rgba(var(--primary-accent-rgb), 0.25); transform: translateY(-3px); box-shadow: 0 10px 20px rgba(var(--primary-accent-rgb), 0.3); border-color: var(--accent); }
-    .popup-footer { padding: 15px 20px 20px; text-align: center; }
-    .popup-continue-btn { background: rgba(var(--primary-accent-rgb), 0.1); border: 1px solid var(--primary-accent); border-radius: 50px; padding: 12px 24px; color: var(--primary-accent); font-size: 0.95rem; font-weight: bold; letter-spacing: 0.5px; cursor: none !important; transition: all 0.3s ease; width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px; }
-    .popup-continue-btn i { transition: transform 0.3s ease; }
-    .popup-continue-btn:hover { background: rgba(var(--primary-accent-rgb), 0.2); box-shadow: 0 0 20px rgba(var(--primary-accent-rgb), 0.3); }
-    .popup-continue-btn:hover i { transform: translateX(5px); }
-    @keyframes popupSlideIn { 0% { opacity: 0; transform: scale(0.9) translateY(20px); } 100% { opacity: 1; transform: scale(1) translateY(0); } }
-    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-    @media (max-width: 480px) { .popup-header { padding: 15px; } .popup-title { font-size: 1.15rem; } .popup-body { padding: 18px 15px; font-size: 0.95rem; }  </style>
   <script>
     // Ad placements (Adsterra). Each slot writes its own atOptions + invoke pair
     // while the page is parsing, so every unit is served at its own size.
@@ -397,38 +376,6 @@
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=9"></script>
   <script src="js/main.js?v=8"></script>
-  <script>
-    function showStaticPopup() {
-      const popup = document.getElementById('staticPopup');
-      if (popup) {
-        popup.style.display = 'flex';
-        document.body.style.overflow = 'hidden';
-        document.addEventListener('keydown', handleStaticPopupEscape);
-      }
-    }
-    function closeStaticPopup() {
-      const popup = document.getElementById('staticPopup');
-      if (popup) {
-        popup.style.display = 'none';
-        document.body.style.overflow = '';
-        document.removeEventListener('keydown', handleStaticPopupEscape);
-        localStorage.setItem('staticPopupShown', 'true');
-      }
-    }
-    function handleStaticPopupEscape(e) {
-      if (e.key === 'Escape') closeStaticPopup();
-    }
-    document.addEventListener('DOMContentLoaded', function () {
-      if (!localStorage.getItem('staticPopupShown')) {
-        setTimeout(showStaticPopup, 3500);
-      }
-    });
-    document.addEventListener('click', function (e) {
-      const popup = document.getElementById('staticPopup');
-      if (!popup || popup.style.display !== 'flex') return;
-      if (e.target.classList.contains('popup-overlay')) closeStaticPopup();
-    });
-  </script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
     <button aria-label="Close advertisement" class="ad-mobile-close" type="button"
       onclick="document.getElementById('adMobileSticky').classList.add('ad-mobile-sticky-hidden')">×</button>
