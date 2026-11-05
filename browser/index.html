@@ -81,6 +81,13 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 .q { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 2px 0; }
 .q a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); cursor: pointer; font-size: 12px; text-decoration: none; transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease; }
 .q a:hover { border-color: rgba(var(--acc-rgb), 0.55); background: rgba(var(--acc-rgb), 0.1); transform: translateY(-1px); }
+.app-shortcuts { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 1px 0 3px; }
+.app-shortcut { display: inline-flex; align-items: center; gap: 8px; min-height: 38px; padding: 0 13px 0 7px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); font-size: 12px; font-weight: 600; text-decoration: none; transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease; }
+.app-shortcut:hover { border-color: rgba(var(--acc-rgb), 0.55); background: rgba(var(--acc-rgb), 0.1); transform: translateY(-1px); }
+.app-shortcut-mark { display: grid; width: 24px; height: 24px; place-items: center; border-radius: 7px; background: rgba(var(--acc-rgb), 0.22); color: var(--fg); font: 700 10px/1 var(--display); }
+.app-shortcut-discord .app-shortcut-mark { background: #5865f2; }
+.app-shortcut-tiktok .app-shortcut-mark { background: #161823; color: #f1f1f2; box-shadow: 2px 2px 0 #25f4ee; }
+.app-shortcut-youtube .app-shortcut-mark { background: #ff0033; }
 @media (max-width: 620px) {
   #tabs { padding: 8px 8px 0; }
   .tab { min-width: 92px; max-width: 46vw; padding: 8px 9px; font-size: 12px; }
@@ -123,10 +130,16 @@ button:focus-visible, input:focus-visible, a:focus-visible {
         <a data-go="https://news.ycombinator.com/">Hacker News</a>
         <a data-go="https://example.com/">example.com</a>
       </div>
+      <div class="app-shortcuts" aria-label="Social app shortcuts">
+        <a class="app-shortcut app-shortcut-discord" data-go="https://discord.com/app" title="Open Discord in this browser"><span class="app-shortcut-mark">D</span> Discord</a>
+        <a class="app-shortcut app-shortcut-tiktok" data-go="https://www.tiktok.com/" title="Open TikTok in this browser"><span class="app-shortcut-mark">T</span> TikTok</a>
+        <a class="app-shortcut app-shortcut-youtube" data-go="https://www.youtube.com/" title="Open YouTube in this browser"><span class="app-shortcut-mark">Y</span> YouTube</a>
+      </div>
       <p class="home-note">It is not a VPN: the proxy operator can see what you browse.</p>
     </div>
   </div>
 </div>
+<script src="../js/account-store.js?v=1"></script>
 <script>
 const SEARCH = 'https://html.duckduckgo.com/html/?q=';
 const PROXY = 'https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page';
@@ -281,6 +294,13 @@ function go(raw) {
   if (!cur) return;
   const u = norm(raw);
   if (!u) return;
+  try {
+    if (window.CoolAccountStore) window.CoolAccountStore.addHistory({
+      type: 'web',
+      title: u.replace(/^https?:\/\//, '').split('/')[0],
+      url: u
+    });
+  } catch (error) {}
   if (fallback) {
     const opened = openFallback(u);
     notice(opened
@@ -304,6 +324,13 @@ addEventListener('message', e => {
   t.url = e.data.url;
   if (e.data.title) t.title = e.data.title;
   if (t === cur) $('#url').value = t.url;
+  try {
+    if (window.CoolAccountStore) window.CoolAccountStore.addHistory({
+      type: 'web',
+      title: e.data.title || e.data.url,
+      url: e.data.url
+    });
+  } catch (error) {}
   draw();
 });
 $('#url').addEventListener('keydown', e => {

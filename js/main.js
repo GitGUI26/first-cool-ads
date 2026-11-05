@@ -1363,11 +1363,13 @@ document.addEventListener('DOMContentLoaded', function () {
 });
 function switchTab(tab) {
     const lessonsTab = document.getElementById('lessonsTab');
+    const musicTab = document.getElementById('musicTab');
     const settingsTab = document.getElementById('settingsTab');
     const homeSection = document.getElementById('home-section');
     const allLessonsSection = document.getElementById('all-lessons');
     const settingsSection = document.getElementById('settings-section');
-    const activeTab = tab === 'settings' ? 'settings' : 'lessons';
+    const musicSection = document.getElementById('music-section');
+    const activeTab = tab === 'settings' ? 'settings' : tab === 'music' ? 'music' : 'lessons';
 
     function showSection(section, displayValue) {
         if (!section)
@@ -1380,12 +1382,12 @@ function switchTab(tab) {
         section.style.zIndex = '1';
     }
 
-    [lessonsTab, settingsTab].forEach(function (navItem) {
+    [lessonsTab, musicTab, settingsTab].forEach(function (navItem) {
         if (navItem) {
             navItem.classList.remove('active');
         }
     });
-    [homeSection, allLessonsSection, settingsSection].forEach(function (section) {
+    [homeSection, allLessonsSection, settingsSection, musicSection].forEach(function (section) {
         if (section) {
             section.hidden = true;
             section.setAttribute('aria-hidden', 'true');
@@ -1404,6 +1406,11 @@ function switchTab(tab) {
             lessonsTab.classList.add('active');
         showSection(homeSection);
         showSection(allLessonsSection);
+    }
+    else if (activeTab === 'music') {
+        if (musicTab)
+            musicTab.classList.add('active');
+        showSection(musicSection);
     }
     else {
         if (settingsTab)
@@ -3126,8 +3133,12 @@ function parseCookiesToObject() {
     return cookieObject;
 }
 function getAllSettings() {
-    const localData = readStorageObject(window.localStorage);
-    const sessionData = readStorageObject(window.sessionStorage);
+    let localData = readStorageObject(window.localStorage);
+    let sessionData = readStorageObject(window.sessionStorage);
+    if (window.CoolAccountStore) {
+        localData = window.CoolAccountStore.redactStorageSnapshot(localData);
+        sessionData = window.CoolAccountStore.redactStorageSnapshot(sessionData);
+    }
     const cookiesData = parseCookiesToObject();
     return {
         version: '2.0',
@@ -3252,14 +3263,16 @@ function validateSettings(settings) {
     return true;
 }
 function applyImportedSettings(importedSettings) {
+    const preservedAccounts = window.CoolAccountStore ? window.CoolAccountStore.snapshotAccountKeys() : {};
     if (importedSettings.localStorageData && typeof importedSettings.localStorageData === 'object') {
         localStorage.clear();
         Object.entries(importedSettings.localStorageData).forEach(([key, value]) => {
-            if (typeof key === 'string' && key) {
-                localStorage.setItem(key, value === null || value === undefined ? '' : String(value));
-            }
+            if (typeof key !== 'string' || !key) return;
+            if (window.CoolAccountStore && window.CoolAccountStore.isAccountKey(key)) return;
+            localStorage.setItem(key, value === null || value === undefined ? '' : String(value));
         });
     }
+    if (window.CoolAccountStore) window.CoolAccountStore.restoreAccountKeys(preservedAccounts);
     if (importedSettings.sessionStorageData && typeof importedSettings.sessionStorageData === 'object') {
         sessionStorage.clear();
         Object.entries(importedSettings.sessionStorageData).forEach(([key, value]) => {

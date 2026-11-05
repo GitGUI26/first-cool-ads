@@ -43,6 +43,8 @@
 <link href="css/style.css?v=7" rel="stylesheet">
 <link href="css/refresh.css?v=3" rel="stylesheet">
 <link href="css/browser.css?v=1" rel="stylesheet">
+<link href="css/account.css?v=1" rel="stylesheet">
+<link href="css/music.css?v=2" rel="stylesheet">
   <script>
     // Ad placements (Adsterra). Each slot writes its own atOptions + invoke pair
     // while the page is parsing, so every unit is served at its own size.
@@ -94,10 +96,15 @@
         <div class="top-nav-actions">
           <div class="nav-tabs">
             <div class="nav-tab active" id="lessonsTab" onclick="switchTab('lessons')">GAMES</div>
+            <div class="nav-tab" id="musicTab" onclick="switchTab('music')" role="button" tabindex="0"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('music');}">MUSIC</div>
             <div class="nav-tab" id="settingsTab" onclick="switchTab('settings')">SETTINGS</div>
             <div class="nav-tab" id="browserTab" onclick="openBrowserOverlay()" role="button" tabindex="0"
               aria-expanded="false"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBrowserOverlay();}">BROWSER</div>
+            <div class="nav-tab account-nav" id="accountTab" onclick="openAccount()" role="button" tabindex="0"
+              aria-label="Open account"
+              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAccount();}"><span id="accountNavLabel">ACCOUNT</span></div>
           </div>
           <button class="nav-random" type="button" onclick="openRandomGame()" title="Play a random game" aria-label="Play a random game">
             <i class="fas fa-shuffle"></i><span>Random</span>
@@ -135,6 +142,46 @@
         <div class="home-hero-showcase">
           <div class="showcase-head"><span>Trending now</span><span class="showcase-hint">auto-playing</span></div>
           <div class="home-carousel" id="homePopularCarousel"></div>
+        </div>
+      </div>
+
+
+    </section>
+    <section id="music-section" class="music-page" aria-labelledby="musicTitle" hidden aria-hidden="true">
+      <div class="music-page-head">
+        <div>
+          <span class="section-kicker">Streaming space</span>
+          <h2 id="musicTitle">MUSIC</h2>
+        </div>
+        <p>Search Audius and play full tracks right here. This section has no site ads.</p>
+      </div>
+      <div class="music-layout">
+        <div class="music-player-card">
+          <div class="music-now">
+            <div class="music-cover" id="musicCover" aria-hidden="true"><i class="fas fa-headphones"></i></div>
+            <div class="music-now-copy">
+              <span class="music-overline">Now playing</span>
+              <h3 id="musicTrackTitle">Pick a track</h3>
+              <p id="musicTrackArtist">Search Audius or start with what's trending.</p>
+            </div>
+          </div>
+          <audio id="musicAudio" controls preload="metadata"></audio>
+          <p class="music-note"><i class="fas fa-shield-halved" aria-hidden="true"></i> No ads from this site. Full tracks are streamed by Audius.</p>
+        </div>
+        <div class="music-browser-card">
+          <form class="music-search" id="audiusSearchForm" role="search">
+            <label class="music-search-label" for="audiusSearchInput">Search Audius</label>
+            <div class="music-search-row">
+              <i class="fas fa-search" aria-hidden="true"></i>
+              <input id="audiusSearchInput" name="q" type="search" placeholder="Artists, tracks, or genres" autocomplete="off" required>
+              <button type="submit" aria-label="Search Audius">Search</button>
+            </div>
+          </form>
+          <div class="music-results-head"><span>Browse</span><span id="musicStatus" role="status">Open the MUSIC tab to load tracks.</span></div>
+          <div class="music-results" id="musicResults" aria-live="polite">
+            <p class="music-empty">Select MUSIC to load trending tracks.</p>
+          </div>
+          <p class="music-source">Music via <a href="https://audius.co" target="_blank" rel="noopener noreferrer">Audius</a>.</p>
         </div>
       </div>
     </section>
@@ -335,6 +382,7 @@
     <footer class="site-footer">
       <div class="site-footer-left">
         <p>© 2026 Cool Tutoring Hub.</p>
+        <p class="footer-recommendation">To make a recommendation for the site, email <a href="mailto:arrestmrmann@gmail.com">arrestmrmann@gmail.com</a>.</p>
       </div>
       <p class="footer-credit">site skidded by the most awesome sauce kid at school</p>
     </footer>
@@ -392,9 +440,113 @@
       </div>
     </section>
   </div>
+  <div class="account-modal" id="accountModal" hidden aria-hidden="true">
+    <div class="account-backdrop" data-account-close></div>
+    <div class="account-panel" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
+      <header class="account-head">
+        <div class="account-head-avatar" aria-hidden="true"><i class="fas fa-user"></i></div>
+        <div class="account-head-copy">
+          <span class="account-kicker">Cool / Account</span>
+          <h2 id="accountModalTitle">Sign in or create an account</h2>
+        </div>
+        <button class="account-close" type="button" data-account-close aria-label="Close account"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      </header>
+      <div class="account-scroll">
+        <div id="accountAuthView">
+          <div class="account-tabs" role="tablist" aria-label="Account access">
+            <button type="button" class="is-active" data-auth-mode="signin" role="tab">Sign in</button>
+            <button type="button" data-auth-mode="signup" role="tab">Create account</button>
+          </div>
+          <p class="account-lede" id="accountLede">Sign in to keep your games, browsing history, and preferences together.</p>
+          <form class="account-form" id="signinForm">
+            <label>Username<input id="signinUsername" type="text" autocomplete="username" required></label>
+            <label>Password<input id="signinPassword" type="password" autocomplete="current-password" required></label>
+            <div class="account-error" id="signinError" role="alert" hidden></div>
+            <button class="account-primary" type="submit">Sign in</button>
+            <button class="account-link" id="showRecovery" type="button">Forgot password?</button>
+            <p class="account-local-note">Accounts are saved in this browser. No email is required.</p>
+          </form>
+          <form class="account-form" id="signupForm" hidden>
+            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
+            <label>Password<span>No password requirements. Use anything you will remember.</span><input id="signupPassword" type="password" autocomplete="new-password" required></label>
+            <label>Recovery email<span>Optional. Only used if you forget your password.</span><input id="signupEmail" type="email" autocomplete="email"></label>
+            <div class="account-error" id="signupError" role="alert" hidden></div>
+            <button class="account-primary" type="submit">Create account</button>
+            <p class="account-local-note">Usernames are unique on this site. This static build stores the account in this browser.</p>
+          </form>
+          <form class="account-form" id="recoveryForm" hidden>
+            <p class="account-lede">Enter the optional recovery email saved on the account and choose a new password.</p>
+            <label>Username<input id="recoveryUsername" type="text" autocomplete="username" required></label>
+            <label>Recovery email<input id="recoveryEmail" type="email" autocomplete="email" required></label>
+            <label>New password<input id="recoveryPassword" type="password" autocomplete="new-password" required></label>
+            <div class="account-error" id="recoveryError" role="alert" hidden></div>
+            <div class="account-error is-success" id="recoverySuccess" role="status" hidden></div>
+            <div class="account-card-actions"><button class="account-primary" type="submit">Reset password</button><button class="account-secondary" id="cancelRecovery" type="button">Back</button></div>
+          </form>
+        </div>
+        <div id="accountDashboard" hidden>
+          <div class="account-welcome">
+            <div class="account-avatar" id="accountAvatar" aria-hidden="true">?</div>
+            <div><span class="account-kicker">Signed in</span><h3 id="accountUsername">@</h3><p id="accountJoined"></p></div>
+            <button class="account-logout" id="accountSignOut" type="button">Sign out</button>
+          </div>
+          <div class="account-grid">
+            <section class="account-card">
+              <h4>Recovery email</h4>
+              <p>Optional. Used only to reset a forgotten password on this browser.</p>
+              <label>Email<input id="accountRecoveryEmail" type="email" autocomplete="email"></label>
+              <div class="account-card-actions"><button class="account-primary" id="saveRecoveryEmail" type="button">Save email</button></div>
+              <span class="account-inline-message" id="accountEmailMessage" role="status"></span>
+            </section>
+            <section class="account-card">
+              <h4>Account snapshot</h4>
+              <div class="account-stats">
+                <div class="account-stat"><b id="accountHistoryCount">0</b><span>History items</span></div>
+                <div class="account-stat"><b id="accountAccountCount">0</b><span>Saved accounts</span></div>
+              </div>
+            </section>
+            <section class="account-card account-card-wide">
+              <div class="account-card-head"><div><h4>App accounts</h4><p>Save the handles you use on Discord, TikTok, and YouTube. No passwords are stored.</p></div></div>
+              <div class="account-app-grid">
+                <div class="account-app-block" style="--app-color:#5865f2"><div class="account-app-label"><i class="fab fa-discord"></i> Discord</div><label>Handle<input data-app-field="discord" type="text" placeholder="username"></label><label>Profile URL<input data-app-url="discord" type="text" inputmode="url" placeholder="https://discord.com/users/..."></label></div>
+                <div class="account-app-block" style="--app-color:#25f4ee"><div class="account-app-label"><i class="fab fa-tiktok"></i> TikTok</div><label>Handle<input data-app-field="tiktok" type="text" placeholder="@username"></label><label>Profile URL<input data-app-url="tiktok" type="text" inputmode="url" placeholder="https://tiktok.com/@..."></label></div>
+                <div class="account-app-block" style="--app-color:#ff0033"><div class="account-app-label"><i class="fab fa-youtube"></i> YouTube</div><label>Handle<input data-app-field="youtube" type="text" placeholder="@channel"></label><label>Profile URL<input data-app-url="youtube" type="text" inputmode="url" placeholder="https://youtube.com/@..."></label></div>
+              </div>
+              <div class="account-card-actions"><button class="account-primary" id="saveAppAccounts" type="button">Save app accounts</button></div>
+            </section>
+            <section class="account-card account-card-wide">
+              <h4>Website accounts</h4>
+              <p>Keep site usernames and profile links together. Passwords are never stored here.</p>
+              <form class="account-inline-form" id="websiteForm">
+                <input id="websiteName" type="text" placeholder="Website" aria-label="Website name" required>
+                <input id="websiteUsername" type="text" placeholder="Username" aria-label="Website username">
+                <input id="websiteUrl" type="text" inputmode="url" placeholder="Profile URL" aria-label="Website profile URL">
+                <input id="websiteNote" type="text" placeholder="Note (optional)" aria-label="Website note">
+                <button class="account-primary" type="submit">Save website</button>
+              </form>
+              <div class="account-error" id="websiteError" role="alert" hidden></div>
+              <div class="account-records" id="websiteList"></div>
+            </section>
+            <section class="account-card account-card-wide">
+              <div class="account-card-head"><div><h4>History</h4><p>Games, browser pages, and app launches saved to this account.</p></div><button class="account-secondary" id="clearHistory" type="button">Clear history</button></div>
+              <div class="account-history" id="historyList"></div>
+            </section>
+            <section class="account-card account-card-wide">
+              <div class="account-card-head"><div><h4>Preferences</h4><p>Theme, background, cursor, logo, tab title, and favorites are saved to this account.</p></div><button class="account-secondary" id="savePreferences" type="button">Save current</button></div>
+              <p class="account-inline-message" id="preferencesSummary"></p>
+            </section>
+          </div>
+        </div>
+      </div>
+      <div class="account-toast" id="accountToast" role="status" hidden></div>
+    </div>
+  </div>
+  <script src="js/account-store.js?v=1"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=9"></script>
-  <script src="js/main.js?v=9"></script>
+  <script src="js/main.js?v=10"></script>
+  <script src="js/account.js?v=2"></script>
+  <script src="js/music.js?v=2"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
     <button aria-label="Close advertisement" class="ad-mobile-close" type="button"
       onclick="document.getElementById('adMobileSticky').classList.add('ad-mobile-sticky-hidden')">×</button>
