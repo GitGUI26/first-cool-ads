@@ -47,9 +47,18 @@
       onPointerDown: function (p) {
         if (p.y > H - 170) {
           this.onAction();
-        } else {
-          this.lane = clamp(Math.floor(p.x / (W / 3)), 0, 2);
+          return;
         }
+        var lane = 0;
+        var nearest = Infinity;
+        for (var i = 0; i < LANE_X.length; i++) {
+          var distance = Math.abs(p.x - LANE_X[i]);
+          if (distance < nearest) {
+            nearest = distance;
+            lane = i;
+          }
+        }
+        this.lane = clamp(lane, 0, 2);
       },
       update: function (dt) {
         this.elapsed += dt;

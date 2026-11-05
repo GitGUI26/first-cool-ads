@@ -99,7 +99,9 @@
           if (cell.r === 2 && cell.c === 4) bits |= 2;
           byKey[cell.r + ',' + cell.c].base = bits;
         });
-        var empty = this.cells.filter(function (cell) { return !pathIndex[cell.r + ',' + cell.c]; });
+        var empty = this.cells.filter(function (cell) {
+          return pathIndex[cell.r + ',' + cell.c] === undefined;
+        });
         shuffle(empty).slice(0, 5).forEach(function (cell) {
           var bits = shuffle([1, 2, 4, 8]);
           cell.base = bits[0] | bits[1];

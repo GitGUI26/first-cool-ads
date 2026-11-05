@@ -329,8 +329,8 @@ function pageHtml(game) {
     </footer>
     <div class="touch-pad" id="touchPad"></div>
   </div>
-  <script src="originals.js?v=2"></script>
-  <script src="${game.slug}.js?v=2"></script>
+  <script src="originals.js?v=3"></script>
+  <script src="${game.slug}.js?v=3"></script>
 </body>
 </html>
 `;

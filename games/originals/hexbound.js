@@ -61,8 +61,14 @@
         this.over = false;
         this.token = (this.token || 0) + 1;
         this.message = 'Your move';
+        this.aiDue = 0;
         this.setScore(this.playerCount);
         setScore(this.playerCount);
+      },
+      update: function (dt) {
+        if (this.over || this.turn !== 2) return;
+        this.aiDue -= dt;
+        if (this.aiDue <= 0) this.aiMove();
       },
       setScore: function (value) {
         this.playerCount = value;
@@ -135,11 +141,7 @@
         if (this.checkBoard()) return;
         this.turn = 2;
         this.message = 'Rival thinking…';
-        var self = this;
-        var token = ++this.token;
-        setTimeout(function () {
-          if (token === self.token && !self.over) self.aiMove();
-        }, 320);
+        this.aiDue = 0.32;
       },
       aiMove: function () {
         if (this.over) return;
