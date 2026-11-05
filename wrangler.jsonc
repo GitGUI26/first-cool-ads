@@ -1,0 +1,11 @@
+{
+  "name": "first-cool-ads",
+  "main": "worker.js",
+  "compatibility_date": "2025-06-01",
+  "assets": {
+    "directory": ".",
+    "binding": "ASSETS",
+    "html_handling": "none",
+    "run_worker_first": ["/p", "/p/*"]
+  }
+}

@@ -1,0 +1,16 @@
+.git
+.gitignore
+.wrangler
+node_modules
+.env
+server.js
+worker.js
+wrangler.jsonc
+.assetsignore
+package.json
+package-lock.json
+render.yaml
+README.md
+AGENTS.md
+tools
+proxy
