@@ -297,6 +297,29 @@ header {
   gap: 9px;
 }
 
+.hero-recommendation {
+  margin: -3px 0 0;
+  color: var(--ui-muted);
+  font-size: 0.74rem;
+  line-height: 1.55;
+  overflow-wrap: anywhere;
+}
+
+.hero-recommendation i {
+  margin-right: 5px;
+  color: var(--accent);
+}
+
+.hero-recommendation a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.hero-recommendation a:hover {
+  color: #fff;
+}
+
 .btn-primary,
 .btn-ghost {
   display: inline-flex;
