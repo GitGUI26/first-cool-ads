@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="Lumen Loom cover art">
+  <defs>
+    <linearGradient id="bg-lumen-loom" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1426"/>
+      <stop offset=".58" stop-color="#07101e"/>
+      <stop offset="1" stop-color="#03070f"/>
+    </linearGradient>
+    <radialGradient id="glow-lumen-loom" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity=".34"/>
+      <stop offset=".55" stop-color="#22d3ee" stop-opacity=".1"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fade-lumen-loom" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#03070f" stop-opacity="0"/>
+      <stop offset="1" stop-color="#03070f" stop-opacity=".95"/>
+    </linearGradient>
+    <radialGradient id="torch" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#d8ffff" stop-opacity=".8"/>
+      <stop offset=".4" stop-color="#5eead4" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet" cx="35%" cy="28%" r="72%">
+      <stop offset="0" stop-color="#5778aa"/>
+      <stop offset=".5" stop-color="#243b65"/>
+      <stop offset="1" stop-color="#0a1224"/>
+    </radialGradient>
+    <pattern id="grid-lumen-loom" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M30 0H0V30" fill="none" stroke="#22d3ee" stroke-opacity=".12" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg-lumen-loom)"/>
+  <rect width="640" height="360" fill="url(#grid-lumen-loom)" opacity=".5"/>
+  <circle cx="488" cy="170" r="190" fill="url(#glow-lumen-loom)"/>
+  <path d="M0 342H640V360H0Z" fill="url(#fade-lumen-loom)"/>
+  <text x="36" y="35" fill="#22d3ee" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="3">COOL ORIGINALS</text>
+  <rect x="542" y="18" width="62" height="24" rx="12" fill="#22d3ee" fill-opacity=".13" stroke="#22d3ee" stroke-opacity=".7"/>
+  <text x="573" y="34" fill="#22d3ee" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="700" text-anchor="middle" letter-spacing="2">NEW</text>
+  
+      <g transform="translate(333 62)">
+        <rect x="0" y="0" width="244" height="210" rx="20" fill="#071522" stroke="#22d3ee" stroke-opacity=".22"/>
+        <g fill="#0b2234" stroke="#2c6f83" stroke-width="1.5">
+          <rect x="22" y="23" width="58" height="58" rx="11"/><rect x="93" y="23" width="58" height="58" rx="11"/><rect x="164" y="23" width="58" height="58" rx="11"/>
+          <rect x="22" y="94" width="58" height="58" rx="11"/><rect x="93" y="94" width="58" height="58" rx="11"/><rect x="164" y="94" width="58" height="58" rx="11"/>
+          <rect x="22" y="165" width="58" height="58" rx="11"/><rect x="93" y="165" width="58" height="58" rx="11"/><rect x="164" y="165" width="58" height="58" rx="11"/>
+        </g>
+        <path d="M51 52H122V123H193V194" fill="none" stroke="#22d3ee" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+        <path d="M51 52H122V123H193V194" fill="none" stroke="#d8ffff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" opacity=".8"/>
+        <circle cx="51" cy="52" r="12" fill="#f6c453"/><circle cx="193" cy="194" r="12" fill="#5eead4"/>
+        <circle cx="51" cy="52" r="30" fill="#f6c453" opacity=".16"/><circle cx="193" cy="194" r="30" fill="#5eead4" opacity=".14"/>
+      </g>
+  <text x="36" y="270" fill="#22d3ee" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="2.5">LIGHT &amp; LOGIC</text>
+  <text x="34" y="317" fill="#f4f7ff" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5">Lumen Loom</text>
+  <text x="36" y="340" fill="#9ba9c9" font-family="Arial, Helvetica, sans-serif" font-size="9" letter-spacing="2">A HAND-BUILT GAME FOR COOL</text>
+</svg>

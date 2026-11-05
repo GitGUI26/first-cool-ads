@@ -1,0 +1,60 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="Tidepool cover art">
+  <defs>
+    <linearGradient id="bg-tidepool" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1426"/>
+      <stop offset=".58" stop-color="#07101e"/>
+      <stop offset="1" stop-color="#03070f"/>
+    </linearGradient>
+    <radialGradient id="glow-tidepool" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#5eead4" stop-opacity=".34"/>
+      <stop offset=".55" stop-color="#5eead4" stop-opacity=".1"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fade-tidepool" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#03070f" stop-opacity="0"/>
+      <stop offset="1" stop-color="#03070f" stop-opacity=".95"/>
+    </linearGradient>
+    <radialGradient id="torch" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#d8ffff" stop-opacity=".8"/>
+      <stop offset=".4" stop-color="#5eead4" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet" cx="35%" cy="28%" r="72%">
+      <stop offset="0" stop-color="#5778aa"/>
+      <stop offset=".5" stop-color="#243b65"/>
+      <stop offset="1" stop-color="#0a1224"/>
+    </radialGradient>
+    <pattern id="grid-tidepool" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M30 0H0V30" fill="none" stroke="#5eead4" stroke-opacity=".12" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg-tidepool)"/>
+  <rect width="640" height="360" fill="url(#grid-tidepool)" opacity=".5"/>
+  <circle cx="488" cy="170" r="190" fill="url(#glow-tidepool)"/>
+  <path d="M0 342H640V360H0Z" fill="url(#fade-tidepool)"/>
+  <text x="36" y="35" fill="#5eead4" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="3">COOL ORIGINALS</text>
+  <rect x="542" y="18" width="62" height="24" rx="12" fill="#5eead4" fill-opacity=".13" stroke="#5eead4" stroke-opacity=".7"/>
+  <text x="573" y="34" fill="#5eead4" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="700" text-anchor="middle" letter-spacing="2">NEW</text>
+  
+      <g transform="translate(318 46)">
+        <path d="M0 68C48 54 83 80 130 65C178 50 211 80 258 63C287 53 306 60 322 67V224H0Z" fill="#0a3342"/>
+        <path d="M0 100C47 85 87 111 134 96C178 82 219 110 264 94C287 86 307 91 322 98" fill="none" stroke="#5eead4" stroke-opacity=".22" stroke-width="2"/>
+        <path d="M0 153C49 137 88 162 133 147C181 132 220 160 265 144C289 136 306 140 322 146" fill="none" stroke="#5eead4" stroke-opacity=".16" stroke-width="2"/>
+        <g transform="translate(155 146)">
+          <ellipse cx="0" cy="0" rx="37" ry="23" fill="#f47b50"/>
+          <circle cx="-28" cy="-12" r="4" fill="#07141d"/><circle cx="28" cy="-12" r="4" fill="#07141d"/>
+          <path d="M-26 20L-44 34M0 24V40M26 20L44 34M-22 -18L-38 -31M22 -18L38 -31" stroke="#f47b50" stroke-width="6" stroke-linecap="round"/>
+          <path d="M-39 -1L-56 -7M39 -1L56 -7" stroke="#ffb08a" stroke-width="5" stroke-linecap="round"/>
+        </g>
+        <g transform="translate(240 176)">
+          <path d="M0 0C-15 -4 -20 -20 -7 -28C0 -32 0 -20 0 -20C0 -20 0 -32 7 -28C20 -20 15 -4 0 0Z" fill="#f6c453"/>
+          <path d="M0 0V14" stroke="#f6c453" stroke-width="2"/>
+        </g>
+        <path d="M35 54C47 37 63 44 71 54C63 44 79 37 91 54" fill="none" stroke="#dceeff" stroke-width="3" stroke-linecap="round" opacity=".75"/>
+        <g fill="#f6c453" opacity=".8"><circle cx="74" cy="198" r="3"/><circle cx="103" cy="186" r="2"/><circle cx="276" cy="206" r="2"/></g>
+      </g>
+  <text x="36" y="270" fill="#5eead4" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="2.5">SHALLOW WATER</text>
+  <text x="34" y="317" fill="#f4f7ff" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5">Tidepool</text>
+  <text x="36" y="340" fill="#9ba9c9" font-family="Arial, Helvetica, sans-serif" font-size="9" letter-spacing="2">A HAND-BUILT GAME FOR COOL</text>
+</svg>

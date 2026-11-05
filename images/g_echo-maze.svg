@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="Echo Maze cover art">
+  <defs>
+    <linearGradient id="bg-echo-maze" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1426"/>
+      <stop offset=".58" stop-color="#07101e"/>
+      <stop offset="1" stop-color="#03070f"/>
+    </linearGradient>
+    <radialGradient id="glow-echo-maze" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#5eead4" stop-opacity=".34"/>
+      <stop offset=".55" stop-color="#5eead4" stop-opacity=".1"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fade-echo-maze" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#03070f" stop-opacity="0"/>
+      <stop offset="1" stop-color="#03070f" stop-opacity=".95"/>
+    </linearGradient>
+    <radialGradient id="torch" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#d8ffff" stop-opacity=".8"/>
+      <stop offset=".4" stop-color="#5eead4" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet" cx="35%" cy="28%" r="72%">
+      <stop offset="0" stop-color="#5778aa"/>
+      <stop offset=".5" stop-color="#243b65"/>
+      <stop offset="1" stop-color="#0a1224"/>
+    </radialGradient>
+    <pattern id="grid-echo-maze" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M30 0H0V30" fill="none" stroke="#5eead4" stroke-opacity=".12" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg-echo-maze)"/>
+  <rect width="640" height="360" fill="url(#grid-echo-maze)" opacity=".5"/>
+  <circle cx="488" cy="170" r="190" fill="url(#glow-echo-maze)"/>
+  <path d="M0 342H640V360H0Z" fill="url(#fade-echo-maze)"/>
+  <text x="36" y="35" fill="#5eead4" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="3">COOL ORIGINALS</text>
+  <rect x="542" y="18" width="62" height="24" rx="12" fill="#5eead4" fill-opacity=".13" stroke="#5eead4" stroke-opacity=".7"/>
+  <text x="573" y="34" fill="#5eead4" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="700" text-anchor="middle" letter-spacing="2">NEW</text>
+  
+      <g transform="translate(326 52)">
+        <rect x="0" y="0" width="270" height="222" rx="20" fill="#06131c" stroke="#5eead4" stroke-opacity=".18"/>
+        <g fill="none" stroke="#2f7190" stroke-width="3" stroke-linecap="square">
+          <path d="M20 20V202M20 20H250M250 20V202M20 202H250M55 20V76H117V20M117 76H186V20M186 76V132H250M250 132H194M194 132V202M194 202H117V158M117 158H55V202M55 202V110H20M55 110H88V76M117 158V110H145V158"/>
+        </g>
+        <circle cx="88" cy="76" r="48" fill="url(#torch)"/>
+        <circle cx="88" cy="76" r="8" fill="#d8ffff"/>
+        <g fill="#f6c453">
+          <circle cx="218" cy="190" r="5"/><circle cx="218" cy="190" r="12" fill="none" stroke="#f6c453" stroke-width="2"/>
+          <circle cx="34" cy="40" r="5"/><circle cx="34" cy="40" r="12" fill="none" stroke="#f6c453" stroke-width="2"/>
+          <circle cx="238" cy="50" r="5"/><circle cx="238" cy="50" r="12" fill="none" stroke="#f6c453" stroke-width="2"/>
+        </g>
+        <path d="M194 202H250V154" fill="none" stroke="#5eead4" stroke-width="3" stroke-dasharray="4 7"/>
+      </g>
+  <text x="36" y="270" fill="#5eead4" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="2.5">DARK MAZE</text>
+  <text x="34" y="317" fill="#f4f7ff" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5">Echo Maze</text>
+  <text x="36" y="340" fill="#9ba9c9" font-family="Arial, Helvetica, sans-serif" font-size="9" letter-spacing="2">A HAND-BUILT GAME FOR COOL</text>
+</svg>

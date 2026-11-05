@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" width="640" height="360" role="img" aria-label="Hexbound cover art">
+  <defs>
+    <linearGradient id="bg-hexbound" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d1426"/>
+      <stop offset=".58" stop-color="#07101e"/>
+      <stop offset="1" stop-color="#03070f"/>
+    </linearGradient>
+    <radialGradient id="glow-hexbound" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#22d3ee" stop-opacity=".34"/>
+      <stop offset=".55" stop-color="#22d3ee" stop-opacity=".1"/>
+      <stop offset="1" stop-color="#22d3ee" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="fade-hexbound" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#03070f" stop-opacity="0"/>
+      <stop offset="1" stop-color="#03070f" stop-opacity=".95"/>
+    </linearGradient>
+    <radialGradient id="torch" cx="50%" cy="50%" r="50%">
+      <stop offset="0" stop-color="#d8ffff" stop-opacity=".8"/>
+      <stop offset=".4" stop-color="#5eead4" stop-opacity=".25"/>
+      <stop offset="1" stop-color="#5eead4" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="planet" cx="35%" cy="28%" r="72%">
+      <stop offset="0" stop-color="#5778aa"/>
+      <stop offset=".5" stop-color="#243b65"/>
+      <stop offset="1" stop-color="#0a1224"/>
+    </radialGradient>
+    <pattern id="grid-hexbound" width="30" height="30" patternUnits="userSpaceOnUse">
+      <path d="M30 0H0V30" fill="none" stroke="#22d3ee" stroke-opacity=".12" stroke-width="1"/>
+    </pattern>
+  </defs>
+  <rect width="640" height="360" fill="url(#bg-hexbound)"/>
+  <rect width="640" height="360" fill="url(#grid-hexbound)" opacity=".5"/>
+  <circle cx="488" cy="170" r="190" fill="url(#glow-hexbound)"/>
+  <path d="M0 342H640V360H0Z" fill="url(#fade-hexbound)"/>
+  <text x="36" y="35" fill="#22d3ee" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="3">COOL ORIGINALS</text>
+  <rect x="542" y="18" width="62" height="24" rx="12" fill="#22d3ee" fill-opacity=".13" stroke="#22d3ee" stroke-opacity=".7"/>
+  <text x="573" y="34" fill="#22d3ee" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="700" text-anchor="middle" letter-spacing="2">NEW</text>
+  
+      <g transform="translate(326 54)">
+        <g stroke="#5d6d9f" stroke-opacity=".35" stroke-width="1.5" fill="#101c35">
+          <polygon points="52,6 92,29 92,75 52,98 12,75 12,29"/>
+          <polygon points="132,6 172,29 172,75 132,98 92,75 92,29"/>
+          <polygon points="92,98 132,121 132,167 92,190 52,167 52,121" fill="#0d2841" stroke="#22d3ee"/>
+          <polygon points="172,98 212,121 212,167 172,190 132,167 132,121" fill="#2d1633" stroke="#f472b6"/>
+          <polygon points="212,6 252,29 252,75 212,98 172,75 172,29" fill="#2d1633" stroke="#f472b6"/>
+          <polygon points="132,98 172,121 172,167 132,190 92,167 92,121" fill="#0d2841" stroke="#22d3ee"/>
+        </g>
+        <g fill="#22d3ee"><circle cx="92" cy="144" r="6"/><circle cx="52" cy="52" r="4" opacity=".6"/><circle cx="132" cy="52" r="4" opacity=".6"/></g>
+        <g fill="#f472b6"><circle cx="172" cy="144" r="6"/><circle cx="212" cy="52" r="4" opacity=".6"/><circle cx="252" cy="52" r="4" opacity=".6"/></g>
+        <path d="M92 144L132 121M172 144L212 121" stroke="#eef3ff" stroke-opacity=".2" stroke-dasharray="4 5"/>
+      </g>
+  <text x="36" y="270" fill="#22d3ee" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="2.5">TERRITORY DUEL</text>
+  <text x="34" y="317" fill="#f4f7ff" font-family="Arial Black, Arial, Helvetica, sans-serif" font-size="38" font-weight="900" letter-spacing="-1.5">Hexbound</text>
+  <text x="36" y="340" fill="#9ba9c9" font-family="Arial, Helvetica, sans-serif" font-size="9" letter-spacing="2">A HAND-BUILT GAME FOR COOL</text>
+</svg>

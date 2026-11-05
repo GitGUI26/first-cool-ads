@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>Tidepool — Cool Originals</title>
+  <meta name="description" content="Skitter through the shallows, scoop up lost shells, and keep one eye on the sky.">
+  <meta name="theme-color" content="#05080f">
+  <link rel="stylesheet" href="../arcade/arcade.css">
+</head>
+<body data-game="tidepool">
+  <div class="arcade-shell">
+    <header class="arcade-bar">
+      <a class="arcade-brand" href="../../index.html" target="_top"><span class="mark">O</span><span>Cool Originals</span></a>
+      <div class="arcade-hud">
+        <div class="hud-chip"><span id="scoreLabel">Score</span><b id="scoreValue">0</b></div>
+        <div class="hud-chip"><span id="bestLabel">Best</span><b id="bestValue">—</b></div>
+        <button class="arcade-btn" id="restartBtn" type="button">Restart</button>
+      </div>
+    </header>
+    <main class="arcade-stage">
+      <canvas id="stage" width="960" height="540" aria-label="Tidepool game"></canvas>
+      <div class="arcade-overlay" id="overlay">
+        <div class="overlay-card">
+          <span class="overlay-kicker" id="overlayKicker">Cool Originals</span>
+          <h1 id="overlayTitle">Tidepool</h1>
+          <p id="overlayText">Skitter through the shallows, scoop up lost shells, and keep one eye on the sky.</p>
+          <button class="arcade-btn primary" id="startBtn" type="button">Play</button>
+        </div>
+      </div>
+    </main>
+    <footer class="arcade-foot">
+      <span id="controlsHint">Loading controls…</span>
+      <span class="arcade-tag">Original · Cool Originals</span>
+    </footer>
+    <div class="touch-pad" id="touchPad"></div>
+  </div>
+  <script src="originals.js?v=2"></script>
+  <script src="tidepool.js?v=2"></script>
+</body>
+</html>
