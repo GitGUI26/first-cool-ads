@@ -31,6 +31,12 @@ const MAX_REDIRECTS = 6;
 const TIMEOUT_MS = 20000;
 const ALLOWED_PORTS = new Set(['', '80', '443', '8080', '8443']);
 const TOKEN = KEY ? crypto.createHmac('sha256', KEY).update('proxy-auth-v1').digest('hex') : '';
+const CORS = {
+  'access-control-allow-origin': '*',
+  'access-control-allow-methods': 'GET, HEAD, POST, OPTIONS',
+  'access-control-allow-headers': 'content-type, range',
+  'access-control-max-age': '86400'
+};
 
 /* ---------- helpers ---------- */
 function isPrivateIP(ip) {
@@ -82,12 +88,12 @@ function tooManyAttempts(ip) {
 const clientIP = req => String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
 
 function sendJSON(res, code, obj, extra) {
-  res.writeHead(code, Object.assign({ 'content-type': 'application/json', 'cache-control': 'no-store' }, extra || {}));
+  res.writeHead(code, Object.assign({}, CORS, { 'content-type': 'application/json', 'cache-control': 'no-store' }, extra || {}));
   res.end(JSON.stringify(obj));
 }
 function sendError(res, code, msg) {
   if (res.headersSent) return res.destroy();
-  res.writeHead(code, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' });
+  res.writeHead(code, Object.assign({}, CORS, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }));
   res.end('<!doctype html><meta charset="utf-8"><body style="font:15px system-ui;background:#0f1115;color:#e8eaf0;padding:40px"><h2>' +
     code + '</h2><p>' + esc(msg) + '</p>');
 }
@@ -321,7 +327,7 @@ async function handleProxy(req, res, qs) {
   req.on('close', () => ur.destroy());
 
   const ct = String(ur.headers['content-type'] || '');
-  const out = { 'cache-control': 'no-store' };
+  const out = Object.assign({}, CORS, { 'cache-control': 'no-store' });
   const isHTML = /text\/html|application\/xhtml/i.test(ct);
   const isCSS = /text\/css/i.test(ct);
 
@@ -409,6 +415,10 @@ function serveStatic(req, res, pathname) {
 const server = http.createServer(async (req, res) => {
   try {
     const u = new URL(req.url, 'http://localhost');
+    if (req.method === 'OPTIONS' && /^\/p(?:\/|$)/.test(u.pathname)) {
+      res.writeHead(204, Object.assign({}, CORS, { 'content-length': '0' }));
+      return res.end();
+    }
     if (u.pathname === '/p/health') {
       return sendJSON(res, 200, { ok: true, locked: !!KEY, authed: authed(req) });
     }

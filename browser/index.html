@@ -9,9 +9,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="preconnect" href="https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page" crossorigin>
-<link rel="preconnect" href="https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page">
-<link rel="dns-prefetch" href="https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page">
+<link rel="preconnect" href="https://rcms-gmk0.onrender.com" crossorigin>
 <style>
 :root {
   --bg: #060a14;
@@ -123,7 +121,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
     <div id="home" class="on">
       <div class="home-eyebrow"><span class="home-pulse"></span>COOL / PRIVATE SESSION</div>
       <h1>Private Browser</h1>
-      <p>Pages are fetched by the site's edge proxy, so websites see the proxy rather than your device. Cookies and referrers are stripped.</p>
+      <p>Pages are fetched by the site's proxy server, so websites see the proxy rather than your device. Cookies and referrers are stripped.</p>
       <div class="q">
         <a data-go="https://duckduckgo.com/html/">DuckDuckGo</a>
         <a data-go="https://www.wikipedia.org/">Wikipedia</a>
@@ -142,10 +140,11 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 <script src="../js/account-store.js?v=1"></script>
 <script>
 const SEARCH = 'https://html.duckduckgo.com/html/?q=';
-const PROXY = 'https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page';
+const RENDER_PROXY = 'https://rcms-gmk0.onrender.com';
+const PROXY = location.hostname === 'rcms-gmk0.onrender.com' ? location.origin : RENDER_PROXY;
 const $ = (s) => document.querySelector(s);
 let tabs = [], cur = null, uid = 0, online = true, fallback = false;
-const HEALTH_TIMEOUT = 6000;
+const HEALTH_TIMEOUT = 25000;
 const HEALTH_ATTEMPTS = 3;
 const FALLBACK = 'https://www.4everproxy.com/';
 const FALLBACK_QUERY = 'https://www.4everproxy.com/query';
@@ -359,6 +358,7 @@ async function boot() {
       const r = await readProxyHealth();
       online = r.ok !== false;
       fallback = false;
+      notice('');
       if (r.locked && !r.authed) {
         const k = prompt('Access key for the proxy:');
         if (k) {
@@ -379,15 +379,18 @@ async function boot() {
       }
       return;
     } catch (e) {
-      if (attempt < HEALTH_ATTEMPTS) await sleep(650 * attempt);
+      if (attempt < HEALTH_ATTEMPTS) {
+        notice('Starting the proxy server — a cold Render instance can take up to a minute to wake.', false);
+        await sleep(650 * attempt);
+      }
     }
   }
-  // The private host can be blocked by a local network even when the backend is
-  // healthy. CroxyProxy refuses to run in an iframe, so its fallback opens as a
-  // top-level tab instead.
+  // The proxy host can be blocked by a local network even when the backend is
+  // healthy, and a sleeping free instance can take too long to wake. The public
+  // fallback refuses to run in an iframe, so it opens as a top-level tab instead.
   fallback = true;
   online = true;
-  notice('Private proxy is blocked on this network. Use the public fallback to continue.', false, true);
+  notice('The private proxy did not respond. Use the public fallback to continue.', false, true);
 }
 try {
   if (window.parent !== window) {

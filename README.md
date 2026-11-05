@@ -11,8 +11,9 @@ Or run the original Node server for a self-hosted local proxy:
 Optional: `PROXY_KEY=somesecret node server.js` makes the local proxy ask for a key. `PORT=3000` changes its port.
 
 Hosting: GitHub Pages, Cloudflare Pages and other static hosts serve the games and the BROWSER tab. The BROWSER tab
-uses the hosted edge proxy at `https://site-f38c0cecdb6f42f890f9ef76a1463c3c.freebuff.page`; its source is in `proxy/`.
-To use a Node proxy instead, run `server.js` and change `PROXY` in `browser/index.html` to that origin.
+sends proxy traffic to the Render service at `https://rcms-gmk0.onrender.com/`; its source is `server.js` and its
+configuration is `render.yaml`. Opening the browser directly on that Render origin also works. For local development,
+run `node server.js` and set `PROXY` in `browser/index.html` to the local origin.
 
 ## Optional: deploy a Node proxy on Render
 1. Push this folder to GitHub.
