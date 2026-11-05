@@ -1,19 +1,20 @@
 # Site + private browser
 
 ## Run it
-    python3 -m http.server 8300  # static site; the BROWSER tab uses the edge proxy
+    python3 -m http.server 8300  # static site; the BROWSER tab falls back to Render
     # open http://localhost:8300
 
-Or run the original Node server for a self-hosted local proxy:
+Or run the Node server for a self-hosted local proxy:
     node server.js            # Node 18+, no npm install needed
-    # open http://localhost:8080
+    # open http://localhost:8080; the browser uses this same origin automatically
 
 Optional: `PROXY_KEY=somesecret node server.js` makes the local proxy ask for a key. `PORT=3000` changes its port.
 
-Hosting: GitHub Pages, Cloudflare Pages and other static hosts serve the games and the BROWSER tab. The BROWSER tab
-sends proxy traffic to the Render service at `https://rcms-gmk0.onrender.com/`; its source is `server.js` and its
-configuration is `render.yaml`. Opening the browser directly on that Render origin also works. For local development,
-run `node server.js` and set `PROXY` in `browser/index.html` to the local origin.
+Hosting: when a site served by `server.js` is used, the BROWSER tab sends its proxy traffic to that same origin
+(for example `https://rcms-gmk0.onrender.com/p?u=...`), so the main site and proxy share one origin. Static hosts
+such as GitHub Pages fall back to the Render service at `https://rcms-gmk0.onrender.com/`; its source is `server.js`
+and its configuration is `render.yaml`. If the main site has no `/p` endpoint, the browser detects that and switches
+to Render automatically.
 
 ## Optional: deploy a Node proxy on Render
 1. Push this folder to GitHub.
@@ -29,7 +30,7 @@ Duplicates are detected by normalized title and by identical file contents, agai
 within the new ones. Re-running is safe.
 
 ## What the proxy does / doesn't do
-Does: sites see the edge proxy instead of your device; cookies + referrers are stripped; private/local addresses are blocked.
+Does: sites see the site's proxy server instead of your device; cookies + referrers are stripped; private/local addresses are blocked.
 Doesn't: encrypt anything from whoever runs the proxy, or work on heavy sites (YouTube, Google login, anything that
 builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scramjet on the same proxy.
 
