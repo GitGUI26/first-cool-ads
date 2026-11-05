@@ -36,7 +36,10 @@ builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scra
 
 ## Ads
 
-There are none. The site ships without Adsterra units, AdSense tags or an `ads.txt`.
+The site uses labeled Adsterra placements: a desktop leaderboard, a banner below the hero, a 300x250 and
+160x300 above the game library, a sticky 160x600 desktop rail, a native unit after the first five rows of games,
+and a dismissible 320x50 banner on mobile. Set `localStorage.adsDisabled = 'true'` to suppress ad scripts locally;
+update the keys in `index.html` when changing units.
 
 ## Thumbnails for the added games
 113 games were added (`games/pack/` and `games/mgg/`). Most have a generated title-card thumbnail; to replace them with

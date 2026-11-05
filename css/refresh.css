@@ -468,6 +468,64 @@ header {
   border-radius: 8px;
 }
 
+/* Lead ad pair: the 160x300 joins the 300x250 above the library on wide screens. */
+.ad-slot-lead {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 18px;
+  width: 100%;
+  margin: 10px 0 8px;
+}
+
+.ad-slot-lead > .ad-slot {
+  width: auto;
+  flex: 0 0 auto;
+}
+
+.ad-slot-lead .ad-unit {
+  margin: 0 0 12px;
+}
+
+.ad-slot-lead .ad-slot-rect160 {
+  display: none;
+}
+
+@media (min-width: 1100px) {
+  .ad-slot-lead .ad-slot-rect160 {
+    display: flex;
+  }
+}
+
+/* Native unit injected after the first five rows of games. */
+.ad-in-feed {
+  grid-column: 1 / -1;
+  grid-row: 6;
+  width: auto;
+  margin: 10px 0 12px;
+  padding: 14px 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 16px;
+  background: rgba(9, 14, 27, 0.54);
+}
+
+.ad-in-feed[hidden] {
+  display: none;
+}
+
+.ad-in-feed .ad-unit {
+  width: min(728px, 100%);
+  margin: 0;
+}
+
+@media (max-width: 560px) {
+  .ad-in-feed {
+    padding: 10px 8px;
+    border-radius: 14px;
+  }
+}
+
 /* ------------------------------------------------------------- library head */
 
 #all-lessons {

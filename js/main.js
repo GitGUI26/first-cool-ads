@@ -122,6 +122,9 @@ function performSearch(searchTerm) {
             searchStats.textContent = `Found ${visibleCount} of ${totalCount} games for "${String(searchTerm || '').trim()}"`;
         }
     }
+    if (typeof placeInFeedAd === 'function') {
+        placeInFeedAd();
+    }
 }
 
 function normalizeText(text) {
@@ -4127,6 +4130,25 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(typeEffect, 1000);
 });
 const LESSON_GRID_COLUMNS = 3;
+const inFeedAd = document.getElementById('adInFeed');
+let inFeedResizeTimer;
+function placeInFeedAd() {
+    const grid = document.getElementById('allLessonsGrid');
+    if (!inFeedAd || !grid)
+        return;
+    const visibleCards = Array.from(grid.querySelectorAll('.lesson-card'))
+        .filter(card => card.style.display !== 'none');
+    const columnCount = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length);
+    const hasAd = Boolean(inFeedAd.querySelector('.ad-unit'));
+    if (!hasAd || visibleCards.length < columnCount * 5) {
+        inFeedAd.hidden = true;
+        return;
+    }
+    inFeedAd.hidden = false;
+    if (inFeedAd.parentElement !== grid) {
+        grid.appendChild(inFeedAd);
+    }
+}
 function applyGridColumns(columns = LESSON_GRID_COLUMNS) {
     const lessonsGrid = document.getElementById('allLessonsGrid');
     if (lessonsGrid) {
@@ -4150,9 +4172,17 @@ if (typeof applySorting === 'function') {
     const originalApplySorting = applySorting;
     window.applySorting = function () {
         originalApplySorting();
-        setTimeout(() => applyGridColumns(), 50);
+        placeInFeedAd();
+        setTimeout(() => {
+            applyGridColumns();
+            placeInFeedAd();
+        }, 50);
     };
 }
+window.addEventListener('resize', function () {
+    clearTimeout(inFeedResizeTimer);
+    inFeedResizeTimer = setTimeout(placeInFeedAd, 150);
+});
 localStorage.removeItem('gridColumns');
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => applyGridColumns());
