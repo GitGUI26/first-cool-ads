@@ -1584,3 +1584,11 @@ header {
   border-color: rgba(255, 107, 157, 0.65);
   color: #ff6b9d;
 }
+
+
+.game-toolbar a.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  text-decoration: none;
+}

@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=7" rel="stylesheet">
-<link href="css/refresh.css?v=8" rel="stylesheet">
+<link href="css/refresh.css?v=9" rel="stylesheet">
 <link href="css/browser.css?v=1" rel="stylesheet">
 <link href="css/account.css?v=4" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
@@ -387,7 +387,7 @@
       </div>
       <div class="search-container" role="search">
         <label class="visually-hidden" for="searchInput">Search games</label>
-        <input class="search-box" id="searchInput" placeholder="Search 652 games..." type="text" autocomplete="off" aria-describedby="searchStats">
+        <input class="search-box" id="searchInput" placeholder="Search 652 games..." type="text" autocomplete="off" enterkeyhint="search" aria-keyshortcuts="/" aria-describedby="searchStats">
         <div class="search-icon"><i class="fas fa-search"></i></div>
         <button class="search-clear" id="searchClear" type="button" aria-label="Clear search" hidden><i class="fas fa-xmark"></i></button>
       </div>
@@ -591,7 +591,7 @@
       <p class="footer-credit">site skidded by the most awesome sauce kid at school</p>
     </footer>
   </div>
-  <div class="game-page" id="gamePage">
+  <div class="game-page" id="gamePage" role="dialog" aria-modal="true" aria-labelledby="gameSessionTitle" aria-hidden="true">
     <div class="game-browser">
       <div class="game-tabbar">
         <div class="game-session-meta">
@@ -608,7 +608,8 @@
               class="fas fa-heart"></i></button>
           <button class="btn" onclick="toggleFullscreen()" title="Fullscreen Game"><i
               class="fas fa-expand"></i></button>
-          <button class="btn" onclick="exitGameBrowser()" title="Exit Browser"><i class="fas fa-xmark"></i></button>
+          <a class="btn" id="gameOpenRaw" href="#" target="_blank" rel="noopener" title="Open game in a new tab" aria-label="Open game in a new tab"><i class="fas fa-arrow-up-right-from-square"></i></a>
+          <button class="btn" onclick="exitGameBrowser()" title="Exit Browser" aria-label="Close game"><i class="fas fa-xmark"></i></button>
         </div>
       </div>
       <div class="game-view-stack" id="gameViewStack"></div>
@@ -803,8 +804,8 @@
   <script src="js/account-store.js?v=7"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=12"></script>
-  <script src="js/main.js?v=23"></script>
-  <script src="js/updates.js?v=7"></script>
+  <script src="js/main.js?v=24"></script>
+  <script src="js/updates.js?v=8"></script>
   <script src="js/account.js?v=7"></script>
   <script src="js/music.js?v=2"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">

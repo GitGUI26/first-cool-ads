@@ -8,6 +8,7 @@
             date: '2026-11-07',
             title: 'Faster, shareable, and personal',
             items: [
+                'The player toolbar can open any game in its own tab, and closing the player returns keyboard focus to the card you used.',
                 'The game toolbar now has a heart button, and favorites stay in sync between the toolbar and the card grid.',
                 'A new Recently played sort puts the games you opened last at the top of the library.',
                 'Games start loading immediately instead of waiting through a 1.5-second loading screen; the first frame now appears in about a quarter of a second.',

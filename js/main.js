@@ -3,6 +3,7 @@
 let typedKeys = '';
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 let favorites = [];
+let gameOverlayReturnFocus = null;
 try {
     const storedFavorites = JSON.parse(localStorage.getItem('gameFavorites'));
     if (Array.isArray(storedFavorites))
@@ -495,6 +496,22 @@ function syncGameFavoriteButton() {
     button.setAttribute('aria-pressed', isFavorite ? 'true' : 'false');
     button.setAttribute('aria-label', isFavorite ? 'Remove from favorites' : 'Add to favorites');
     button.title = isFavorite ? 'Remove from favorites' : 'Add to favorites';
+}
+function syncGameOpenRawButton() {
+    const link = document.getElementById('gameOpenRaw');
+    if (!link)
+        return;
+    const active = getActiveGameTab();
+    if (active && active.url) {
+        link.href = active.url;
+        link.setAttribute('aria-disabled', 'false');
+        link.removeAttribute('tabindex');
+    }
+    else {
+        link.href = '#';
+        link.setAttribute('aria-disabled', 'true');
+        link.tabIndex = -1;
+    }
 }
 function toggleFavorite(title, button) {
     const index = favorites.indexOf(title);
@@ -2819,23 +2836,37 @@ function setGameOverlayVisible(visible, options = {}) {
         gameSessionState.hideTimer = null;
     }
     if (visible) {
+        const wasActive = shell.page.classList.contains('active');
+        if (!wasActive)
+            gameOverlayReturnFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+        shell.page.setAttribute('aria-hidden', 'false');
         shell.page.classList.remove('slide-down');
         shell.page.classList.add('active');
         shell.main.classList.add('slide-down');
         const activeTab = getActiveGameTab();
         if (activeTab)
             resumeGameTab(activeTab);
+        if (!wasActive) {
+            const closeButton = shell.page.querySelector('.game-toolbar button[title="Exit Browser"]');
+            if (closeButton)
+                setTimeout(() => closeButton.focus(), 0);
+        }
         return;
     }
     const activeTab = getActiveGameTab();
     if (activeTab)
         freezeGameTab(activeTab);
+    shell.page.setAttribute('aria-hidden', 'true');
     shell.page.classList.add('slide-down');
     shell.main.classList.remove('slide-down');
     gameSessionState.hideTimer = setTimeout(() => {
         shell.page.classList.remove('active', 'slide-down');
         if (destroyOnHide)
             destroyActiveGameSession();
+        if (gameOverlayReturnFocus && gameOverlayReturnFocus.isConnected) {
+            gameOverlayReturnFocus.focus();
+            gameOverlayReturnFocus = null;
+        }
     }, 500);
 }
 function pauseMediaInFrame(frame, reset = false) {
@@ -3451,6 +3482,7 @@ function openLesson(t, u, options = {}) {
         setGameOverlayVisible(true);
         syncGameUrl(t, options);
         syncGameFavoriteButton();
+        syncGameOpenRawButton();
         return;
     }
     const tab = ensureActiveGameSession(t, normalizedUrl);
@@ -3459,6 +3491,7 @@ function openLesson(t, u, options = {}) {
     setGameOverlayVisible(true);
     syncGameUrl(t, options);
     syncGameFavoriteButton();
+    syncGameOpenRawButton();
     loadGameIntoTab(tab);
 }
 function exitGameBrowser(options = {}) {
@@ -3485,10 +3518,12 @@ function copyGameLink() {
         button.classList.add('is-copied');
         button.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>';
         button.title = 'Link copied';
+        button.setAttribute('aria-label', 'Link copied');
         setTimeout(function () {
             button.classList.remove('is-copied');
             button.innerHTML = '<i class="fas fa-link" aria-hidden="true"></i>';
             button.title = 'Copy game link';
+            button.setAttribute('aria-label', 'Copy game link');
         }, 1600);
     };
     if (navigator.clipboard && navigator.clipboard.writeText) {
