@@ -12,6 +12,7 @@
                 'Every game has a shareable link. Use the link button in the game toolbar, or copy the address bar after opening a game.',
                 'Press the heart on any game card to save favorites, then choose Favorites first in the sort menu.',
                 'The library now has a labeled search box, a no-results state, visible keyboard focus, and reduced-motion support.',
+                'The library renders and filters in one pass, so sorting and searching stay responsive even with 652 games.',
                 'Added a social preview image, structured data for search engines, robots.txt, and a sitemap.'
             ]
         },
