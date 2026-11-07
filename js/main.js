@@ -2275,7 +2275,7 @@ function selectPresetTheme(themeName) {
 }
 function updateLogoForCurrentTheme() {
     const currentTheme = localStorage.getItem('selectedTheme') || 'default';
-    const defaultLogo = "images/logo.png?v=4";
+    const defaultLogo = "images/logo.webp?v=5";
     document.querySelectorAll('.logo, .home-logo').forEach(logoEl => {
         logoEl.src = defaultLogo;
         logoEl.dataset.baseSrc = defaultLogo;
@@ -2484,7 +2484,7 @@ function tintLogoElementExact(logoEl, r, g, b) {
     const isDefaultColor = r === 124 && g === 140 && b === 255;
     if (isDefaultTheme || isDefaultColor) {
         const baseSrc = logoEl.dataset.baseSrc ||
-            "images/logo.png?v=4";
+            "images/logo.webp?v=5";
         if (logoEl.src !== baseSrc) {
             logoEl.src = baseSrc;
         }
@@ -2556,7 +2556,7 @@ function tintLogoElementExact(logoEl, r, g, b) {
 function syncLogoThemeTone() {
     const currentTheme = localStorage.getItem('selectedTheme') || 'default';
     if (currentTheme === 'default') {
-        const defaultLogo = "images/logo.png?v=4";
+        const defaultLogo = "images/logo.webp?v=5";
         document.querySelectorAll('.logo, .home-logo').forEach(logoEl => {
             if (logoEl.src !== defaultLogo) {
                 logoEl.src = defaultLogo;
@@ -2574,7 +2574,7 @@ function updateMatrixTheme() {
     refreshActiveBackground();
 }
 function revertLogo() {
-    const defaultLogo = "images/logo.png?v=4";
+    const defaultLogo = "images/logo.webp?v=5";
     const logoPreview = document.getElementById('logoPreview');
     const previewImg = logoPreview.querySelector('img');
     previewImg.src = defaultLogo;
@@ -3724,7 +3724,7 @@ function applyImportedSettings(importedSettings) {
         setSiteLogos(settings.customLogo);
     }
     else {
-        const defaultLogo = "images/logo.png?v=4";
+        const defaultLogo = "images/logo.webp?v=5";
         const logoPreview = document.getElementById('logoPreview');
         setSiteLogos(defaultLogo);
         if (logoPreview) {

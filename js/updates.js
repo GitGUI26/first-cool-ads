@@ -8,6 +8,8 @@
             date: '2026-11-07',
             title: 'Faster, shareable, and personal',
             items: [
+                'Games start loading immediately instead of waiting through a 1.5-second loading screen; the first frame now appears in about a quarter of a second.',
+                'The site logo now loads as a 42 KB WebP instead of an 87 KB PNG, and the library renders with about 2,000 fewer DOM nodes.',
                 'Startup is much lighter: the classroom loader is now about 10 KB instead of 1 MB, and card art loads as optimized WebP thumbnails.',
                 'Every game has a shareable link. Use the link button in the game toolbar, or copy the address bar after opening a game.',
                 'Press the heart on any game card to save favorites, then choose Favorites first in the sort menu.',
