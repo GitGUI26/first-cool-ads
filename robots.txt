@@ -1,0 +1,9 @@
+User-agent: *
+Allow: /
+Disallow: /loader.html
+Disallow: /loader_files/
+Disallow: /supabase/
+Disallow: /tools/
+Disallow: /proxy/
+
+Sitemap: https://rcms.cleazium.workers.dev/sitemap.xml

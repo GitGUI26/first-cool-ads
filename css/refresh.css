@@ -1365,3 +1365,121 @@ header {
     height: 34px;
   }
 }
+
+
+/* ------------------------------------------------- quality pass 2026-11-07 */
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px !important;
+  height: 1px !important;
+  padding: 0 !important;
+  margin: -1px !important;
+  overflow: hidden !important;
+  clip: rect(0, 0, 0, 0) !important;
+  white-space: nowrap !important;
+  border: 0 !important;
+}
+
+.skip-link {
+  position: fixed;
+  top: 10px;
+  left: 10px;
+  z-index: 2147483601;
+  padding: 10px 16px;
+  border-radius: 10px;
+  background: #eef2ff;
+  color: #0a1020;
+  font: 600 0.82rem/1 var(--font-display, sans-serif);
+  transform: translateY(-160%);
+  transition: transform 0.15s ease;
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+  outline: 3px solid var(--accent, #22d3ee);
+  outline-offset: 2px;
+}
+
+#allLessonsGrid .lesson-card {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 250px;
+}
+
+#allLessonsGrid .search-empty {
+  grid-column: 1 / -1;
+  display: grid;
+  justify-items: center;
+  gap: 8px;
+  padding: 48px 22px;
+  border: 1px dashed var(--ui-line-strong, rgba(158, 174, 255, 0.3));
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.02);
+  text-align: center;
+}
+
+#allLessonsGrid .search-empty i {
+  color: var(--accent, #22d3ee);
+  font-size: 1.6rem;
+}
+
+#allLessonsGrid .search-empty h3 {
+  margin: 0;
+  color: var(--ui-text, #eef2ff);
+  font-family: var(--font-display, sans-serif);
+  font-size: 1.02rem;
+}
+
+#allLessonsGrid .search-empty p {
+  max-width: 420px;
+  margin: 0;
+  color: var(--ui-muted, #96a0c0);
+  font-size: 0.82rem;
+  line-height: 1.55;
+}
+
+#allLessonsGrid .search-empty button {
+  margin-top: 8px;
+  min-height: 38px;
+  padding: 0 16px;
+  border: 1px solid var(--ui-line-strong, rgba(158, 174, 255, 0.3));
+  border-radius: 9px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ui-text, #eef2ff);
+  font: 600 0.74rem/1 var(--font-display, sans-serif);
+  letter-spacing: 0.04em;
+}
+
+#allLessonsGrid .search-empty button:hover {
+  border-color: var(--accent, #22d3ee);
+  color: var(--accent, #22d3ee);
+}
+
+.nav-tab:focus-visible,
+.nav-random:focus-visible,
+.account-nav-button:focus-visible {
+  outline: 2px solid var(--accent, #22d3ee);
+  outline-offset: 2px;
+}
+
+@media (max-width: 560px) {
+  #allLessonsGrid .lesson-card {
+    contain-intrinsic-size: auto 220px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-carousel-track {
+    animation: none !important;
+  }
+
+  .home-logo-shine,
+  #custom-cursor,
+  #custom-scrollbar {
+    display: none !important;
+  }
+
+  #allLessonsGrid .lesson-card {
+    transition: none !important;
+  }
+}

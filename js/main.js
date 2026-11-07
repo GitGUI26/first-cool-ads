@@ -1,6 +1,7 @@
 // @ts-nocheck
 // Legacy global browser script migrated to TypeScript.
 let typedKeys = '';
+const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const secretCode = 'epstein';
 let secretUnlocked = false;
 document.addEventListener('keydown', function (e) {
@@ -21,36 +22,6 @@ document.addEventListener('keydown', function (e) {
             }
         }
     }
-});
-document.addEventListener('DOMContentLoaded', function () {
-    const loader = document.getElementById('siteStartupLoader');
-    if (!loader) {
-        return;
-    }
-    const startedAt = Date.now();
-    const minimumVisibleMs = 1600;
-    let loaderHidden = false;
-    const hideLoader = () => {
-        if (loaderHidden) {
-            return;
-        }
-        loaderHidden = true;
-        const wait = Math.max(0, minimumVisibleMs - (Date.now() - startedAt));
-        setTimeout(() => {
-            loader.classList.add('is-hidden');
-            loader.setAttribute('aria-hidden', 'true');
-            setTimeout(() => {
-                if (loader.parentElement) {
-                    loader.parentElement.removeChild(loader);
-                }
-            }, 600);
-        }, wait);
-    };
-    const frame = loader.querySelector('iframe');
-    if (frame) {
-        frame.addEventListener('load', hideLoader, { once: true });
-    }
-    setTimeout(hideLoader, 3200);
 });
 function performSearch(searchTerm) {
     const allContainer = document.getElementById('allLessonsGrid');
@@ -113,6 +84,25 @@ function performSearch(searchTerm) {
         }
     });
 
+    const existingEmpty = allContainer.querySelector('.search-empty');
+    if (existingEmpty)
+        existingEmpty.remove();
+    if (searchTermLower && visibleCount === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'search-empty';
+        empty.innerHTML = '<i class="fas fa-ghost" aria-hidden="true"></i><h3>No games found</h3>' +
+            '<p>Nothing matched “' + escapeHtml(searchTerm) + '”. Try a shorter title or browse the full library.</p>' +
+            '<button type="button">Clear search</button>';
+        empty.querySelector('button').addEventListener('click', function () {
+            const input = document.getElementById('searchInput');
+            if (input) {
+                input.value = '';
+                input.dispatchEvent(new Event('input', { bubbles: true }));
+                input.focus();
+            }
+        });
+        allContainer.appendChild(empty);
+    }
     const searchStats = document.getElementById('searchStats');
     if (searchStats) {
         const totalCount = searchableCards.length;
@@ -414,7 +404,7 @@ function createGameCard(game, isRandom = false) {
     card.innerHTML = `
     <div class="card-inner">
       <div class="card-cover">
-        <img src="${escapeHtml(game.image)}" alt="${escapeHtml(displayTitle)} cover art" class="lesson-image ${isRandom ? 'flash-image' : ''}" loading="${isRandom ? 'eager' : 'lazy'}" decoding="async">
+        <img src="${escapeHtml(game.image)}" alt="${escapeHtml(displayTitle)} cover art" class="lesson-image ${isRandom ? 'flash-image' : ''}" width="640" height="360" loading="${isRandom ? 'eager' : 'lazy'}" decoding="async"${isRandom ? ' fetchpriority="high"' : ''}>
         ${isRandom ? '<span class="card-badge card-badge-random">Random</span>' : (game.tag ? `<span class="card-badge">${escapeHtml(game.tag)}</span>` : '')}
         <div class="card-play" aria-hidden="true"><i class="fas fa-play"></i></div>
       </div>
@@ -448,7 +438,7 @@ function startHomeCarouselAutoplay(carousel) {
     if (!carousel)
         return;
     const track = carousel.querySelector('.home-carousel-track');
-    if (!track)
+    if (!track || prefersReducedMotion)
         return;
     const cardCount = Math.max(1, Math.floor(track.querySelectorAll('.home-carousel-card').length / 2));
     const duration = Math.max(18, cardCount * 3.2);
@@ -641,13 +631,19 @@ function updateSearchStats() {
     }
 }
 function initCursorHover() {
-    const interactive = document.querySelectorAll('.lesson-card');
     const cursor = document.getElementById('custom-cursor');
-    if (!cursor)
+    if (!cursor || document.documentElement.dataset.cardCursorBound === '1')
         return;
-    interactive.forEach(el => {
-        el.addEventListener('mouseenter', () => cursor.classList.add('hover'));
-        el.addEventListener('mouseleave', () => cursor.classList.remove('hover'));
+    document.documentElement.dataset.cardCursorBound = '1';
+    document.addEventListener('mouseover', function (event) {
+        const card = event.target instanceof Element ? event.target.closest('.lesson-card') : null;
+        if (card)
+            cursor.classList.add('hover');
+    });
+    document.addEventListener('mouseout', function (event) {
+        const card = event.target instanceof Element ? event.target.closest('.lesson-card') : null;
+        if (card)
+            cursor.classList.remove('hover');
     });
 }
 window.pageLoadTime = Date.now();
@@ -1390,6 +1386,7 @@ function switchTab(tab) {
     [lessonsTab, musicTab, updatesTab, settingsTab].forEach(function (navItem) {
         if (navItem) {
             navItem.classList.remove('active');
+            navItem.removeAttribute('aria-current');
         }
     });
     [homeSection, allLessonsSection, settingsSection, musicSection, updatesSection].forEach(function (section) {
@@ -1407,24 +1404,32 @@ function switchTab(tab) {
     document.body.dataset.activeTab = activeTab;
 
     if (activeTab === 'lessons') {
-        if (lessonsTab)
+        if (lessonsTab) {
             lessonsTab.classList.add('active');
+            lessonsTab.setAttribute('aria-current', 'page');
+        }
         showSection(homeSection);
         showSection(allLessonsSection);
     }
     else if (activeTab === 'music') {
-        if (musicTab)
+        if (musicTab) {
             musicTab.classList.add('active');
+            musicTab.setAttribute('aria-current', 'page');
+        }
         showSection(musicSection);
     }
     else if (activeTab === 'updates') {
-        if (updatesTab)
+        if (updatesTab) {
             updatesTab.classList.add('active');
+            updatesTab.setAttribute('aria-current', 'page');
+        }
         showSection(updatesSection);
     }
     else {
-        if (settingsTab)
+        if (settingsTab) {
             settingsTab.classList.add('active');
+            settingsTab.setAttribute('aria-current', 'page');
+        }
         showSection(settingsSection);
     }
 
@@ -1614,7 +1619,16 @@ document.addEventListener('DOMContentLoaded', function () {
     buildHomePopularCarousel();
     initHomeLogoTilt();
     setupSearchClear();
+    const initialQuery = new URLSearchParams(location.search).get('q');
+    if (initialQuery) {
+        const input = document.getElementById('searchInput');
+        if (input)
+            input.value = initialQuery;
+        performSearch(initialQuery);
+    }
     switchTab('lessons');
+    if (typeof window.__hideStartupLoader === 'function')
+        window.__hideStartupLoader();
 });
 document.addEventListener('DOMContentLoaded', function () {
     const scrollbar = document.getElementById('custom-scrollbar');
@@ -1891,7 +1905,7 @@ let flashImages = [];
 let lastRandomIndex = -1;
 function startImageFlash() {
     flashImages = games.map(game => game.image).filter(img => img);
-    if (flashImages.length === 0)
+    if (flashImages.length === 0 || prefersReducedMotion)
         return;
     if (flashInterval)
         clearInterval(flashInterval);
@@ -1945,10 +1959,6 @@ if (searchInput) {
         });
     }
 }
-window.addEventListener('beforeunload', (event) => {
-    event.preventDefault();
-    event.returnValue = '';
-});
 let cursorEnabled = true;
 let cursorStyle = 'ring';
 const themeColors = {

@@ -6,33 +6,33 @@
   <meta charset="UTF-8">
   <meta content="width=device-width, initial-scale=1.0" name="viewport">
   <title>Home - Classroom</title>
+  <link rel="canonical" href="https://rcms.cleazium.workers.dev/">
+  <meta name="robots" content="index, follow, max-image-preview:large">
+  <link rel="preload" as="image" href="images/logo.png?v=4" fetchpriority="high">
   <link href="cuh.png" id="siteFavicon" rel="icon" type="image/x-icon">
   <link href="cuh.png" rel="shortcut icon">
   <link href="cuh.png" rel="apple-touch-icon">
   <meta content="#7c8cff" name="theme-color">
   <meta content="Cool Tutoring Hub" property="og:site_name">
-  <meta content="Cool Tutoring Hub | 400+ Unblocked Games & Lessons" property="og:title">
+  <meta content="Cool Tutoring Hub | 652 Unblocked Games &amp; Lessons" property="og:title">
   <meta
-    content="Access hundreds of unblocked games, educational tools, and math lessons. The ultimate hub for students!"
+    content="Play 652 free unblocked games, educational tools, and brain breaks in one fast hub made for students."
     property="og:description">
   <meta content="website" property="og:type">
-  <meta
-    content="cuh.png"
-    property="og:image">
-  <meta content="1200" property="og:image:width">
-  <meta content="630" property="og:image:height">
+  <meta content="https://rcms.cleazium.workers.dev/" property="og:url">
+  <meta content="https://rcms.cleazium.workers.dev/cuh.png" property="og:image">
   <meta content="Cool Tutoring Hub - Unblocked Games & Educational Resources" property="og:image:alt">
   <meta content="en_US" property="og:locale">
   <meta content="summary_large_image" name="twitter:card">
-  <meta content="Cool Tutoring Hub | 400+ Unblocked Games" name="twitter:title">
-  <meta content="The best collection of unblocked games and educational resources for students."
+  <meta content="Cool Tutoring Hub | 652 Unblocked Games" name="twitter:title">
+  <meta content="Play 652 free unblocked games and educational brain breaks in one fast hub for students."
     name="twitter:description">
   <meta
-    content="cuh.png"
+    content="https://rcms.cleazium.workers.dev/cuh.png"
     name="twitter:image">
   <meta content="Cool Tutoring Hub Banner" name="twitter:image:alt">
   <meta
-    content="Cool Tutoring Hub - Access hundreds of unblocked games, math lessons, and educational resources. Perfect for students looking for fun learning tools."
+    content="Cool Tutoring Hub - Play 652 free unblocked games, use educational tools, and take a brain break. A fast, free game library built for students."
     name="description">
   <meta content="unblocked games, tutoring, math help, educational games, student resources, online learning"
     name="keywords">
@@ -73,6 +73,30 @@
   <div class="site-startup-loader" id="siteStartupLoader" aria-hidden="false">
     <iframe class="site-startup-loader-frame" src="loader.html" title="Loading Cool Tutoring"></iframe>
   </div>
+  <script>
+    (function () {
+      var loader = document.getElementById('siteStartupLoader');
+      if (!loader) return;
+      var startedAt = Date.now();
+      var minimumVisibleMs = 500;
+      var loaderHidden = false;
+      function hideLoader() {
+        if (loaderHidden) return;
+        loaderHidden = true;
+        var wait = Math.max(0, minimumVisibleMs - (Date.now() - startedAt));
+        setTimeout(function () {
+          loader.classList.add('is-hidden');
+          loader.setAttribute('aria-hidden', 'true');
+          setTimeout(function () {
+            if (loader.parentElement) loader.parentElement.removeChild(loader);
+          }, 500);
+        }, wait);
+      }
+      window.__hideStartupLoader = hideLoader;
+      setTimeout(hideLoader, 2600);
+    })();
+  </script>
+  <a class="skip-link" href="#all-lessons">Skip to games</a>
   <div id="custom-scrollbar">
     <div id="custom-scrollbar-track">
       <div id="custom-scrollbar-thumb"></div>
@@ -91,19 +115,16 @@
       <div class="top-bar">
         <div class="logo-container" onclick="switchTab('lessons')" role="button" tabindex="0"
           onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('lessons');}">
-          <img alt="Cool Tutoring Hub" class="logo"
-            src="images/logo.png?v=4">
+          <img alt="Cool Tutoring Hub" class="logo" width="1212" height="485"
+            src="images/logo.png?v=4" fetchpriority="high" decoding="async">
         </div>
         <div class="top-nav-actions">
           <div class="nav-tabs">
-            <div class="nav-tab active" id="lessonsTab" onclick="switchTab('lessons')">GAMES</div>
-            <div class="nav-tab" id="musicTab" onclick="switchTab('music')" role="button" tabindex="0"
-              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('music');}">MUSIC</div>
-            <div class="nav-tab" id="updatesTab" onclick="switchTab('updates')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('updates');}">UPDATES</div>
-            <div class="nav-tab" id="settingsTab" onclick="switchTab('settings')">SETTINGS</div>
-            <div class="nav-tab" id="browserTab" onclick="openBrowserOverlay()" role="button" tabindex="0"
-              aria-expanded="false"
-              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBrowserOverlay();}">BROWSER</div>
+            <button class="nav-tab active" id="lessonsTab" type="button" onclick="switchTab('lessons')" aria-current="page">GAMES</button>
+            <button class="nav-tab" id="musicTab" type="button" onclick="switchTab('music')">MUSIC</button>
+            <button class="nav-tab" id="updatesTab" type="button" onclick="switchTab('updates')">UPDATES</button>
+            <button class="nav-tab" id="settingsTab" type="button" onclick="switchTab('settings')">SETTINGS</button>
+            <button class="nav-tab" id="browserTab" type="button" onclick="openBrowserOverlay()" aria-expanded="false">BROWSER</button>
 
 
 
@@ -129,13 +150,13 @@
       <div class="home-hero">
         <div class="home-hero-copy">
           <div class="home-logo-wrap" id="homeLogoWrap">
-            <img alt="Cool Tutoring Hub" class="home-logo"
-              src="images/logo.png?v=4">
+            <img alt="Cool Tutoring Hub" class="home-logo" width="1212" height="485"
+              src="images/logo.png?v=4" fetchpriority="high" decoding="async">
             <div class="home-logo-shine" id="homeLogoShine"></div>
           </div>
           <p class="home-subtitle"><span id="typing-quote"></span><span class="cursor">|</span></p>
           <div class="hero-stats">
-            <div class="hero-stat"><b data-game-count>712</b><span>games</span></div>
+            <div class="hero-stat"><b data-game-count>652</b><span>games</span></div>
           </div>
           <div class="hero-cta">
             <button class="btn-primary" type="button" onclick="document.getElementById('all-lessons').scrollIntoView({behavior:'smooth'})"><i class="fas fa-gamepad"></i> Browse games</button>
@@ -202,15 +223,16 @@
           <span class="section-kicker">The library</span>
           <h2>ALL GAMES</h2>
         </div>
-        <div class="library-count"><b data-game-count>712</b> games · always free</div>
+        <div class="library-count"><b data-game-count>652</b> games · always free</div>
       </div>
-      <div class="search-container">
-        <input class="search-box" id="searchInput" placeholder="Search 652 games..." type="text" autocomplete="off">
+      <div class="search-container" role="search">
+        <label class="visually-hidden" for="searchInput">Search games</label>
+        <input class="search-box" id="searchInput" placeholder="Search 652 games..." type="text" autocomplete="off" aria-describedby="searchStats">
         <div class="search-icon"><i class="fas fa-search"></i></div>
         <button class="search-clear" id="searchClear" type="button" aria-label="Clear search" hidden><i class="fas fa-xmark"></i></button>
       </div>
       <div class="library-toolbar">
-        <div class="search-stats" id="searchStats"></div>
+        <div class="search-stats" id="searchStats" role="status" aria-live="polite"></div>
         <div class="sorter-section">
           <span class="sort-label">Sort</span>
           <div class="sorter-wrapper">
