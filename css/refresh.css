@@ -1444,9 +1444,12 @@ header {
   }
 
   .home-logo-shine,
-  #custom-cursor,
   #custom-scrollbar {
     display: none !important;
+  }
+
+  #custom-cursor {
+    transition: none !important;
   }
 
   #allLessonsGrid .lesson-card {

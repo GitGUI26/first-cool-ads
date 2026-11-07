@@ -1365,6 +1365,12 @@ function getFullscreenElementCompat() {
         null;
 }
 function ensureNativeCursorState() {
+    if (!getFullscreenElementCompat()) {
+        const savedStyle = localStorage.getItem('cursorStyle') ||
+            (localStorage.getItem('cursorEnabled') === 'false' ? 'default' : 'ring');
+        setCursorStyle(savedStyle);
+        return;
+    }
     const cursor = document.getElementById('custom-cursor');
     if (cursor) {
         cursor.style.display = 'none';
@@ -1735,8 +1741,8 @@ function switchTab(tab) {
         resetCursorTimeout();
     });
     function animate() {
-        cx = lerp(cx, mx, 0.25);
-        cy = lerp(cy, my, 0.25);
+        cx = prefersReducedMotion ? mx : lerp(cx, mx, 0.25);
+        cy = prefersReducedMotion ? my : lerp(cy, my, 0.25);
         c.style.left = cx + 'px';
         c.style.top = cy + 'px';
         requestAnimationFrame(animate);
@@ -2433,6 +2439,7 @@ function setCursorStyle(style) {
     if (cursorEnabled) {
         if (cursor) {
             cursor.style.display = 'block';
+            cursor.style.opacity = '1';
             updateCursorColors();
         }
         document.documentElement.style.cursor = 'none';
