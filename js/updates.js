@@ -6,6 +6,17 @@
     var updates = [
         {
             date: '2026-11-07',
+            title: 'Faster, shareable, and personal',
+            items: [
+                'Startup is much lighter: the classroom loader is now about 10 KB instead of 1 MB, and card art loads as optimized WebP thumbnails.',
+                'Every game has a shareable link. Use the link button in the game toolbar, or copy the address bar after opening a game.',
+                'Press the heart on any game card to save favorites, then choose Favorites first in the sort menu.',
+                'The library now has a labeled search box, a no-results state, visible keyboard focus, and reduced-motion support.',
+                'Added a social preview image, structured data for search engines, robots.txt, and a sitemap.'
+            ]
+        },
+        {
+            date: '2026-11-07',
             title: 'Email is optional, with verified upgrades',
             items: [
                 'You can create an account without an email; it stays in this browser until you add one.',

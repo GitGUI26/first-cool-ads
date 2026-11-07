@@ -2,6 +2,15 @@
 // Legacy global browser script migrated to TypeScript.
 let typedKeys = '';
 const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+let favorites = [];
+try {
+    const storedFavorites = JSON.parse(localStorage.getItem('gameFavorites'));
+    if (Array.isArray(storedFavorites))
+        favorites = storedFavorites.filter(title => typeof title === 'string');
+}
+catch (error) {
+    favorites = [];
+}
 const secretCode = 'epstein';
 let secretUnlocked = false;
 document.addEventListener('keydown', function (e) {
@@ -368,6 +377,76 @@ function getRandomGame() {
     const pool = games.filter(game => !game.secret);
     return pool[Math.floor(Math.random() * pool.length)] || games[Math.floor(Math.random() * games.length)];
 }
+function baseGameSlug(title) {
+    return String(title || '').toLowerCase().trim()
+        .replace(/[\u2018\u2019']/g, '')
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '');
+}
+function gameSlug(title) {
+    const base = baseGameSlug(title);
+    const matches = games.filter(game => !game.secret && baseGameSlug(game.title) === base);
+    if (matches.length < 2)
+        return base;
+    const position = matches.findIndex(game => game.title === title);
+    return position === -1 ? base : base + '-' + (position + 1);
+}
+function findGameBySlug(slug) {
+    if (!slug)
+        return null;
+    return games.find(game => !game.secret && gameSlug(game.title) === slug) || null;
+}
+function syncGameUrl(title, options = {}) {
+    if (options.syncUrl === false)
+        return;
+    const game = games.find(item => item.title === title);
+    if (game && game.secret)
+        return;
+    const slug = gameSlug(title);
+    if (!slug)
+        return;
+    const next = new URL(location.href);
+    if (next.searchParams.get('game') === slug)
+        return;
+    next.searchParams.set('game', slug);
+    next.hash = '';
+    try {
+        history[options.replaceUrl ? 'replaceState' : 'pushState']({ game: slug }, '', next);
+    }
+    catch (error) {
+    }
+}
+function clearGameUrl() {
+    const next = new URL(location.href);
+    if (!next.searchParams.has('game'))
+        return;
+    next.searchParams.delete('game');
+    next.hash = '';
+    try {
+        history.pushState({}, '', next);
+    }
+    catch (error) {
+    }
+}
+function toggleFavorite(title, button) {
+    const index = favorites.indexOf(title);
+    const isNowFavorite = index === -1;
+    if (isNowFavorite)
+        favorites.push(title);
+    else
+        favorites.splice(index, 1);
+    try {
+        localStorage.setItem('gameFavorites', JSON.stringify(favorites));
+    }
+    catch (error) {
+    }
+    if (button) {
+        button.classList.toggle('is-favorite', isNowFavorite);
+        button.setAttribute('aria-pressed', isNowFavorite ? 'true' : 'false');
+        button.setAttribute('aria-label', (isNowFavorite ? 'Remove ' : 'Add ') + title + (isNowFavorite ? ' from' : ' to') + ' favorites');
+        button.title = isNowFavorite ? 'Remove from favorites' : 'Add to favorites';
+    }
+}
 function openRandomGame() {
     const pick = getRandomGame();
     if (pick) {
@@ -387,22 +466,26 @@ function setSiteLogos(src) {
     syncLogoThemeTone();
 }
 function createGameCard(game, isRandom = false) {
-    const card = document.createElement('div');
+    const card = document.createElement(isRandom ? 'div' : 'article');
     card.className = 'lesson-card' + (isRandom ? ' lesson-card-random' : '');
-    card.tabIndex = 0;
-    card.setAttribute('role', 'button');
     if (isRandom) {
-        card.setAttribute('data-random-game', 'true');
+        card.tabIndex = 0;
+        card.setAttribute('role', 'button');
         card.setAttribute('aria-label', 'Play a random game');
         card.title = 'Let fate pick your next game';
     }
     else {
-        card.setAttribute('aria-label', 'Play ' + game.title);
+        card.setAttribute('data-game-title', game.title);
+        card.setAttribute('data-game-url', game.url);
         card.title = game.title + (game.desc ? ' — ' + game.desc : '');
     }
     const displayTitle = isRandom ? 'Random' : game.title;
+    const innerTag = isRandom ? 'div' : 'a';
+    const linkAttributes = isRandom ? '' : ` href="${escapeHtml('?game=' + encodeURIComponent(gameSlug(game.title)))}"`;
+    const isFavorite = !isRandom && favorites.indexOf(game.title) !== -1;
+    const favoriteLabel = (isFavorite ? 'Remove ' : 'Add ') + game.title + (isFavorite ? ' from' : ' to') + ' favorites';
     card.innerHTML = `
-    <div class="card-inner">
+    <${innerTag} class="card-inner"${linkAttributes}>
       <div class="card-cover">
         <img src="${escapeHtml(game.image)}" alt="${escapeHtml(displayTitle)} cover art" class="lesson-image ${isRandom ? 'flash-image' : ''}" width="640" height="360" loading="${isRandom ? 'eager' : 'lazy'}" decoding="async"${isRandom ? ' fetchpriority="high"' : ''}>
         ${isRandom ? '<span class="card-badge card-badge-random">Random</span>' : (game.tag ? `<span class="card-badge">${escapeHtml(game.tag)}</span>` : '')}
@@ -412,7 +495,8 @@ function createGameCard(game, isRandom = false) {
         <h3 class="lesson-title">${escapeHtml(displayTitle)}</h3>
         <i class="fas fa-arrow-right card-arrow" aria-hidden="true"></i>
       </div>
-    </div>
+    </${innerTag}>
+    ${isRandom ? '' : `<button class="card-favorite${isFavorite ? ' is-favorite' : ''}" type="button" data-game-title="${escapeHtml(game.title)}" aria-pressed="${isFavorite ? 'true' : 'false'}" aria-label="${escapeHtml(favoriteLabel)}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}"><i class="fas fa-heart" aria-hidden="true"></i></button>`}
   `;
     const launch = function () {
         if (isRandom) {
@@ -425,13 +509,32 @@ function createGameCard(game, isRandom = false) {
             openLesson(game.title, game.url);
         }
     };
-    card.onclick = launch;
-    card.addEventListener('keydown', function (event) {
-        if (event.key === 'Enter' || event.key === ' ') {
+    if (isRandom) {
+        card.onclick = launch;
+        card.addEventListener('keydown', function (event) {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                launch();
+            }
+        });
+    }
+    else {
+        const link = card.querySelector('.card-inner');
+        link.addEventListener('click', function (event) {
+            if (event.defaultPrevented || event.button !== 0 || event.metaKey || event.ctrlKey || event.shiftKey || event.altKey)
+                return;
             event.preventDefault();
             launch();
+        });
+        const favoriteButton = card.querySelector('.card-favorite');
+        if (favoriteButton) {
+            favoriteButton.addEventListener('click', function (event) {
+                event.preventDefault();
+                event.stopPropagation();
+                toggleFavorite(game.title, favoriteButton);
+            });
         }
-    });
+    }
     return card;
 }
 function startHomeCarouselAutoplay(carousel) {
@@ -1276,6 +1379,11 @@ function sortGames(method) {
         case 'reverse':
             sortedGames.sort((a, b) => b.title.localeCompare(a.title));
             break;
+        case 'favorites': {
+            const favoriteSet = new Set(favorites.map(title => String(title).toLowerCase()));
+            sortedGames.sort((a, b) => (favoriteSet.has(b.title.toLowerCase()) - favoriteSet.has(a.title.toLowerCase())) || a.title.localeCompare(b.title));
+            break;
+        }
         case 'random':
             for (let i = sortedGames.length - 1; i > 0; i--) {
                 const j = Math.floor(Math.random() * (i + 1));
@@ -1627,6 +1735,12 @@ document.addEventListener('DOMContentLoaded', function () {
         performSearch(initialQuery);
     }
     switchTab('lessons');
+    const deepLinkSlug = new URLSearchParams(location.search).get('game');
+    if (deepLinkSlug) {
+        const deepLinkGame = findGameBySlug(deepLinkSlug);
+        if (deepLinkGame)
+            openLesson(deepLinkGame.title, deepLinkGame.url, { replaceUrl: true });
+    }
     if (typeof window.__hideStartupLoader === 'function')
         window.__hideStartupLoader();
 });
@@ -3208,7 +3322,7 @@ window.addEventListener('message', function (event) {
     tab.lastProgressJson = serialized;
     store.setGameProgress(message.gameId, message.data);
 });
-function openLesson(t, u) {
+function openLesson(t, u, options = {}) {
     if (typeof gtag !== 'undefined') {
         gtag('event', 'game_launch', {
             'event_category': 'game_interaction',
@@ -3229,18 +3343,65 @@ function openLesson(t, u) {
     if (activeTab && activeTab.title === t && (activeTab.url || '').trim() === normalizedUrl) {
         updateGameSessionTitle(activeTab.title);
         setGameOverlayVisible(true);
+        syncGameUrl(t, options);
         return;
     }
     const tab = ensureActiveGameSession(t, normalizedUrl);
     if (!tab)
         return;
     setGameOverlayVisible(true);
+    syncGameUrl(t, options);
     loadGameIntoTab(tab);
 }
-function exitGameBrowser() {
+function exitGameBrowser(options = {}) {
     requestGameProgress(getActiveGameTab());
     setGameOverlayVisible(false, { destroyOnHide: true });
+    if (!options.skipUrl)
+        clearGameUrl();
 }
+function copyGameLink() {
+    const active = getActiveGameTab();
+    if (!active)
+        return;
+    const next = new URL(location.href);
+    next.searchParams.set('game', gameSlug(active.title));
+    next.hash = '';
+    const link = next.href;
+    const button = document.querySelector('[data-copy-game-link]');
+    const showCopied = function () {
+        if (!button)
+            return;
+        button.classList.add('is-copied');
+        button.innerHTML = '<i class="fas fa-check" aria-hidden="true"></i>';
+        button.title = 'Link copied';
+        setTimeout(function () {
+            button.classList.remove('is-copied');
+            button.innerHTML = '<i class="fas fa-link" aria-hidden="true"></i>';
+            button.title = 'Copy game link';
+        }, 1600);
+    };
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(showCopied).catch(function () {
+            window.prompt('Copy this game link:', link);
+        });
+    }
+    else {
+        window.prompt('Copy this game link:', link);
+    }
+}
+window.copyGameLink = copyGameLink;
+window.addEventListener('popstate', function () {
+    const slug = new URLSearchParams(location.search).get('game');
+    const active = getActiveGameTab();
+    if (slug) {
+        const game = findGameBySlug(slug);
+        if (game && (!active || active.title !== game.title))
+            openLesson(game.title, game.url, { syncUrl: false });
+    }
+    else if (active) {
+        exitGameBrowser({ skipUrl: true });
+    }
+});
 document.addEventListener('visibilitychange', () => {
     const activeTab = getActiveGameTab();
     if (!activeTab)
@@ -4137,7 +4298,6 @@ function refreshGame() {
     }
     loadGameIntoTab(activeTab);
 }
-let favorites = JSON.parse(localStorage.getItem('gameFavorites')) || [];
 function updateGameDisplay(games) {
     const container = document.getElementById('allLessonsGrid');
     if (!container)
