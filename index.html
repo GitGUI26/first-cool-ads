@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=7" rel="stylesheet">
-<link href="css/refresh.css?v=7" rel="stylesheet">
+<link href="css/refresh.css?v=8" rel="stylesheet">
 <link href="css/browser.css?v=1" rel="stylesheet">
 <link href="css/account.css?v=4" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
@@ -401,6 +401,7 @@
               <option value="newest">Newest</option>
               <option value="reverse">Z – A</option>
               <option value="favorites">Favorites first</option>
+              <option value="recent">Recently played</option>
               <option value="random">Random</option>
             </select>
             <div class="custom-arrow">▼</div>
@@ -603,6 +604,8 @@
               class="fas fa-download"></i></button>
           <button class="btn" data-copy-game-link onclick="copyGameLink()" title="Copy game link" aria-label="Copy game link"><i
               class="fas fa-link"></i></button>
+          <button class="btn" id="gameFavoriteBtn" onclick="toggleCurrentGameFavorite()" title="Add to favorites" aria-label="Add to favorites" aria-pressed="false"><i
+              class="fas fa-heart"></i></button>
           <button class="btn" onclick="toggleFullscreen()" title="Fullscreen Game"><i
               class="fas fa-expand"></i></button>
           <button class="btn" onclick="exitGameBrowser()" title="Exit Browser"><i class="fas fa-xmark"></i></button>
@@ -800,8 +803,8 @@
   <script src="js/account-store.js?v=7"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=12"></script>
-  <script src="js/main.js?v=22"></script>
-  <script src="js/updates.js?v=6"></script>
+  <script src="js/main.js?v=23"></script>
+  <script src="js/updates.js?v=7"></script>
   <script src="js/account.js?v=7"></script>
   <script src="js/music.js?v=2"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">

@@ -452,6 +452,50 @@ function clearGameUrl() {
     catch (error) {
     }
 }
+function recordRecentGame(title, url) {
+    if (!title)
+        return;
+    try {
+        const stored = JSON.parse(localStorage.getItem('recentGames'));
+        const recent = Array.isArray(stored)
+            ? stored.filter(entry => entry && entry.title !== title)
+            : [];
+        recent.unshift({ title: title, url: url || '' });
+        localStorage.setItem('recentGames', JSON.stringify(recent.slice(0, 12)));
+    }
+    catch (error) {
+    }
+}
+function getRecentGames() {
+    try {
+        const stored = JSON.parse(localStorage.getItem('recentGames'));
+        return Array.isArray(stored) ? stored : [];
+    }
+    catch (error) {
+        return [];
+    }
+}
+function updateFavoriteHearts(title, isFavorite) {
+    document.querySelectorAll('.card-favorite').forEach(function (heart) {
+        if (heart.dataset.gameTitle !== title)
+            return;
+        heart.classList.toggle('is-favorite', isFavorite);
+        heart.setAttribute('aria-pressed', isFavorite ? 'true' : 'false');
+        heart.setAttribute('aria-label', (isFavorite ? 'Remove ' : 'Add ') + title + (isFavorite ? ' from' : ' to') + ' favorites');
+        heart.title = isFavorite ? 'Remove from favorites' : 'Add to favorites';
+    });
+}
+function syncGameFavoriteButton() {
+    const button = document.getElementById('gameFavoriteBtn');
+    if (!button)
+        return;
+    const active = getActiveGameTab();
+    const isFavorite = Boolean(active && favorites.indexOf(active.title) !== -1);
+    button.classList.toggle('is-favorite', isFavorite);
+    button.setAttribute('aria-pressed', isFavorite ? 'true' : 'false');
+    button.setAttribute('aria-label', isFavorite ? 'Remove from favorites' : 'Add to favorites');
+    button.title = isFavorite ? 'Remove from favorites' : 'Add to favorites';
+}
 function toggleFavorite(title, button) {
     const index = favorites.indexOf(title);
     const isNowFavorite = index === -1;
@@ -464,12 +508,14 @@ function toggleFavorite(title, button) {
     }
     catch (error) {
     }
-    if (button) {
-        button.classList.toggle('is-favorite', isNowFavorite);
-        button.setAttribute('aria-pressed', isNowFavorite ? 'true' : 'false');
-        button.setAttribute('aria-label', (isNowFavorite ? 'Remove ' : 'Add ') + title + (isNowFavorite ? ' from' : ' to') + ' favorites');
-        button.title = isNowFavorite ? 'Remove from favorites' : 'Add to favorites';
-    }
+    updateFavoriteHearts(title, isNowFavorite);
+    syncGameFavoriteButton();
+}
+function toggleCurrentGameFavorite() {
+    const active = getActiveGameTab();
+    if (!active)
+        return;
+    toggleFavorite(active.title);
 }
 function openRandomGame() {
     const pick = getRandomGame();
@@ -1401,6 +1447,19 @@ function sortGames(method) {
         case 'favorites': {
             const favoriteSet = new Set(favorites.map(title => String(title).toLowerCase()));
             sortedGames.sort((a, b) => (favoriteSet.has(b.title.toLowerCase()) - favoriteSet.has(a.title.toLowerCase())) || a.title.localeCompare(b.title));
+            break;
+        }
+        case 'recent': {
+            const order = new Map();
+            getRecentGames().forEach(entry => {
+                if (entry && entry.title && !order.has(entry.title))
+                    order.set(entry.title, order.size);
+            });
+            sortedGames.sort((a, b) => {
+                const aIndex = order.has(a.title) ? order.get(a.title) : Number.MAX_SAFE_INTEGER;
+                const bIndex = order.has(b.title) ? order.get(b.title) : Number.MAX_SAFE_INTEGER;
+                return aIndex - bIndex || a.title.localeCompare(b.title);
+            });
             break;
         }
         case 'random':
@@ -3385,11 +3444,13 @@ function openLesson(t, u, options = {}) {
         });
     }
     const normalizedUrl = (u || '').trim();
+    recordRecentGame(t, normalizedUrl);
     const activeTab = getActiveGameTab();
     if (activeTab && activeTab.title === t && (activeTab.url || '').trim() === normalizedUrl) {
         updateGameSessionTitle(activeTab.title);
         setGameOverlayVisible(true);
         syncGameUrl(t, options);
+        syncGameFavoriteButton();
         return;
     }
     const tab = ensureActiveGameSession(t, normalizedUrl);
@@ -3397,6 +3458,7 @@ function openLesson(t, u, options = {}) {
         return;
     setGameOverlayVisible(true);
     syncGameUrl(t, options);
+    syncGameFavoriteButton();
     loadGameIntoTab(tab);
 }
 function exitGameBrowser(options = {}) {

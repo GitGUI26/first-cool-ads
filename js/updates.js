@@ -8,6 +8,8 @@
             date: '2026-11-07',
             title: 'Faster, shareable, and personal',
             items: [
+                'The game toolbar now has a heart button, and favorites stay in sync between the toolbar and the card grid.',
+                'A new Recently played sort puts the games you opened last at the top of the library.',
                 'Games start loading immediately instead of waiting through a 1.5-second loading screen; the first frame now appears in about a quarter of a second.',
                 'The site logo now loads as a 42 KB WebP instead of an 87 KB PNG, and the library renders with about 2,000 fewer DOM nodes.',
                 'Startup is much lighter: the classroom loader is now about 10 KB instead of 1 MB, and card art loads as optimized WebP thumbnails.',
