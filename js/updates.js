@@ -6,6 +6,17 @@
     var updates = [
         {
             date: '2026-11-07',
+            title: 'Email is optional, with verified upgrades',
+            items: [
+                'You can create an account without an email; it stays in this browser until you add one.',
+                'Adding an email later sends a verification code and upgrades the browser account to online sync.',
+                'Accounts created with email also finish with a verification code from the inbox.',
+                'Online usernames and emails are unique, and browser accounts are checked in this browser before they are created.',
+                'Existing duplicate usernames are preserved so current accounts keep working.'
+            ]
+        },
+        {
+            date: '2026-11-07',
             title: 'Online accounts now sync across devices',
             items: [
                 'Accounts are now backed by Supabase, so signing in on another device restores the same account.',

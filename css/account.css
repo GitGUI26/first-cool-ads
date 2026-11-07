@@ -462,6 +462,29 @@ body.account-open textarea {
   line-height: 1.55;
 }
 
+.account-email-upgrade {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(var(--primary-accent-rgb), 0.14);
+}
+
+.account-email-upgrade h5 {
+  margin: 0 0 4px;
+  color: var(--light-text);
+  font-size: 0.82rem;
+}
+
+.account-email-upgrade > p {
+  margin: 0 0 12px;
+  color: var(--gray-text);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.account-email-upgrade .account-form {
+  max-width: 100%;
+}
+
 .account-error,
 .account-inline-message {
   margin: 0;

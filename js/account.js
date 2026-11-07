@@ -18,6 +18,58 @@
   var recoveryEmail = '';
   var resendTimer = 0;
   var resendUntil = 0;
+  var pendingVerification = null;
+  var verifyResendTimer = 0;
+  var verifyResendUntil = 0;
+  var VERIFY_STORAGE_KEY = 'cuh_pending_verification_v1';
+
+  function isLocalUser(user) {
+    return !!user && String(user.id || '').indexOf('local-') === 0;
+  }
+
+  function readPendingVerification() {
+    try {
+      var data = JSON.parse(sessionStorage.getItem(VERIFY_STORAGE_KEY) || 'null');
+      if (!data || !data.email || !data.mode) return null;
+      if (data.at && Date.now() - data.at > 3600000) return null;
+      return data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function writePendingVerification(value) {
+    pendingVerification = Object.assign({}, value, { at: Date.now() });
+    try { sessionStorage.setItem(VERIFY_STORAGE_KEY, JSON.stringify(pendingVerification)); } catch (error) {}
+  }
+
+  function clearPendingVerification() {
+    pendingVerification = null;
+    if (verifyResendTimer) {
+      clearInterval(verifyResendTimer);
+      verifyResendTimer = 0;
+    }
+    verifyResendUntil = 0;
+    try { sessionStorage.removeItem(VERIFY_STORAGE_KEY); } catch (error) {}
+  }
+
+  function verificationStillApplies() {
+    if (!pendingVerification) return false;
+    var user = currentUser();
+    if (pendingVerification.mode === 'upgrade') {
+      if (!user || !isLocalUser(user) || !pendingVerification.upgrade ||
+        String(user.id) !== String(pendingVerification.upgrade.localId)) {
+        clearPendingVerification();
+        return false;
+      }
+    } else if (user) {
+      clearPendingVerification();
+      return false;
+    }
+    return true;
+  }
+
+  pendingVerification = readPendingVerification();
 
   function setHidden(element, hidden) {
     if (!element) return;
@@ -93,30 +145,33 @@
 
   function setAuthMode(mode) {
     activeAuthMode = mode;
+    var verifying = mode === 'verify';
     var codeStep = mode === 'code';
     var resetting = mode === 'password';
     var onRecovery = mode === 'recovery' || codeStep || resetting;
     document.querySelectorAll('[data-auth-mode]').forEach(function (button) {
       button.classList.toggle('is-active', button.getAttribute('data-auth-mode') === mode);
     });
+    setHidden($('accountAuthTabs'), verifying);
     setHidden($('signinForm'), mode !== 'signin');
     setHidden($('signupForm'), mode !== 'signup');
     setHidden($('recoveryForm'), !onRecovery);
+    setHidden($('verifyForm'), !verifying);
 
     var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
     var lede = $('accountLede');
     if (lede) {
-      lede.hidden = onRecovery;
+      lede.hidden = onRecovery || verifying;
       lede.textContent = configured
         ? (mode === 'signup'
-          ? 'Create an account once and use it on every address this site moves to.'
-          : 'Sign in to keep your games, browsing history, and preferences together.')
+          ? 'Add an email for online sync, or leave it blank to keep this account in this browser.'
+          : 'Sign in with your email for an online account, or your username for a browser-only account.')
         : (mode === 'signup'
           ? 'Create an account saved in this browser. Add Supabase settings later to turn on online sync.'
           : 'Sign in to keep your games, browsing history, and preferences together on this device.');
     }
     var recoveryLink = $('showRecovery');
-    if (recoveryLink) recoveryLink.hidden = !configured;
+    if (recoveryLink) recoveryLink.hidden = !configured || verifying;
     document.querySelectorAll('.account-local-note').forEach(function (note) {
       var copy = note.getAttribute(configured ? 'data-online-copy' : 'data-local-copy');
       if (copy) note.textContent = copy;
@@ -152,9 +207,12 @@
       if ($('recoveryNewPassword')) $('recoveryNewPassword').value = '';
     }
     updateResendButton();
-    if (mode === 'recovery' || mode === 'code') {
-      var title = $('accountModalTitle');
-      if (title) title.textContent = 'Reset your password';
+    updateVerifyResendButton();
+    var title = $('accountModalTitle');
+    if (title) {
+      if (verifying) title.textContent = 'Verify your email';
+      else if (mode === 'recovery' || mode === 'code') title.textContent = 'Reset your password';
+      else if (mode === 'signin' || mode === 'signup') title.textContent = 'Sign in or create an account';
     }
 
     showError('signinError', '');
@@ -162,6 +220,10 @@
     showSuccess('signupSuccess', '');
     showError('recoveryError', '');
     showSuccess('recoverySuccess', '');
+    if (!verifying) {
+      showError('verifyError', '');
+      showSuccess('verifySuccess', '');
+    }
   }
 
   function safeHistoryLink(value) {
@@ -323,6 +385,8 @@
   }
 
   function renderSyncStatus() {
+    var user = currentUser();
+    var local = isLocalUser(user);
     var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
     var synced = Store.cloudSyncEnabled ? Store.cloudSyncEnabled() : false;
     var pill = $('accountSyncPill');
@@ -330,31 +394,51 @@
     var syncButton = $('accountSyncNow');
     var passwordButton = $('accountChangePassword');
     if (pill) {
-      pill.className = 'account-sync-pill ' + (configured ? (synced ? 'is-synced' : 'is-online') : 'is-local');
-      pill.textContent = configured ? (synced ? 'Synced' : 'Online account') : 'Local only';
+      pill.className = 'account-sync-pill ' + (local || !configured ? 'is-local' : synced ? 'is-synced' : 'is-online');
+      pill.textContent = local ? 'Local only' : configured ? (synced ? 'Synced' : 'Online account') : 'Local only';
     }
     if (message) {
       message.className = 'account-sync-message';
-      message.textContent = configured
-        ? (synced
-          ? 'Your profile is stored online and follows your account to a new domain.'
-          : 'Your online account is ready. Sync now to upload the latest profile.')
-        : 'This account is saved in this browser only. Cloud sync has not been turned on yet.';
+      if (local) {
+        message.textContent = configured
+          ? 'This account is saved in this browser. Add a verified email to use it on other devices.'
+          : 'This account is saved in this browser only. Cloud sync has not been turned on yet.';
+      } else {
+        message.textContent = configured
+          ? (synced
+            ? 'Your profile is stored online and follows your account to a new domain.'
+            : 'Your online account is ready. Sync now to upload the latest profile.')
+          : 'This account is saved in this browser only. Cloud sync has not been turned on yet.';
+      }
     }
-    if (syncButton) syncButton.disabled = !configured;
-    if (passwordButton) passwordButton.disabled = !configured;
+    if (syncButton) syncButton.disabled = local || !configured;
+    if (passwordButton) passwordButton.disabled = local || !configured;
   }
 
   function renderDashboard(user) {
     if (!user) return;
     var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
+    var local = isLocalUser(user);
     setAvatarImages(user);
     $('accountUsername').textContent = '@' + user.username;
     $('accountJoined').textContent = 'Member since ' + formatDate(user.createdAt) +
-      (configured ? ' · online account' : ' · saved in this browser');
+      (local || !configured ? ' · saved in this browser' : ' · online account');
     var displayName = $('accountDisplayName');
     if (displayName && document.activeElement !== displayName) displayName.value = user.username || '';
-    $('accountRecoveryEmail').value = user.email || '';
+    var emailField = $('accountRecoveryEmail');
+    if (emailField) {
+      emailField.value = user.email || '';
+      emailField.placeholder = local ? 'Not added' : '';
+    }
+    setHidden($('accountEmailUpgrade'), !local || !configured);
+    if (local && configured) {
+      if ($('upgradeUsername') && document.activeElement !== $('upgradeUsername')) {
+        $('upgradeUsername').value = user.username || '';
+      }
+      if ($('upgradeEmail') && document.activeElement !== $('upgradeEmail')) {
+        $('upgradeEmail').value = user.email || '';
+      }
+    }
     renderSyncStatus();
     $('accountHistoryCount').textContent = String((user.history || []).length);
     $('accountAccountCount').textContent = String((user.websites || []).length +
@@ -374,20 +458,31 @@
   }
 
   function render() {
+    verificationStillApplies();
     var user = currentUser();
     var recovery = Store.isRecoveryPending();
+    var verifying = !!pendingVerification;
     renderNav();
     renderAppCards();
-    setHidden(authView, !!user && !recovery);
-    setHidden(dashboard, !user || recovery);
+    setHidden(authView, !!user && !recovery && !verifying);
+    setHidden(dashboard, !user || recovery || verifying);
     if (recovery) {
       setAuthMode('password');
       $('accountModalTitle').textContent = 'Choose a new password';
+    } else if (verifying) {
+      setAuthMode('verify');
+      if ($('verifyEmail')) $('verifyEmail').value = pendingVerification.email || '';
+      if ($('verifyLede')) {
+        $('verifyLede').textContent = pendingVerification.mode === 'upgrade'
+          ? 'Enter the code sent to ' + pendingVerification.email + ' to attach this email and sync your account.'
+          : 'Enter the code sent to ' + pendingVerification.email + ' to finish creating your account.';
+      }
+      $('accountModalTitle').textContent = 'Verify your email';
     } else if (user) {
       renderDashboard(user);
       $('accountModalTitle').textContent = 'Account settings';
     } else {
-      if (activeAuthMode === 'password') activeAuthMode = 'signin';
+      if (activeAuthMode === 'password' || activeAuthMode === 'verify') activeAuthMode = 'signin';
       setAuthMode(activeAuthMode || 'signin');
       $('accountModalTitle').textContent = (activeAuthMode === 'recovery' || activeAuthMode === 'code')
         ? 'Reset your password'
@@ -407,6 +502,7 @@
     window.setTimeout(function () {
       var first;
       if (Store.isRecoveryPending()) first = $('recoveryNewPassword');
+      else if (pendingVerification) first = $('verifyCode');
       else if (activeAuthMode === 'code') first = $('recoveryCode');
       else if (currentUser()) first = $('accountDisplayName');
       else if (activeAuthMode === 'signup') first = $('signupUsername');
@@ -424,6 +520,157 @@
     document.body.style.overflow = '';
     window.setTimeout(function () { modal.hidden = true; }, 180);
     if (accountTab) accountTab.focus();
+  }
+
+  function updateVerifyResendButton() {
+    var button = $('resendVerification');
+    if (!button) return;
+    var remaining = Math.ceil((verifyResendUntil - Date.now()) / 1000);
+    if (remaining > 0) {
+      button.disabled = true;
+      button.textContent = 'Resend code in ' + remaining + 's';
+    } else {
+      button.disabled = false;
+      button.textContent = 'Resend code';
+      if (verifyResendTimer) {
+        clearInterval(verifyResendTimer);
+        verifyResendTimer = 0;
+      }
+    }
+  }
+
+  function startVerifyResendCooldown() {
+    verifyResendUntil = Date.now() + 60000;
+    updateVerifyResendButton();
+    clearInterval(verifyResendTimer);
+    verifyResendTimer = window.setInterval(updateVerifyResendButton, 1000);
+  }
+
+  function beginVerification(value) {
+    writePendingVerification(value);
+    activeAuthMode = 'verify';
+    setHidden(authView, false);
+    setHidden(dashboard, true);
+    if ($('verifyEmail')) $('verifyEmail').value = value.email || '';
+    if ($('verifyCode')) $('verifyCode').value = '';
+    if ($('verifyLede')) {
+      $('verifyLede').textContent = value.mode === 'upgrade'
+        ? 'Enter the code sent to ' + value.email + ' to attach this email and sync your account.'
+        : 'Enter the code sent to ' + value.email + ' to finish creating your account.';
+    }
+    verifyResendUntil = 0;
+    setAuthMode('verify');
+    updateVerifyResendButton();
+    if ($('accountModalTitle')) $('accountModalTitle').textContent = 'Verify your email';
+    window.setTimeout(function () { if ($('verifyCode')) $('verifyCode').focus(); }, 30);
+  }
+
+  async function submitVerification(event) {
+    event.preventDefault();
+    if (!pendingVerification) {
+      render();
+      return;
+    }
+    var form = $('verifyForm');
+    var pending = pendingVerification;
+    var token = String($('verifyCode').value || '').replace(/\D/g, '');
+    showError('verifyError', '');
+    if (token.length < 6) {
+      showError('verifyError', 'Enter the code from your verification email.');
+      $('verifyCode').focus();
+      return;
+    }
+    setBusy(form, true, 'Verifying…');
+    var result = await Store.verifyEmailCode(pending.email, token, pending.upgrade || null);
+    setBusy(form, false);
+    if (!result.ok) {
+      showError('verifyError', result.error);
+      return;
+    }
+    if (result.user && result.user.preferences) Store.applyPreferences(result.user.preferences);
+    clearPendingVerification();
+    $('verifyForm').reset();
+    activeAuthMode = 'signin';
+    render();
+    showToast(pending.mode === 'upgrade'
+      ? 'Email verified. This account now syncs across devices.'
+      : 'Email verified. You are signed in.');
+    window.setTimeout(function () { window.location.reload(); }, 500);
+  }
+
+  async function resendVerificationCode() {
+    if (!pendingVerification) {
+      render();
+      return;
+    }
+    var button = $('resendVerification');
+    if (!button || button.disabled) return;
+    showError('verifyError', '');
+    showSuccess('verifySuccess', '');
+    button.disabled = true;
+    button.textContent = 'Sending…';
+    var result = await Store.resendEmailCode(pendingVerification.email);
+    if (!result.ok) {
+      showError('verifyError', result.error);
+      updateVerifyResendButton();
+      return;
+    }
+    showSuccess('verifySuccess', 'A new verification code was sent to ' + pendingVerification.email + '.');
+    startVerifyResendCooldown();
+  }
+
+  function cancelVerification() {
+    var wasUpgrade = !!pendingVerification && pendingVerification.mode === 'upgrade';
+    clearPendingVerification();
+    if ($('verifyForm')) $('verifyForm').reset();
+    activeAuthMode = 'signin';
+    render();
+    showToast(wasUpgrade
+      ? 'Email not added. Your browser account is still here.'
+      : 'Verification skipped. You can verify later by signing in with that email.');
+  }
+
+  async function requestEmailUpgrade(event) {
+    event.preventDefault();
+    var form = $('upgradeEmailForm');
+    var user = currentUser();
+    if (!user || !isLocalUser(user)) return;
+    showError('upgradeError', '');
+    var email = $('upgradeEmail').value;
+    var username = $('upgradeUsername').value;
+    var password = $('upgradePassword').value;
+    if (password.length < 6) {
+      showError('upgradeError', 'Enter the password for this browser account.');
+      $('upgradePassword').focus();
+      return;
+    }
+    Store.capturePreferences();
+    setBusy(form, true, 'Sending…');
+    var result = await Store.requestEmailUpgrade({
+      email: email,
+      username: username,
+      password: password,
+      localId: user.id
+    });
+    setBusy(form, false);
+    if (!result.ok) {
+      showError('upgradeError', result.error);
+      return;
+    }
+    if (!result.needsConfirmation) {
+      $('upgradeEmailForm').reset();
+      render();
+      showToast('Email added. This account now syncs across devices.');
+      return;
+    }
+    $('upgradeEmailForm').reset();
+    beginVerification({
+      email: result.email,
+      mode: 'upgrade',
+      upgrade: result.upgrade || { localId: user.id, username: username }
+    });
+    showSuccess('verifySuccess', 'We sent a verification code to ' + result.email + '. Enter it below to finish syncing.');
+    showToast('Check your email for the verification code.');
   }
 
   async function submitSignup(event) {
@@ -448,11 +695,10 @@
       return;
     }
     if (result.needsConfirmation) {
-      var confirmationEmail = email;
       $('signupForm').reset();
-      showSuccess('signupSuccess', 'Account created. Check ' + confirmationEmail +
-        ' for the confirmation link, then sign in.');
-      showToast('Check your email to confirm the account.');
+      beginVerification({ email: result.email, mode: 'signup' });
+      showSuccess('verifySuccess', 'We sent a verification code to ' + result.email + '. Enter it below.');
+      showToast('Check your email for the verification code.');
       return;
     }
     Store.capturePreferences();
@@ -460,9 +706,11 @@
     activeAuthMode = 'signin';
     render();
     var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
-    showToast(configured
-      ? 'Account created. It will work on every future domain.'
-      : 'Account created and saved in this browser.');
+    showToast(result.localOnly
+      ? 'Account created in this browser. Add an email in settings to sync it.'
+      : configured
+        ? 'Account created. It will work on every future domain.'
+        : 'Account created and saved in this browser.');
   }
 
   async function submitSignin(event) {
@@ -474,6 +722,12 @@
     var result = await Store.signIn($('signinEmail').value, $('signinPassword').value);
     setBusy(form, false);
     if (!result.ok) {
+      if (result.needsConfirmation && result.email) {
+        $('signinForm').reset();
+        beginVerification({ email: result.email, mode: 'signup' });
+        showSuccess('verifySuccess', result.error);
+        return;
+      }
       showError('signinError', result.error);
       return;
     }
@@ -799,6 +1053,10 @@
   function beginPasswordReset() {
     var user = currentUser();
     if (!user) return;
+    if (isLocalUser(user)) {
+      showToast('Add a verified email first to manage an online password.');
+      return;
+    }
     if (!Store.isCloudConfigured || !Store.isCloudConfigured()) {
       showToast('Cloud sync is not turned on yet, so passwords cannot be changed here.');
       return;
@@ -835,6 +1093,15 @@
     if ($('signupForm')) $('signupForm').addEventListener('submit', submitSignup);
     if ($('signinForm')) $('signinForm').addEventListener('submit', submitSignin);
     if ($('recoveryForm')) $('recoveryForm').addEventListener('submit', submitRecovery);
+    if ($('verifyForm')) $('verifyForm').addEventListener('submit', submitVerification);
+    if ($('resendVerification')) $('resendVerification').addEventListener('click', resendVerificationCode);
+    if ($('cancelVerification')) $('cancelVerification').addEventListener('click', cancelVerification);
+    if ($('upgradeEmailForm')) $('upgradeEmailForm').addEventListener('submit', requestEmailUpgrade);
+    if ($('verifyCode')) {
+      $('verifyCode').addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 10);
+      });
+    }
     if ($('resendRecovery')) $('resendRecovery').addEventListener('click', resendRecoveryCode);
     if ($('recoveryCode')) {
       $('recoveryCode').addEventListener('input', function () {
