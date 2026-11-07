@@ -3216,6 +3216,34 @@ function injectFreezeHarnessIntoHtml(html, gameUrl, gameProgress) {
     }
     return `${urlShim}\n${harness}\n${html}`;
 }
+function createQuickGameLoadingScreen(gameTitle) {
+    return `<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Loading ${escapeHtml(gameTitle)}</title>
+<style>
+  :root { color-scheme: dark; }
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body { display: grid; place-items: center; background: #070b16; color: #eef2ff; font-family: "Segoe UI", Arial, sans-serif; }
+  .wrap { display: grid; justify-items: center; gap: 14px; padding: 24px; text-align: center; }
+  .ring { width: 38px; height: 38px; border: 3px solid rgba(124, 140, 255, 0.22); border-top-color: #22d3ee; border-radius: 50%; animation: spin 0.8s linear infinite; }
+  p { margin: 0; color: #9aa6c8; font-size: 14px; }
+  strong { display: block; margin-bottom: 4px; color: #eef2ff; font-size: 16px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  @media (prefers-reduced-motion: reduce) { .ring { animation: none; } }
+</style>
+</head>
+<body>
+  <div class="wrap" role="status" aria-live="polite">
+    <span class="ring" aria-hidden="true"></span>
+    <p><strong>${escapeHtml(gameTitle)}</strong>Loading game…</p>
+  </div>
+</body>
+</html>`;
+}
 function loadGameIntoTab(tab) {
     if (!tab || !tab.frame)
         return;
@@ -3231,40 +3259,38 @@ function loadGameIntoTab(tab) {
     tab.frozen = false;
     tab.frame.classList.add('active');
     tab.frame.classList.remove('fullscreen');
-    tab.frame.srcdoc = createGameLoadingScreen(tab.title);
-    tab.loadingTimer = setTimeout(() => {
-        const liveTab = getActiveGameTab();
-        if (!liveTab || liveTab.frame !== tab.frame || liveTab.loadToken !== loadToken)
-            return;
-        liveTab.loadingTimer = null;
-        const gameUrl = liveTab.url || '';
-        liveTab.gameId = gameProgressKey(gameUrl);
-        const savedProgress = window.CoolAccountStore
-            ? window.CoolAccountStore.getGameProgress(liveTab.gameId)
-            : {};
-        const isHtmlGame = /\.html?([?#].*)?$/i.test(gameUrl);
-        if (isHtmlGame) {
-            fetch(gameUrl)
-                .then(response => {
-                    if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
-                    return response.text();
-                })
-                .then(html => {
-                    const currentTab = getActiveGameTab();
-                    if (currentTab && currentTab.frame && currentTab.loadToken === loadToken) {
-                        currentTab.frame.srcdoc = injectFreezeHarnessIntoHtml(html, gameUrl, savedProgress);
-                    }
-                })
-                .catch(() => {
-                    const currentTab = getActiveGameTab();
-                    if (currentTab && currentTab.frame && currentTab.loadToken === loadToken) {
-                        currentTab.frame.srcdoc = createGameFrameWithHarness(gameUrl, liveTab.title);
-                    }
-                });
-        } else {
-            liveTab.frame.srcdoc = createGameFrameWithHarness(gameUrl, liveTab.title);
-        }
-    }, 1500);
+    tab.frame.srcdoc = createQuickGameLoadingScreen(tab.title);
+    const liveTab = getActiveGameTab();
+    if (!liveTab || liveTab.frame !== tab.frame || liveTab.loadToken !== loadToken)
+        return;
+    const gameUrl = liveTab.url || '';
+    liveTab.gameId = gameProgressKey(gameUrl);
+    const savedProgress = window.CoolAccountStore
+        ? window.CoolAccountStore.getGameProgress(liveTab.gameId)
+        : {};
+    const isHtmlGame = /\.html?([?#].*)?$/i.test(gameUrl);
+    if (isHtmlGame) {
+        fetch(gameUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Network response was not ok: ' + response.status);
+                return response.text();
+            })
+            .then(html => {
+                const currentTab = getActiveGameTab();
+                if (currentTab && currentTab.frame && currentTab.loadToken === loadToken) {
+                    currentTab.frame.srcdoc = injectFreezeHarnessIntoHtml(html, gameUrl, savedProgress);
+                }
+            })
+            .catch(() => {
+                const currentTab = getActiveGameTab();
+                if (currentTab && currentTab.frame && currentTab.loadToken === loadToken) {
+                    currentTab.frame.srcdoc = createGameFrameWithHarness(gameUrl, liveTab.title);
+                }
+            });
+    }
+    else {
+        liveTab.frame.srcdoc = createGameFrameWithHarness(gameUrl, liveTab.title);
+    }
 }
 function createGameFrameWithHarness(gamePath, gameTitle) {
     return `<!DOCTYPE html>
@@ -3774,539 +3800,6 @@ function convertToCompatibleUrl(url) {
 function loadGameWithCompatibleUrl(title, originalUrl) {
     const compatibleUrl = convertToCompatibleUrl(originalUrl);
     openLesson(title, compatibleUrl);
-}
-function createGameLoadingScreen(gameTitle) {
-    let primaryColor, accentColor, darkColor;
-    const currentTheme = localStorage.getItem('selectedTheme') || 'default';
-    if (currentTheme === 'custom') {
-        const customColor = localStorage.getItem('customThemeColor') || '#7c8cff';
-        primaryColor = customColor;
-        const hex = customColor.replace('#', '');
-        const r = parseInt(hex.slice(0, 2), 16);
-        const g = parseInt(hex.slice(2, 4), 16);
-        const b = parseInt(hex.slice(4, 6), 16);
-        const accentR = Math.min(255, Math.floor(r * 1.2));
-        const accentG = Math.min(255, Math.floor(g * 1.2));
-        const accentB = Math.min(255, Math.floor(b * 1.2));
-        accentColor = `rgb(${accentR}, ${accentG}, ${accentB})`;
-        const darkR = Math.max(0, Math.floor(r * 0.3));
-        const darkG = Math.max(0, Math.floor(g * 0.3));
-        const darkB = Math.max(0, Math.floor(b * 0.3));
-        darkColor = `rgb(${darkR}, ${darkG}, ${darkB})`;
-    }
-    else {
-        const themeColors = {
-            'default': { primary: '#7c8cff', accent: '#22d3ee', dark: '#1a1a1a' },
-            'rainbow': { primary: '#ff0080', accent: '#ff00ff', dark: '#0a0a0a' },
-            'cyber-green': { primary: '#00ff00', accent: '#00cc00', dark: '#000000' },
-            'ice-blue': { primary: '#00ccff', accent: '#0088cc', dark: '#001122' },
-            'solarized': { primary: '#2aa198', accent: '#268bd2', dark: '#002b36' },
-            'purple-haze': { primary: '#9b59b6', accent: '#6c3483', dark: '#1a1a2e' }
-        };
-        const colors = themeColors[currentTheme] || themeColors['default'];
-        primaryColor = colors.primary;
-        accentColor = colors.accent;
-        darkColor = colors.dark;
-    }
-    function colorToHex(color) {
-        if (color.startsWith('#')) {
-            return color;
-        }
-        if (color.startsWith('rgb(')) {
-            const rgb = color.match(/\d+/g);
-            return '#' + rgb.map(x => {
-                const hex = parseInt(x).toString(16);
-                return hex.length === 1 ? '0' + hex : hex;
-            }).join('');
-        }
-        return '#7c8cff';
-    }
-    function rgbToNumber(color) {
-        if (color.startsWith('#')) {
-            return parseInt(color.replace('#', '0x'));
-        }
-        if (color.startsWith('rgb(')) {
-            const rgb = color.match(/\d+/g);
-            return (parseInt(rgb[0]) << 16) + (parseInt(rgb[1]) << 8) + parseInt(rgb[2]);
-        }
-        return 0x7c8cff;
-    }
-    const primaryHex = colorToHex(primaryColor);
-    const accentHex = colorToHex(accentColor);
-    const darkHex = colorToHex(darkColor);
-    const highlightColor = rgbToNumber(accentColor);
-    const midtoneColor = rgbToNumber(primaryColor);
-    const lowlightColor = rgbToNumber(accentColor);
-    const baseColor = rgbToNumber(darkColor);
-    const quotes = [
-        "Cmon we all know that Marval Rivals is overrated",
-        "Everyone knows ur a furry buddy",
-        "For the love of god go touch some grass",
-        "Are you enjoying the site? You better be or else...",
-        "Call 911!! Whats the Number?",
-        "Access Denied - You are Gay",
-        "HELPPPPPPP HELPPPP MEEE",
-        "Linganguliguliwatalingagoolingangoo",
-        "Make sure the one homie that doesnt hop on knows who hate him",
-        "Make sure you do your homework buddy im watching you",
-        "Does your mom know you're gay?",
-        "If you can read this you're too close",
-        "I see you looking at my code",
-        "This game is way better than Fortnite",
-        "This game is way worse than Fortnite",
-        "I like turtles",
-        "Why are you still reading these?",
-        "Press F to thank the bus driver",
-        "I said wait mf....",
-        "Fun fact: your chopped",
-        "Yoooo whats up",
-        "Isnt this loading screen cool?",
-        "This site was made with love <3",
-        "FAHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHHH",
-        "These edibles ain't shit",
-        "Game will load in just a moment",
-        "Are we there yet",
-        "You know I have to type of of these",
-        "I wish my dad came back with the milk",
-        "Uhhh my mom said I have to do my homework first",
-        "Hey siri whats the name of this site",
-        "Should've used adblock",
-        "That's what she said",
-        "Who made this piece of shit",
-        "It's not a bug it's a feature",
-        "The numbers Mason, what do they mean",
-        "Mila wheela the greatest!!",
-        "Bacon Bacon Bacon",
-        "My name is anderdingus",
-        "Goo goo ga ga",
-        "Why is this taking so long?",
-        "Mane fawk you mama huevo",
-        "Ill give you 5$ to say the n-word",
-        "Meow",
-        "Take your pants off in 3... 2... 1...",
-        "Is it okay if I touch you....?",
-        "AAAAAAAAAAAAAHHHHHHHHHHHHHHHHHH",
-        "did you know Thugalicious is a young cracka?",
-        "all hail daddy T (thugalicious)",
-        "I hope you like my games",
-        "getting thuggy wit it by King. T",
-        "not the hub😎😎😎",
-        "fih",
-        "sponsored by Benjamin N.",
-        "Securly is a bitch",
-        "ion want no damn pickle",
-        "I WAKE UP TO GO TO SLEEP",
-        "I drink soda I eat pizza!",
-        "Dude just said \"I drink soda I eat pizza\"",
-        "Someone make a black pill edit of me",
-        "Go to bed it's a school night",
-        "I am not in danger skyler, I am the danger",
-        "Guys stop saying im in the files",
-        "focking glizzy just bit me man",
-        "just a heads up this game is pretty bad ngl",
-        "I hope you like this loading screen because it took way too long to make",
-        "quotes are hard to come up with",
-        "I should be working on my next game but here we are",
-        "I have to type out 50 of these for the loading screen",
-        "cmon just load the game already",
-        "this is the last quote I promise",
-        "uhhh I ran out of quotes",
-        "MIII BOMBOCLATTTT",
-        "my name is retep and I hate...",
-        "ay why yall put cheese on my cheese burger?",
-        "Yeah, its my birthday, what can i get for free? Uhh nothing? You a BICTH",
-        "that focking bird that I hate",
-        "I am Tanka Jahari but I would NEVER order a whole pizza for myself.",
-        "Vat is dis? I did not vant dis!",
-        "Is it was almond of the Walnut?",
-        "Is they squeezing it out of the penut?",
-        "I swear its bigger, its really cold",
-        "fun Fact, twerking burns 285.43 calories a second, make sure to send proof in the typing section!",
-        "dame tu culo",
-        "ronaldo is the best soccer player ever",
-        "im gay -joseph beltran",
-        "this is all a simulation, ur not real",
-        "are u alright? No! You are all left",
-        "What is the difference between a baked potato and an apple? Im very homosexual!",
-        "you lie! I crack your ass",
-        "messi is better than ronaldo",
-        "if theres a hole theres a goal",
-        "they ripped off my pepino",
-        "your chromebook will self destruct in 5 seconds",
-        "Virus installing....",
-        "uploading device to epstein files...",
-        "digging in ass...",
-        "hey siri how do you pronnounce spontaneity?",
-        "everyday we eatin good",
-        "it wraps around not ONCE, not TWICE, but THRICE!",
-        "shutup MOMMMMMM, silence from YOUU, your cut OFF from TALKING",
-        "Do everything like your name is on it -Joya",
-        "eh pretty cool site",
-        "in the big 2026",
-        "big yahu",
-        "sink let that in",
-        "This site won't give you a virus trust",
-        "giggity",
-        "read this if you like boys",
-        "jiggle my balls to niagra falls and before u do that, take off my drawls",
-        "I heard if you type in epstein something CRAZY happens...",
-        "You can't be shit if you don't start shit",
-        "You can’t spell thug without hug",
-        "2026 is the new 2016",
-        "made by the thugs for the thugs",
-        "u can touch shit and shit will be on your hands -holydih120",
-        "play our games",
-        "Some people don’t realize there worth until their worth nothing -joe",
-        "Anything but doing work",
-        "Sometimes you gotta fart in order to shart",
-        "black on black on black",
-        "Keep calm and swag on",
-        "can’t let go is the hardest geometry dash level -holydih120",
-        "call me thugalicious cus all my homies cant keep their hands to themselves 🥵",
-        "HE CANT KEEP GETTING AWAY WITH THISSSS",
-        "Dany Slicer will take down this site",
-        "Yall need to stop spiking my corisol frl",
-        "can I please have a water, please?",
-        "Clavicular CASSUALY ran in to ASU frat leader and gets BRUTALLY frame mogged",
-        "But when IIIIIIII win a 40v1 I get -1000 AURAAAAA",
-        "lwk gotta take a shit brb",
-        "Call me DL the way I can’t get out the closet” -Bae da Philosopher",
-        "my homies ask if im gay, but the closet is made of glass.",
-        "Big yahu, DESTROY HIM",
-        "i’m really horny -98corbins",
-        "BOMBOCLATTTTTTTT",
-        "It is better to shit in the sink... than to sink... in the shit...",
-        "You know it's cold outside, when you go outside, and it's cold",
-        "deltarune tomorrow",
-        "I woke up today in this morning in the morning I woke up this morning I woke up and remember that every morning that I wake up",
-        "Never back down never what -nick eh 30",
-        "ts website lowk comp",
-        "Keep you head down and your chin up",
-        "lil bro hop off ma dihh",
-        "this is this, and that is that",
-        "If im gay you're gay too",
-        "Ima be under your bed tonight, be ready",
-        "Who TF lives in Nebraska",
-        "Better to cum in the sink, than sink in the cum -Gdkbeetlethugaming",
-        "My teacher ate his own shit",
-        "did he just say his last name's BURDER?",
-        "does he come with a side of FRIES?",
-        "Cake is cake even if it has a candle",
-        "Hope you have a nice gaming session -NRGmason48",
-        "if this was real life you’d be dead -angelmag1980",
-        "vete para alla -angelmag1980",
-        "i like men -Raul ulloa",
-        "I am kevin G btw",
-        "thug should pay me",
-        "I should be payed frfr",
-        "teachers literally behind you",
-        "some dude in the back of the walmart told me to suck his dih for a 2 dollar bill, idek know who would take that deal, anyway i found this 2 dollar bill -midgetfucker53",
-        "ay bro, u tryna f*ck?",
-        "lemme crack -thugalicious120",
-        "If u goon in class goon quietly",
-        "make sure your teacher aint lookin gang -jubihat",
-        "thugalicious is a femboy in disguise",
-        "alt+tab to get away from the teachers catching you playing gamrs",
-        "if you get caught you get caught",
-        "contentkeeper sucks",
-        "Jay likes diddy partys",
-        "I have to go to the bathroom but I also want to keep playing",
-        "Do your work gng",
-        "Math class is boring why do you think i made this site?",
-        "If a black person got BBC, then what does a white person have?",
-        "They would have a BWC",
-        "You should be listening to the teacher.",
-        "If you don't do your work, you will never succeed in life.",
-        "This site is for educational purposes only, please don't get in trouble.",
-        "I hope you learn something new today",
-        "I want goth babe",
-        "CTRL+D bookmark this shi",
-        "thugalicious abuses me",
-        "dubist gut genug",
-    ];
-    const loadingSteps = [
-        { status: "Stealing Lesson....", progress: 15, time: 800 },
-        { status: "Aquiring HTML assets..", progress: 30, time: 700 },
-        { status: "Putting in the thingamabobs...", progress: 45, time: 900 },
-        { status: "Screwing in the doohickeys..", progress: 60, time: 1200 },
-        { status: "Establishing tarbonator...", progress: 75, time: 600 },
-        { status: "Contacting Netanyahu....", progress: 85, time: 800 },
-        { status: "Finalizing...", progress: 95, time: 1000 },
-        { status: "Ready to launch...", progress: 100, time: 1200 }
-    ];
-    function getRandomQuote() {
-        return quotes[Math.floor(Math.random() * quotes.length)];
-    }
-    return `
-		                                    <!DOCTYPE html>
-		                                    <html lang="en">
-		                                    <head>
-		                                        <meta charset="UTF-8">
-		                                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-		                                        <title>Loading ${gameTitle}<\/title>
-		                                        <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r134/three.min.js"><\/script>
-		                                        <script src="https://cdn.jsdelivr.net/npm/vanta@latest/dist/vanta.fog.min.js"><\/script>
-		                                        <style>
-		                                            * {
-		                                                margin: 0;
-		                                                padding: 0;
-		                                                box-sizing: border-box;
-		                                            }
-
-		                                            body {
-		                                                margin: 0;
-		                                                padding: 0;
-		                                                width: 100%;
-		                                                height: 100vh;
-		                                                overflow: hidden;
-		                                                font-family: 'Courier New', monospace;
-		                                                background: ${darkColor};
-		                                            }
-
-		                                            #vanta-bg {
-		                                                position: absolute;
-		                                                top: 0;
-		                                                left: 0;
-		                                                width: 100%;
-		                                                height: 100%;
-		                                                z-index: 1;
-		                                            }
-
-		                                            .loading-content {
-		                                                text-align: center;
-		                                                width: 90%;
-		                                                max-width: 500px;
-		                                                z-index: 2;
-		                                                position: relative;
-		                                                margin: 0 auto;
-		                                                padding-top: 25vh;
-		                                            }
-
-		                                            .game-title {
-		                                                color: ${accentColor};
-		                                                font-size: 1.8rem;
-		                                                margin-bottom: 5px;
-		                                                font-weight: 600;
-		                                                letter-spacing: 1px;
-		                                                text-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
-		                                            }
-
-		                                            .game-subtitle {
-		                                                color: ${accentColor}70;
-		                                                font-size: 0.9rem;
-		                                                margin-bottom: 30px;
-		                                                font-weight: 400;
-		                                                letter-spacing: 3px;
-		                                                text-transform: uppercase;
-		                                            }
-
-		                                            .status {
-		                                                color: ${primaryColor};
-		                                                font-size: 1rem;
-		                                                margin-bottom: 30px;
-		                                                font-weight: 500;
-		                                                height: 20px;
-		                                                letter-spacing: 0.5px;
-		                                                text-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
-		                                            }
-
-		                                            .loading-bar-container {
-		                                                width: 100%;
-		                                                height: 4px;
-		                                                background: rgba(255, 255, 255, 0.1);
-		                                                border-radius: 2px;
-		                                                margin: 30px 0 20px;
-		                                                overflow: hidden;
-		                                                position: relative;
-		                                            }
-
-		                                            .loading-bar {
-		                                                position: absolute;
-		                                                top: 0;
-		                                                left: 0;
-		                                                width: 30%;
-		                                                height: 100%;
-		                                                background: linear-gradient(90deg,
-		                                                    transparent,
-		                                                    ${primaryColor}80,
-		                                                    ${primaryColor}80,
-		                                                    transparent);
-		                                                animation: slide 1.5s infinite ease-in-out;
-		                                            }
-
-		                                            @keyframes slide {
-		                                                0% { transform: translateX(-100%); }
-		                                                100% { transform: translateX(400%); }
-		                                            }
-
-		                                            .percentage {
-		                                                color: ${accentColor};
-		                                                font-size: 1rem;
-		                                                font-weight: 600;
-		                                                margin-top: 10px;
-		                                                text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-		                                            }
-
-		                                            .quote-container {
-		                                                margin: 40px 0 0;
-		                                                padding: 20px 0 0;
-		                                                position: relative;
-		                                            }
-
-		                                            .quote-container:before {
-		                                                content: '';
-		                                                position: absolute;
-		                                                top: 0;
-		                                                left: 20%;
-		                                                right: 20%;
-		                                                height: 1px;
-		                                                background: linear-gradient(90deg,
-		                                                    transparent,
-		                                                    ${primaryColor}30,
-		                                                    transparent);
-		                                            }
-
-		                                            .quote-text {
-		                                                color: rgba(255, 255, 255, 0.9);
-		                                                font-size: 0.9rem;
-		                                                line-height: 1.5;
-		                                                font-style: italic;
-		                                                font-weight: 300;
-		                                                padding: 0 10px;
-		                                            }
-
-		                                            .success {
-		                                                color: #4CAF50;
-		                                                animation: pulseSuccess 2s infinite;
-		                                            }
-
-		                                            @keyframes pulseSuccess {
-		                                                0%, 100% { opacity: 1; }
-		                                                50% { opacity: 0.7; }
-		                                            }
-		                                        <\/style>
-		                                    <\/head>
-		                                    <body>
-		                                        <div id="vanta-bg"><\/div>
-
-		                                        <div class="loading-content">
-		                                            <div class="game-title" id="gameTitle">LOADING<\/div>
-		                                            <div class="game-subtitle" id="gameSubtitle">${gameTitle.toUpperCase()}<\/div>
-
-		                                            <div class="status" id="statusText">Initializing game engine...<\/div>
-
-		                                            <div class="loading-bar-container">
-		                                                <div class="loading-bar"><\/div>
-		                                            <\/div>
-
-		                                            <div class="percentage" id="percentage">0%<\/div>
-
-		                                            <div class="quote-container">
-		                                                <div class="quote-text" id="quoteText">${getRandomQuote()}<\/div>
-		                                            <\/div>
-		                                        <\/div>
-
-		                                        <script>
-		                                            const CONFIG = {
-		                                                quotes: ${JSON.stringify(quotes)},
-		                                                loadingSteps: ${JSON.stringify(loadingSteps)},
-		                                                vantaSettings: {
-		                                                    el: "#vanta-bg",
-		                                                    mouseControls: false,
-		                                                    touchControls: false,
-		                                                    gyroControls: false,
-		                                                    minHeight: 200.00,
-		                                                    minWidth: 200.00,
-		                                                    highlightColor: ${highlightColor},
-		                                                    midtoneColor: ${midtoneColor},
-		                                                    lowlightColor: ${lowlightColor},
-		                                                    baseColor: ${baseColor},
-		                                                    speed: 2.50,
-		                                                    zoom: 1.80
-		                                                }
-		                                            };
-
-		                                            let currentStep = 0;
-		                                            let quoteInterval;
-		                                            let vantaEffect = null;
-
-		                                            function initVantaBackground() {
-		                                                if (window.VANTA && !vantaEffect) {
-		                                                    try {
-		                                                        vantaEffect = VANTA.FOG(CONFIG.vantaSettings);
-		                                                    } catch (error) {
-		                                                        console.error('Vanta.js initialization error:', error);
-		                                                        document.getElementById('vanta-bg').style.background = '${darkColor}';
-		                                                    }
-		                                                }
-		                                            }
-
-		                                            function getRandomQuote() {
-		                                                return CONFIG.quotes[Math.floor(Math.random() * CONFIG.quotes.length)];
-		                                            }
-
-		                                            function updateQuote() {
-		                                                document.getElementById('quoteText').textContent = getRandomQuote();
-		                                            }
-
-		                                            function updateProgress() {
-		                                                if (currentStep >= CONFIG.loadingSteps.length) return;
-
-		                                                const step = CONFIG.loadingSteps[currentStep];
-		                                                const percentageEl = document.getElementById('percentage');
-		                                                const statusEl = document.getElementById('statusText');
-
-		                                                statusEl.textContent = step.status;
-
-		                                                percentageEl.textContent = step.progress + '%';
-
-		                                                currentStep++;
-
-		                                                if (step.progress === 100) {
-		                                                    statusEl.classList.add('success');
-		                                                    percentageEl.classList.add('success');
-		                                                }
-
-		                                                if (currentStep < CONFIG.loadingSteps.length) {
-		                                                    const randomFactor = 0.7 + Math.random() * 0.6;
-		                                                    const delay = Math.floor(step.time * randomFactor);
-		                                                    setTimeout(updateProgress, delay);
-		                                                }
-		                                            }
-
-		                                            function startLoading() {
-		                                                initVantaBackground();
-
-		                                                updateQuote();
-
-		                                                quoteInterval = setInterval(updateQuote, 4000);
-
-		                                                setTimeout(() => {
-		                                                    updateProgress();
-		                                                }, 500);
-		                                            }
-
-		                                            function handleResize() {
-		                                                if (vantaEffect) {
-		                                                    vantaEffect.resize();
-		                                                }
-		                                            }
-
-		                                            window.addEventListener('DOMContentLoaded', startLoading);
-		                                            window.addEventListener('resize', handleResize);
-
-		                                            window.addEventListener('beforeunload', () => {
-		                                                if (quoteInterval) {
-		                                                    clearInterval(quoteInterval);
-		                                                }
-		                                                if (vantaEffect) {
-		                                                    vantaEffect.destroy();
-		                                                }
-		                                            });
-		                                        <\/script>
-		                                    <\/body>
-		                                    <\/html>
-		                                `;
 }
 function refreshGame() {
     const activeTab = getActiveGameTab();
