@@ -6,6 +6,16 @@
     var updates = [
         {
             date: '2026-11-07',
+            title: 'Online accounts now sync across devices',
+            items: [
+                'Accounts are now backed by Supabase, so signing in on another device restores the same account.',
+                'The profile, history, saved sites, and preferences follow you instead of staying in one browser.',
+                'Passwords are handled by Supabase Auth and are never stored by the site.',
+                'Browser-only accounts remain the fallback when Supabase is not configured.'
+            ]
+        },
+        {
+            date: '2026-11-07',
             title: 'Accounts work without Supabase',
             items: [
                 'Sign-up and sign-in no longer fail with “online accounts are temporarily unavailable” when no Supabase project is connected.',

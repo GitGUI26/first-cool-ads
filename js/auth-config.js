@@ -10,7 +10,7 @@
  * Authentication -> URL Configuration in Supabase.
  */
 window.CUH_AUTH_CONFIG = {
-  supabaseUrl: '',
-  supabaseAnonKey: '',
+  supabaseUrl: 'https://wpefdqygzqoipbsborqk.supabase.co',
+  supabaseAnonKey: 'sb_publishable_IJ6zRJBgC7HLhcFCLpZn9g_rKEl2npg',
   siteUrl: ''
 };
