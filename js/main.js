@@ -1372,7 +1372,9 @@ function switchTab(tab) {
     const allLessonsSection = document.getElementById('all-lessons');
     const settingsSection = document.getElementById('settings-section');
     const musicSection = document.getElementById('music-section');
-    const activeTab = tab === 'settings' ? 'settings' : tab === 'music' ? 'music' : 'lessons';
+    const updatesTab = document.getElementById('updatesTab');
+    const updatesSection = document.getElementById('updates-section');
+    const activeTab = tab === 'settings' ? 'settings' : tab === 'music' ? 'music' : tab === 'updates' ? 'updates' : 'lessons';
 
     function showSection(section, displayValue) {
         if (!section)
@@ -1385,12 +1387,12 @@ function switchTab(tab) {
         section.style.zIndex = '1';
     }
 
-    [lessonsTab, musicTab, settingsTab].forEach(function (navItem) {
+    [lessonsTab, musicTab, updatesTab, settingsTab].forEach(function (navItem) {
         if (navItem) {
             navItem.classList.remove('active');
         }
     });
-    [homeSection, allLessonsSection, settingsSection, musicSection].forEach(function (section) {
+    [homeSection, allLessonsSection, settingsSection, musicSection, updatesSection].forEach(function (section) {
         if (section) {
             section.hidden = true;
             section.setAttribute('aria-hidden', 'true');
@@ -1414,6 +1416,11 @@ function switchTab(tab) {
         if (musicTab)
             musicTab.classList.add('active');
         showSection(musicSection);
+    }
+    else if (activeTab === 'updates') {
+        if (updatesTab)
+            updatesTab.classList.add('active');
+        showSection(updatesSection);
     }
     else {
         if (settingsTab)
@@ -2575,6 +2582,9 @@ function destroyActiveGameSession() {
         clearTimeout(activeTab.loadingTimer);
         activeTab.loadingTimer = null;
     }
+    if (activeTab) {
+        requestGameProgress(activeTab);
+    }
     if (activeTab?.frame) {
         freezeGameTab(activeTab);
         activeTab.frame.classList.remove('active', 'fullscreen');
@@ -2921,6 +2931,8 @@ function ensureActiveGameSession(title, url) {
             id: ACTIVE_GAME_ID,
             title,
             url,
+            gameId: gameProgressKey(url),
+            lastProgressJson: '',
             frame,
             loadingTimer: null,
             frozen: false,
@@ -2939,17 +2951,118 @@ function ensureActiveGameSession(title, url) {
     }
     activeTab.title = title;
     activeTab.url = url;
+    activeTab.gameId = gameProgressKey(url);
+    activeTab.lastProgressJson = '';
     activeTab.frame.classList.add('active');
     updateGameSessionTitle(title);
     return activeTab;
 }
-function injectFreezeHarnessIntoHtml(html, gameUrl) {
+function gameProgressKey(gameUrl) {
+    var raw = String(gameUrl || '').trim();
+    if (!raw) return '';
+    try {
+        var parsed = new URL(raw, location.href);
+        return (parsed.pathname.replace(/^\/+/, '') + parsed.search).slice(0, 240);
+    } catch (error) {
+        return raw.slice(0, 240);
+    }
+}
+function getGameProgressBridgeScript(gameId, progress) {
+    const store = window.CoolAccountStore;
+    // Guests keep the game's native local storage; only accounts get the bridge.
+    if (!store || typeof store.getCurrentUser !== 'function' || !store.getCurrentUser())
+        return '';
+    var gameIdJson = JSON.stringify(String(gameId || '')).replace(/</g, '\\u003c');
+    var seedJson = JSON.stringify(progress && typeof progress === 'object' ? progress : {})
+        .replace(/</g, '\\u003c')
+        .replace(/\u2028/g, '\\u2028')
+        .replace(/\u2029/g, '\\u2029');
+    return `<script>
+(function () {
+  if (window.__coolGameProgressBridge) return;
+  window.__coolGameProgressBridge = true;
+  var gameId = ${gameIdJson};
+  var memory = Object.create(null);
+  var seed = ${seedJson};
+  var lastSerialized = '';
+  var timer = 0;
+  var nativeSetTimeout = window.setTimeout.bind(window);
+  var nativeSetInterval = window.setInterval.bind(window);
+  Object.keys(seed).forEach(function (key) {
+    if (typeof seed[key] === 'string') memory[String(key).slice(0, 160)] = seed[key];
+  });
+  lastSerialized = JSON.stringify(memory);
+  function snapshot() {
+    var out = {};
+    Object.keys(memory).forEach(function (key) {
+      var value = memory[key];
+      if (typeof value === 'string' && value.length <= 120000) out[key] = value;
+    });
+    return out;
+  }
+  function send(force) {
+    var payload = snapshot();
+    var serialized = JSON.stringify(payload);
+    if (!force && serialized === lastSerialized) return;
+    lastSerialized = serialized;
+    try {
+      window.parent.postMessage({ type: 'COOL_GAME_PROGRESS', gameId: gameId, data: payload }, '*');
+    } catch (error) {}
+  }
+  function schedule() {
+    if (timer) return;
+    timer = nativeSetTimeout(function () { timer = 0; send(false); }, 1200);
+  }
+  function getValue(key) {
+    key = String(key);
+    return Object.prototype.hasOwnProperty.call(memory, key) ? memory[key] : null;
+  }
+  var api = {
+    getItem: getValue,
+    setItem: function (key, value) {
+      key = String(key);
+      memory[key] = String(value);
+      schedule();
+    },
+    removeItem: function (key) {
+      key = String(key);
+      delete memory[key];
+      schedule();
+    },
+    clear: function () {
+      Object.keys(memory).forEach(function (key) { delete memory[key]; });
+      schedule();
+    },
+    key: function (index) {
+      var keys = Object.keys(memory);
+      return index >= 0 && index < keys.length ? keys[index] : null;
+    }
+  };
+  Object.defineProperty(api, 'length', { get: function () { return Object.keys(memory).length; } });
+  try {
+    Object.defineProperty(window, 'localStorage', { configurable: true, get: function () { return api; } });
+  } catch (error) {
+    window.__coolGameProgressUnavailable = true;
+  }
+  window.addEventListener('message', function (event) {
+    if (event && event.data && event.data.type === 'COOL_GAME_PROGRESS_REQUEST') send(true);
+  });
+  window.addEventListener('pagehide', function () { send(true); });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'hidden') send(true);
+  });
+  nativeSetInterval(function () { send(false); }, 5000);
+})();
+<\/script>`;
+}
+function injectFreezeHarnessIntoHtml(html, gameUrl, gameProgress) {
     if (!html || typeof html !== 'string') return html;
     let baseTag = '';
     if (!/<base\b[^>]*\bhref\s*=/i.test(html)) {
         try { baseTag = '<base href="' + new URL(gameUrl, location.href).href.replace(/"/g, '%22') + '">'; } catch (e) {}
     }
-    const harness = baseTag + getGameFreezeHarnessScript();
+    const progressScript = getGameProgressBridgeScript(gameProgressKey(gameUrl), gameProgress);
+    const harness = baseTag + progressScript + '\n' + getGameFreezeHarnessScript();
     const urlShim = '<script>try{Object.defineProperty(document,"URL",{configurable:true,get:function(){return document.baseURI||"https://cdn.jsdelivr.net/";}});}catch(e){}<\/script>';
     if (/<head[^>]*>/i.test(html)) {
         return html.replace(/<head[^>]*>/i, match => `${match}\n${urlShim}\n${harness}`);
@@ -2981,6 +3094,10 @@ function loadGameIntoTab(tab) {
             return;
         liveTab.loadingTimer = null;
         const gameUrl = liveTab.url || '';
+        liveTab.gameId = gameProgressKey(gameUrl);
+        const savedProgress = window.CoolAccountStore
+            ? window.CoolAccountStore.getGameProgress(liveTab.gameId)
+            : {};
         const isHtmlGame = /\.html?([?#].*)?$/i.test(gameUrl);
         if (isHtmlGame) {
             fetch(gameUrl)
@@ -2991,7 +3108,7 @@ function loadGameIntoTab(tab) {
                 .then(html => {
                     const currentTab = getActiveGameTab();
                     if (currentTab && currentTab.frame && currentTab.loadToken === loadToken) {
-                        currentTab.frame.srcdoc = injectFreezeHarnessIntoHtml(html, gameUrl);
+                        currentTab.frame.srcdoc = injectFreezeHarnessIntoHtml(html, gameUrl, savedProgress);
                     }
                 })
                 .catch(() => {
@@ -3061,6 +3178,26 @@ function createGameFrameWithHarness(gamePath, gameTitle) {
 </body>
 </html>`;
 }
+function requestGameProgress(tab) {
+    if (!tab || !tab.frame) return;
+    try {
+        if (tab.frame.contentWindow) {
+            tab.frame.contentWindow.postMessage({ type: 'COOL_GAME_PROGRESS_REQUEST' }, '*');
+        }
+    } catch (error) {}
+}
+window.addEventListener('message', function (event) {
+    const tab = getActiveGameTab();
+    if (!tab || !tab.frame || event.source !== tab.frame.contentWindow) return;
+    const message = event.data;
+    if (!message || message.type !== 'COOL_GAME_PROGRESS' || message.gameId !== tab.gameId) return;
+    const store = window.CoolAccountStore;
+    if (!store || typeof store.getCurrentUser !== 'function' || !store.getCurrentUser()) return;
+    const serialized = JSON.stringify(message.data || {});
+    if (serialized === tab.lastProgressJson) return;
+    tab.lastProgressJson = serialized;
+    store.setGameProgress(message.gameId, message.data);
+});
 function openLesson(t, u) {
     if (typeof gtag !== 'undefined') {
         gtag('event', 'game_launch', {
@@ -3091,6 +3228,7 @@ function openLesson(t, u) {
     loadGameIntoTab(tab);
 }
 function exitGameBrowser() {
+    requestGameProgress(getActiveGameTab());
     setGameOverlayVisible(false, { destroyOnHide: true });
 }
 document.addEventListener('visibilitychange', () => {
@@ -4073,7 +4211,6 @@ document.addEventListener('DOMContentLoaded', function () {
         "To be ballin you gotta b-all-in",
         "lowkey im just better",
         "It be the ones closest to you with the sharpest fangs",
-        "Yall be complaining about ads when you can LITERALLY turn them off in settings",
         "Life is hard but im harder",
         "Hoes mad",
         "jarvis, more alcohol",

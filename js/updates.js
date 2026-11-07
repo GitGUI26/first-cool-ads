@@ -1,0 +1,91 @@
+(function () {
+    'use strict';
+
+    // Add a new entry at the top of this array every time the site changes.
+    // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
+    var updates = [
+        {
+            date: '2026-11-07',
+            title: 'Site updates page added',
+            items: [
+                'New UPDATES tab collects every change to the site in one place.',
+                'This changelog is now kept current with each update.'
+            ]
+        },
+        {
+            date: '2026-11-07',
+            title: 'COD Nazi Zombies added to the catalog',
+            items: [
+                'The old COD Nazi Zombies Portable card now runs the live NZ: Portable build from nzp.gay.',
+                'Plays in the game overlay with solo and co-op modes, powered by WebGL.'
+            ]
+        },
+        {
+            date: '2026-11-06',
+            title: 'Catalog health pass',
+            items: [
+                'Removed 60 games that no longer loaded, including 57 broken Flash pack dumps.',
+                'Fixed 43 Flash game wrappers that were missing the player type.',
+                'Moved 82 game embeds off a dead CDN onto a working one.',
+                'Catalog verified at 653 entries: 652 public games plus the hidden secret game.'
+            ]
+        },
+        {
+            date: '2026-11-06',
+            title: 'New default avatar',
+            items: [
+                'The gamepad icon is now a person silhouette styled to match the site theme.'
+            ]
+        },
+        {
+            date: '2026-11-06',
+            title: 'Contact email updated',
+            items: [
+                'Recommendations now go to arrestmrmann@outlook.com in the hero and footer.'
+            ]
+        }
+    ];
+
+    function escapeHtml(value) {
+        return String(value)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+    }
+
+    function formatDate(iso) {
+        var date = new Date(iso + 'T12:00:00');
+        if (isNaN(date.getTime()))
+            return iso;
+        return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
+    function render() {
+        var list = document.getElementById('updatesList');
+        if (!list)
+            return;
+
+        var sorted = updates.slice().sort(function (a, b) {
+            return b.date.localeCompare(a.date);
+        });
+
+        list.innerHTML = sorted.map(function (update, index) {
+            var items = update.items.map(function (item) {
+                return '<li>' + escapeHtml(item) + '</li>';
+            }).join('');
+            return '<article class="update-entry' + (index === 0 ? ' is-latest' : '') + '">' +
+                '<time class="update-date" datetime="' + escapeHtml(update.date) + '">' +
+                escapeHtml(formatDate(update.date)) + '</time>' +
+                '<div class="update-card"><h3>' + escapeHtml(update.title) +
+                (index === 0 ? '<span class="update-badge">Latest</span>' : '') +
+                '</h3><ul>' + items + '</ul></div></article>';
+        }).join('');
+    }
+
+    if (document.readyState === 'loading')
+        document.addEventListener('DOMContentLoaded', render);
+    else
+        render();
+})();

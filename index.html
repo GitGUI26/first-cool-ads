@@ -43,8 +43,9 @@
 <link href="css/style.css?v=7" rel="stylesheet">
 <link href="css/refresh.css?v=5" rel="stylesheet">
 <link href="css/browser.css?v=1" rel="stylesheet">
-<link href="css/account.css?v=1" rel="stylesheet">
+<link href="css/account.css?v=4" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
+<link href="css/updates.css?v=1" rel="stylesheet">
   <script>
     // Ad placements (Adsterra). Each slot writes its own atOptions + invoke pair
     // while the page is parsing, so every unit is served at its own size.
@@ -98,16 +99,21 @@
             <div class="nav-tab active" id="lessonsTab" onclick="switchTab('lessons')">GAMES</div>
             <div class="nav-tab" id="musicTab" onclick="switchTab('music')" role="button" tabindex="0"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('music');}">MUSIC</div>
+            <div class="nav-tab" id="updatesTab" onclick="switchTab('updates')" role="button" tabindex="0" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();switchTab('updates');}">UPDATES</div>
             <div class="nav-tab" id="settingsTab" onclick="switchTab('settings')">SETTINGS</div>
             <div class="nav-tab" id="browserTab" onclick="openBrowserOverlay()" role="button" tabindex="0"
               aria-expanded="false"
               onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openBrowserOverlay();}">BROWSER</div>
-            <div class="nav-tab account-nav" id="accountTab" onclick="openAccount()" role="button" tabindex="0"
-              aria-label="Open account"
-              onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openAccount();}"><span id="accountNavLabel">ACCOUNT</span></div>
+
+
+
           </div>
           <button class="nav-random" type="button" onclick="openRandomGame()" title="Play a random game" aria-label="Play a random game">
             <i class="fas fa-shuffle"></i><span>Random</span>
+          </button>
+          <span class="account-nav-separator" aria-hidden="true"></span>
+          <button class="account-nav-button" id="accountTab" type="button" onclick="openAccount()" aria-label="Open account settings" aria-haspopup="dialog" title="Account settings">
+            <img class="account-nav-avatar" id="accountNavAvatar" src="images/default-avatar.svg" alt="">
           </button>
         </div>
       </div>
@@ -129,13 +135,13 @@
           </div>
           <p class="home-subtitle"><span id="typing-quote"></span><span class="cursor">|</span></p>
           <div class="hero-stats">
-            <div class="hero-stat"><b data-game-count>577+</b><span>games</span></div>
+            <div class="hero-stat"><b data-game-count>712</b><span>games</span></div>
           </div>
           <div class="hero-cta">
             <button class="btn-primary" type="button" onclick="document.getElementById('all-lessons').scrollIntoView({behavior:'smooth'})"><i class="fas fa-gamepad"></i> Browse games</button>
             <button class="btn-ghost" type="button" onclick="openRandomGame()"><i class="fas fa-shuffle"></i> Surprise me</button>
           </div>
-          <p class="hero-recommendation"><i class="fas fa-envelope" aria-hidden="true"></i> Have a recommendation? Email <a href="mailto:arrestmrmann@gmail.com">arrestmrmann@gmail.com</a></p>
+          <p class="hero-recommendation"><i class="fas fa-envelope" aria-hidden="true"></i> Have a recommendation? Email <a href="mailto:arrestmrmann@outlook.com">arrestmrmann@outlook.com</a></p>
         </div>
         <div class="home-hero-showcase">
           <div class="showcase-head"><span>Trending now</span><span class="showcase-hint">auto-playing</span></div>
@@ -196,10 +202,10 @@
           <span class="section-kicker">The library</span>
           <h2>ALL GAMES</h2>
         </div>
-        <div class="library-count"><b data-game-count>577+</b> games · always free</div>
+        <div class="library-count"><b data-game-count>712</b> games · always free</div>
       </div>
       <div class="search-container">
-        <input class="search-box" id="searchInput" placeholder="Search 577 games..." type="text" autocomplete="off">
+        <input class="search-box" id="searchInput" placeholder="Search 652 games..." type="text" autocomplete="off">
         <div class="search-icon"><i class="fas fa-search"></i></div>
         <button class="search-clear" id="searchClear" type="button" aria-label="Clear search" hidden><i class="fas fa-xmark"></i></button>
       </div>
@@ -372,6 +378,18 @@
         </div>
       </div>
     </section>
+    <section id="updates-section" class="updates-page" aria-labelledby="updatesTitle" hidden aria-hidden="true">
+      <div class="updates-shell">
+        <div class="updates-head">
+          <div>
+            <span class="section-kicker">Changelog</span>
+            <h2 id="updatesTitle">SITE UPDATES</h2>
+          </div>
+          <p>Every fix, addition, and cleanup made to Cool Tutoring Hub, newest first.</p>
+        </div>
+        <div class="updates-list" id="updatesList"></div>
+      </div>
+    </section>
     <div class="ad-slot ad-slot-native ad-in-feed" id="adInFeed">
       <script>
         if (adsAllowed()) {
@@ -384,7 +402,7 @@
     <footer class="site-footer">
       <div class="site-footer-left">
         <p>© 2026 Cool Tutoring Hub.</p>
-        <p class="footer-recommendation">To make a recommendation for the site, email <a href="mailto:arrestmrmann@gmail.com">arrestmrmann@gmail.com</a>.</p>
+        <p class="footer-recommendation">To make a recommendation for the site, email <a href="mailto:arrestmrmann@outlook.com">arrestmrmann@outlook.com</a>.</p>
       </div>
       <p class="footer-credit">site skidded by the most awesome sauce kid at school</p>
     </footer>
@@ -446,7 +464,7 @@
     <div class="account-backdrop" data-account-close></div>
     <div class="account-panel" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
       <header class="account-head">
-        <div class="account-head-avatar" aria-hidden="true"><i class="fas fa-user"></i></div>
+        <div class="account-head-avatar" aria-hidden="true"><img id="accountHeadAvatar" src="images/default-avatar.svg" alt=""></div>
         <div class="account-head-copy">
           <span class="account-kicker">Cool / Account</span>
           <h2 id="accountModalTitle">Sign in or create an account</h2>
@@ -461,44 +479,70 @@
           </div>
           <p class="account-lede" id="accountLede">Sign in to keep your games, browsing history, and preferences together.</p>
           <form class="account-form" id="signinForm">
-            <label>Username<input id="signinUsername" type="text" autocomplete="username" required></label>
+            <label>Email<input id="signinEmail" type="email" autocomplete="email" required></label>
             <label>Password<input id="signinPassword" type="password" autocomplete="current-password" required></label>
             <div class="account-error" id="signinError" role="alert" hidden></div>
             <button class="account-primary" type="submit">Sign in</button>
             <button class="account-link" id="showRecovery" type="button">Forgot password?</button>
-            <p class="account-local-note">Accounts are saved in this browser. No email is required.</p>
+            <p class="account-local-note">Your account is stored online, so it follows the site to a new address.</p>
           </form>
           <form class="account-form" id="signupForm" hidden>
-            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
-            <label>Password<span>No password requirements. Use anything you will remember.</span><input id="signupPassword" type="password" autocomplete="new-password" required></label>
-            <label>Recovery email<span>Optional. Only used if you forget your password.</span><input id="signupEmail" type="email" autocomplete="email"></label>
+            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. This is your display name.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
+            <label>Email<span>Used to sign in and recover your account.</span><input id="signupEmail" type="email" autocomplete="email" required></label>
+            <label>Password<span>At least 6 characters.</span><input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required></label>
             <div class="account-error" id="signupError" role="alert" hidden></div>
+            <div class="account-error is-success" id="signupSuccess" role="status" hidden></div>
             <button class="account-primary" type="submit">Create account</button>
-            <p class="account-local-note">Usernames are unique on this site. This static build stores the account in this browser.</p>
+            <p class="account-local-note">One account works on every domain this site uses. If you had a browser-only account, use the same username and email to bring its saved data along.</p>
           </form>
-          <form class="account-form" id="recoveryForm" hidden>
-            <p class="account-lede">Enter the optional recovery email saved on the account and choose a new password.</p>
-            <label>Username<input id="recoveryUsername" type="text" autocomplete="username" required></label>
-            <label>Recovery email<input id="recoveryEmail" type="email" autocomplete="email" required></label>
-            <label>New password<input id="recoveryPassword" type="password" autocomplete="new-password" required></label>
+          <form class="account-form" id="recoveryForm" hidden novalidate>
+            <p class="account-lede" id="recoveryLede">Enter the email on your account and we will send you a recovery code.</p>
+
+            <label id="recoveryEmailLabel">Email<input id="recoveryEmail" type="email" autocomplete="email" required></label>
+            <label id="recoveryCodeLabel" hidden>Recovery code<span>Check the email we sent for the code.</span><input id="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" required></label>
+            <button class="account-link" id="resendRecovery" type="button" hidden>Resend code</button>
+            <label id="recoveryPasswordLabel" hidden>New password<span>At least 6 characters.</span><input id="recoveryNewPassword" type="password" autocomplete="new-password" minlength="6" required></label>
             <div class="account-error" id="recoveryError" role="alert" hidden></div>
             <div class="account-error is-success" id="recoverySuccess" role="status" hidden></div>
-            <div class="account-card-actions"><button class="account-primary" type="submit">Reset password</button><button class="account-secondary" id="cancelRecovery" type="button">Back</button></div>
+            <div class="account-card-actions"><button class="account-primary" id="recoverySubmit" type="submit">Send code</button><button class="account-secondary" id="cancelRecovery" type="button">Back</button></div>
           </form>
         </div>
         <div id="accountDashboard" hidden>
           <div class="account-welcome">
-            <div class="account-avatar" id="accountAvatar" aria-hidden="true">?</div>
+            <div class="account-avatar" id="accountAvatar" aria-hidden="true"><img id="accountAvatarImage" src="images/default-avatar.svg" alt=""></div>
             <div><span class="account-kicker">Signed in</span><h3 id="accountUsername">@</h3><p id="accountJoined"></p></div>
             <button class="account-logout" id="accountSignOut" type="button">Sign out</button>
           </div>
           <div class="account-grid">
+            <section class="account-card account-card-wide account-settings-card">
+              <div class="account-card-head">
+                <div>
+                  <h4>Account settings</h4>
+                  <p>Manage your display name, email, and how your account stays synced.</p>
+                </div>
+                <span class="account-sync-pill" id="accountSyncPill" role="status">Checking sync…</span>
+              </div>
+              <div class="account-settings-grid">
+                <label>Display name<input id="accountDisplayName" type="text" maxlength="24" autocomplete="nickname"></label>
+                <label>Email<input id="accountRecoveryEmail" type="email" autocomplete="email" disabled></label>
+              </div>
+              <div class="account-card-actions">
+                <button class="account-primary" id="saveDisplayName" type="button">Save display name</button>
+                <button class="account-secondary" id="accountChangePassword" type="button">Change password</button>
+                <button class="account-secondary" id="accountSyncNow" type="button">Sync now</button>
+              </div>
+              <p class="account-sync-message" id="accountSyncMessage" role="status"></p>
+            </section>
             <section class="account-card">
-              <h4>Recovery email</h4>
-              <p>Optional. Used only to reset a forgotten password on this browser.</p>
-              <label>Email<input id="accountRecoveryEmail" type="email" autocomplete="email"></label>
-              <div class="account-card-actions"><button class="account-primary" id="saveRecoveryEmail" type="button">Save email</button></div>
-              <span class="account-inline-message" id="accountEmailMessage" role="status"></span>
+              <div class="account-card-head"><div><h4>Profile picture</h4><p>Choose a square image. It is cropped and resized to 256 × 256 and saved with your account.</p></div></div>
+              <div class="account-profile-editor">
+                <div class="account-avatar account-avatar-large" id="accountAvatarPreview" aria-hidden="true"><img id="accountAvatarPreviewImage" src="images/default-avatar.svg" alt=""></div>
+                <div class="account-profile-actions">
+                  <label class="account-file-button"><i class="fas fa-upload" aria-hidden="true"></i> Choose image<input id="avatarUpload" type="file" accept="image/png,image/jpeg,image/webp"></label>
+                  <button class="account-secondary" id="avatarReset" type="button" disabled>Use default</button>
+                  <div class="account-error" id="avatarError" role="alert" hidden></div>
+                </div>
+              </div>
             </section>
             <section class="account-card">
               <h4>Account snapshot</h4>
@@ -543,11 +587,14 @@
       <div class="account-toast" id="accountToast" role="status" hidden></div>
     </div>
   </div>
-  <script src="js/account-store.js?v=1"></script>
+  <script src="js/vendor/supabase.js?v=1"></script>
+  <script src="js/auth-config.js?v=1"></script>
+  <script src="js/account-store.js?v=6"></script>
   <script src="scripts/starfield.js?v=3"></script>
-  <script src="js/games.js?v=10"></script>
-  <script src="js/main.js?v=12"></script>
-  <script src="js/account.js?v=2"></script>
+  <script src="js/games.js?v=11"></script>
+  <script src="js/main.js?v=16"></script>
+  <script src="js/updates.js?v=1"></script>
+  <script src="js/account.js?v=6"></script>
   <script src="js/music.js?v=2"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
     <button aria-label="Close advertisement" class="ad-mobile-close" type="button"

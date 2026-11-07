@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 256 256" role="img" aria-label="Default profile picture">
+  <defs>
+    <linearGradient id="defaultAvatarBackground" x1="20" y1="18" x2="236" y2="242" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#1b2748"/>
+      <stop offset="0.55" stop-color="#0b1222"/>
+      <stop offset="1" stop-color="#070b14"/>
+    </linearGradient>
+    <radialGradient id="defaultAvatarGlow" cx="0" cy="0" r="1" gradientTransform="translate(128 92) rotate(90) scale(130)" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#7c8cff" stop-opacity="0.22"/>
+      <stop offset="1" stop-color="#7c8cff" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="defaultAvatarPerson" x1="128" y1="58" x2="128" y2="232" gradientUnits="userSpaceOnUse">
+      <stop offset="0" stop-color="#f7f9ff"/>
+      <stop offset="1" stop-color="#aebada"/>
+    </linearGradient>
+    <clipPath id="defaultAvatarClip"><circle cx="128" cy="128" r="128"/></clipPath>
+  </defs>
+  <circle cx="128" cy="128" r="128" fill="url(#defaultAvatarBackground)"/>
+  <circle cx="128" cy="128" r="128" fill="url(#defaultAvatarGlow)"/>
+  <g clip-path="url(#defaultAvatarClip)">
+    <circle cx="128" cy="99" r="40" fill="url(#defaultAvatarPerson)"/>
+    <path d="M128 148c-40 0-73 24-84 60-2 7-4 14-4 22h176c0-8-2-15-4-22-11-36-44-60-84-60Z" fill="url(#defaultAvatarPerson)"/>
+  </g>
+</svg>

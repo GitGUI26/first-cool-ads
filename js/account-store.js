@@ -1,19 +1,35 @@
 /*
  * Cool Tutoring Hub account store.
  *
- * This build is static, so accounts live in this browser's localStorage. Passwords
- * are never stored directly: each account gets a random salt and a PBKDF2-SHA-256
- * hash. Usernames are unique within this browser's account registry.
+ * Credentials and sessions are handled by Supabase Auth, so an account keeps
+ * working after the site moves to a different domain. The browser only caches
+ * the signed-in profile (history, saved apps, preferences); passwords never
+ * touch this file.
+ *
+ * The optional public.profiles table (see supabase/schema.sql) syncs that
+ * profile across devices. If the table has not been created, the site still
+ * signs in and keeps the profile in this browser.
  */
 (function () {
   'use strict';
 
-  var ACCOUNTS_KEY = 'cuh_accounts_v1';
-  var SESSION_KEY = 'cuh_session_v1';
   var GUEST_PREFS_KEY = 'cuh_guest_prefs_v1';
-  var VERSION = 1;
-  var ITERATIONS = 150000;
+  var LEGACY_ACCOUNTS_KEY = 'cuh_accounts_v1';
+  var LEGACY_SESSION_KEY = 'cuh_session_v1';
+  var PROFILES_KEY = 'cuh_profiles_v2';
+  var SESSION_KEY = 'cuh_session_v2';
+  var AUTH_STORAGE_KEY = 'cuh_auth_v2';
+  var RECOVERY_FLAG_KEY = 'cuh_recovery_pending_v1';
+  var PROFILE_VERSION = 2;
   var MAX_HISTORY = 200;
+  var MAX_WEBSITES = 40;
+  var MAX_AVATAR_LENGTH = 500000;
+  var MAX_PROGRESS_GAMES = 80;
+  var MAX_PROGRESS_KEYS = 120;
+  var MAX_PROGRESS_VALUE = 120000;
+  var MAX_PROGRESS_GAME_BYTES = 250000;
+  var MAX_PROGRESS_TOTAL_BYTES = 1000000;
+  var PUSH_DELAY = 900;
 
   var PREF_KEYS = [
     'selectedTheme',
@@ -44,7 +60,33 @@
   };
 
   var APP_IDS = ['discord', 'tiktok', 'youtube'];
-  var ACCOUNT_KEYS = [ACCOUNTS_KEY, SESSION_KEY, GUEST_PREFS_KEY];
+  var ACCOUNT_KEYS = [
+    LEGACY_ACCOUNTS_KEY,
+    LEGACY_SESSION_KEY,
+    GUEST_PREFS_KEY,
+    PROFILES_KEY,
+    SESSION_KEY,
+    AUTH_STORAGE_KEY,
+    RECOVERY_FLAG_KEY
+  ];
+
+  var client = null;
+  var clientChecked = false;
+  var pushTimer = 0;
+  var cloudReady = false;
+  var recoveryPending = false;
+
+  function readStored(key) {
+    try { return localStorage.getItem(key); } catch (error) { return null; }
+  }
+
+  function writeStored(key, value) {
+    try { localStorage.setItem(key, value); return true; } catch (error) { return false; }
+  }
+
+  function removeStored(key) {
+    try { localStorage.removeItem(key); } catch (error) {}
+  }
 
   function safeParse(value, fallback) {
     try { return JSON.parse(value) || fallback; } catch (error) { return fallback; }
@@ -78,6 +120,63 @@
     return { ok: true, username: display, key: normalizeUsername(display) };
   }
 
+  function normalizeAvatar(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (!raw) return '';
+    if (!/^data:image\/(?:png|jpe?g|webp);base64,/i.test(raw)) return '';
+    return raw.length <= MAX_AVATAR_LENGTH ? raw : '';
+  }
+
+  function cleanProgressKey(value) {
+    return String(value == null ? '' : value).replace(/[\u0000-\u001f]/g, '').trim().slice(0, 240);
+  }
+
+  function normalizeProgressData(data) {
+    if (!data || typeof data !== 'object' || Array.isArray(data)) return {};
+    var out = {};
+    var total = 0;
+    Object.keys(data).slice(0, MAX_PROGRESS_KEYS).forEach(function (rawKey) {
+      var key = String(rawKey == null ? '' : rawKey).slice(0, 160);
+      if (!key) return;
+      var value = data[rawKey];
+      if (value === null || value === undefined) return;
+      var text = typeof value === 'string' ? value : (typeof value === 'number' || typeof value === 'boolean' ? String(value) : JSON.stringify(value));
+      if (typeof text !== 'string' || !text.length || text.length > MAX_PROGRESS_VALUE) return;
+      if (total + text.length > MAX_PROGRESS_GAME_BYTES) return;
+      out[key] = text;
+      total += text.length;
+    });
+    return out;
+  }
+
+  function normalizeGameProgress(progress) {
+    if (!progress || typeof progress !== 'object' || Array.isArray(progress)) return {};
+    var entries = [];
+    Object.keys(progress).forEach(function (rawKey) {
+      var key = cleanProgressKey(rawKey);
+      if (!key) return;
+      var entry = progress[rawKey];
+      var data = entry && typeof entry === 'object' && !Array.isArray(entry) && entry.data && typeof entry.data === 'object'
+        ? entry.data
+        : entry;
+      var normalized = normalizeProgressData(data);
+      if (!Object.keys(normalized).length) return;
+      var updatedAt = entry && entry.updatedAt ? String(entry.updatedAt) : new Date().toISOString();
+      if (isNaN(Date.parse(updatedAt))) updatedAt = new Date().toISOString();
+      entries.push({ key: key, data: normalized, updatedAt: updatedAt });
+    });
+    entries.sort(function (a, b) { return new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime(); });
+    var out = {};
+    var total = 0;
+    entries.slice(0, MAX_PROGRESS_GAMES).forEach(function (entry) {
+      var size = JSON.stringify(entry.data).length;
+      if (total + size > MAX_PROGRESS_TOTAL_BYTES) return;
+      out[entry.key] = { data: entry.data, updatedAt: entry.updatedAt };
+      total += size;
+    });
+    return out;
+  }
+
   function cleanUrl(value) {
     var raw = String(value == null ? '' : value).trim();
     if (!raw) return '';
@@ -98,121 +197,167 @@
     return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
   }
 
-  function bytesToBase64(bytes) {
-    var binary = '';
-    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
-    return btoa(binary);
-  }
-
-  function base64ToBytes(value) {
-    var binary = atob(value);
-    var bytes = new Uint8Array(binary.length);
-    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-    return bytes;
-  }
-
-  function randomSalt() {
-    var bytes = new Uint8Array(16);
-    window.crypto.getRandomValues(bytes);
-    return bytesToBase64(bytes);
-  }
-
-  function cryptoAvailable() {
-    return !!(window.crypto && window.crypto.subtle && window.TextEncoder);
-  }
-
-  async function derivePassword(password, salt, iterations) {
-    if (!cryptoAvailable()) throw new Error('This browser cannot create accounts securely.');
-    var keyMaterial = await window.crypto.subtle.importKey(
-      'raw',
-      new TextEncoder().encode(password),
-      'PBKDF2',
-      false,
-      ['deriveBits']
-    );
-    var bits = await window.crypto.subtle.deriveBits({
-      name: 'PBKDF2',
-      salt: base64ToBytes(salt),
-      iterations: iterations || ITERATIONS,
-      hash: 'SHA-256'
-    }, keyMaterial, 256);
-    return bytesToBase64(new Uint8Array(bits));
-  }
-
-  function emptyRegistry() {
-    return { version: VERSION, users: {} };
-  }
-
-  function readRegistry() {
-    var registry = safeParse(localStorage.getItem(ACCOUNTS_KEY), emptyRegistry());
-    if (!registry || registry.version !== VERSION || !registry.users || typeof registry.users !== 'object') {
-      return emptyRegistry();
-    }
-    return registry;
-  }
-
-  function writeRegistry(registry) {
-    try {
-      localStorage.setItem(ACCOUNTS_KEY, JSON.stringify(registry));
-      return true;
-    } catch (error) {
-      return false;
-    }
-  }
-
-  function getSessionKey() {
-    try { return localStorage.getItem(SESSION_KEY) || ''; } catch (error) { return ''; }
-  }
-
-  function getCurrentUser() {
-    var key = getSessionKey();
-    if (!key) return null;
-    var registry = readRegistry();
-    var user = registry.users[key];
-    if (!user) {
-      try { localStorage.removeItem(SESSION_KEY); } catch (error) {}
-      return null;
-    }
-    return user;
-  }
-
-  function findUser(username) {
-    var key = normalizeUsername(username);
-    if (!key) return null;
-    return readRegistry().users[key] || null;
-  }
-
-  function saveUser(user) {
-    var registry = readRegistry();
-    user.updatedAt = new Date().toISOString();
-    registry.users[user.key] = user;
-    var saved = writeRegistry(registry);
-    if (saved) emitChange('profile');
-    return saved;
-  }
-
-  function snakeApp(value) {
-    return APP_IDS.indexOf(value) !== -1 ? value : '';
-  }
-
   function blankApps() {
     var apps = {};
     APP_IDS.forEach(function (id) { apps[id] = { handle: '', url: '' }; });
     return apps;
   }
 
+  function normalizeApps(apps) {
+    var next = blankApps();
+    APP_IDS.forEach(function (id) {
+      var item = apps && apps[id];
+      if (!item || typeof item !== 'object') return;
+      next[id] = {
+        handle: cleanText(item.handle, 80),
+        url: cleanUrl(item.url)
+      };
+    });
+    return next;
+  }
+
+  function normalizeHistory(history) {
+    if (!Array.isArray(history)) return [];
+    var out = [];
+    history.forEach(function (entry) {
+      if (!entry || typeof entry !== 'object') return;
+      var title = cleanText(entry.title, 160);
+      var url = cleanText(entry.url, 2048);
+      if (!title && !url) return;
+      out.push({
+        id: cleanText(entry.id, 80) || randomId(),
+        type: ['web', 'app', 'game', 'site'].indexOf(entry.type) !== -1 ? entry.type : 'web',
+        title: title || url,
+        url: url,
+        at: entry.at || new Date().toISOString()
+      });
+    });
+    out.sort(function (a, b) { return new Date(b.at).getTime() - new Date(a.at).getTime(); });
+    return out.slice(0, MAX_HISTORY);
+  }
+
+  function normalizeWebsites(websites) {
+    if (!Array.isArray(websites)) return [];
+    return websites.slice(0, MAX_WEBSITES).map(function (entry) {
+      if (!entry || typeof entry !== 'object') return null;
+      var name = cleanText(entry.name, 60);
+      if (!name) return null;
+      return {
+        id: cleanText(entry.id, 80) || randomId(),
+        name: name,
+        username: cleanText(entry.username, 80),
+        url: cleanUrl(entry.url),
+        note: cleanText(entry.note, 200)
+      };
+    }).filter(Boolean);
+  }
+
   function normalizeUser(user) {
     if (!user || typeof user !== 'object') return user;
-    if (!Array.isArray(user.history)) user.history = [];
-    if (!Array.isArray(user.websites)) user.websites = [];
-    if (!user.apps || typeof user.apps !== 'object') user.apps = blankApps();
-    APP_IDS.forEach(function (id) {
-      if (!user.apps[id] || typeof user.apps[id] !== 'object') user.apps[id] = { handle: '', url: '' };
-      user.apps[id].handle = cleanText(user.apps[id].handle, 80);
-      user.apps[id].url = cleanUrl(user.apps[id].url);
-    });
+    user.history = normalizeHistory(user.history);
+    user.websites = normalizeWebsites(user.websites);
+    user.apps = normalizeApps(user.apps);
+    user.avatar = normalizeAvatar(user.avatar);
+    user.gameProgress = normalizeGameProgress(user.gameProgress);
     if (!user.preferences || typeof user.preferences !== 'object') user.preferences = {};
+    user.key = normalizeUsername(user.username);
     return user;
+  }
+
+  function normalizeProfile(user) {
+    return {
+      id: String((user && user.id) || ''),
+      username: cleanText(user && user.username, 24),
+      email: cleanEmail(user && user.email) || normalizeEmail(user && user.email),
+      avatar: normalizeAvatar(user && user.avatar),
+      gameProgress: normalizeGameProgress(user && user.gameProgress),
+      history: normalizeHistory(user && user.history),
+      apps: normalizeApps(user && user.apps),
+      websites: normalizeWebsites(user && user.websites),
+      preferences: user && user.preferences && typeof user.preferences === 'object'
+        ? Object.assign({}, user.preferences)
+        : {},
+      createdAt: (user && user.createdAt) || new Date().toISOString(),
+      updatedAt: (user && user.updatedAt) || new Date().toISOString()
+    };
+  }
+
+  function blankProfile(identity) {
+    return {
+      id: identity.id,
+      username: identity.username,
+      email: identity.email,
+      avatar: '',
+      gameProgress: {},
+      history: [],
+      apps: blankApps(),
+      websites: [],
+      preferences: {},
+      createdAt: identity.createdAt,
+      updatedAt: new Date().toISOString()
+    };
+  }
+
+  function emptyProfiles() {
+    return { version: PROFILE_VERSION, users: {} };
+  }
+
+  function readProfiles() {
+    var data = safeParse(readStored(PROFILES_KEY), null);
+    if (!data || data.version !== PROFILE_VERSION || !data.users || typeof data.users !== 'object') {
+      return emptyProfiles();
+    }
+    return data;
+  }
+
+  function writeProfiles(profiles) {
+    try {
+      return writeStored(PROFILES_KEY, JSON.stringify(profiles));
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function readSession() {
+    var data = safeParse(readStored(SESSION_KEY), null);
+    if (!data || !data.id) return null;
+    return {
+      id: String(data.id),
+      username: cleanText(data.username, 24),
+      email: cleanEmail(data.email) || normalizeEmail(data.email),
+      createdAt: data.createdAt || new Date().toISOString()
+    };
+  }
+
+  function writeSession(identity) {
+    return writeStored(SESSION_KEY, JSON.stringify({
+      id: identity.id,
+      username: identity.username,
+      email: identity.email,
+      createdAt: identity.createdAt
+    }));
+  }
+
+  function clearSession() {
+    removeStored(SESSION_KEY);
+  }
+
+  function getCurrentUser() {
+    var identity = readSession();
+    if (!identity) return null;
+    var profiles = readProfiles();
+    var profile = profiles.users[identity.id];
+    if (!profile) {
+      profile = blankProfile(identity);
+      profiles.users[identity.id] = profile;
+      writeProfiles(profiles);
+    }
+    return normalizeUser(Object.assign({}, profile, identity, {
+      id: identity.id,
+      username: identity.username || profile.username,
+      email: identity.email || profile.email,
+      createdAt: identity.createdAt || profile.createdAt
+    }));
   }
 
   function emitChange(reason) {
@@ -221,6 +366,57 @@
         detail: { reason: reason || 'update', user: getCurrentUser() }
       }));
     } catch (error) {}
+  }
+
+  function identityFromAuthUser(authUser) {
+    var email = normalizeEmail(authUser && authUser.email);
+    var meta = authUser && authUser.user_metadata && typeof authUser.user_metadata === 'object'
+      ? authUser.user_metadata
+      : {};
+    var username = cleanText(meta.username, 24);
+    if (!username || !/^[A-Za-z0-9_.-]+$/.test(username)) {
+      username = email.split('@')[0].replace(/[^A-Za-z0-9_.-]/g, '').slice(0, 24);
+    }
+    if (!username) username = 'player';
+    return {
+      id: String(authUser.id),
+      username: username,
+      email: email,
+      createdAt: authUser.created_at || new Date().toISOString()
+    };
+  }
+
+  function findLegacyUser(identity) {
+    var registry = safeParse(readStored(LEGACY_ACCOUNTS_KEY), null);
+    var users = registry && registry.users;
+    if (!users || typeof users !== 'object') return null;
+    var byName = users[normalizeUsername(identity.username)];
+    if (byName) return byName;
+    var email = normalizeEmail(identity.email);
+    if (!email) return null;
+    var keys = Object.keys(users);
+    for (var i = 0; i < keys.length; i++) {
+      var user = users[keys[i]];
+      if (user && normalizeEmail(user.recoveryEmail) === email) return user;
+    }
+    return null;
+  }
+
+  function mergeLegacyProfile(profile, identity) {
+    var legacy = findLegacyUser(identity);
+    if (!legacy) return false;
+    profile.history = normalizeHistory(legacy.history);
+    profile.apps = normalizeApps(legacy.apps);
+    profile.websites = normalizeWebsites(legacy.websites);
+    profile.preferences = legacy.preferences && typeof legacy.preferences === 'object'
+      ? Object.assign({}, legacy.preferences)
+      : {};
+    return true;
+  }
+
+  function hasLegacyAccounts() {
+    var registry = safeParse(readStored(LEGACY_ACCOUNTS_KEY), null);
+    return !!(registry && registry.users && Object.keys(registry.users).length);
   }
 
   function snapshotPreferences() {
@@ -234,16 +430,6 @@
     // Avoid duplicating a multi-megabyte uploaded logo into every account.
     if (data.customLogo && data.customLogo.length > 450000) delete data.customLogo;
     return data;
-  }
-
-  function saveGuestPreferences() {
-    if (getCurrentUser()) return false;
-    try {
-      localStorage.setItem(GUEST_PREFS_KEY, JSON.stringify(snapshotPreferences()));
-      return true;
-    } catch (error) {
-      return false;
-    }
   }
 
   function applyPreferences(preferences) {
@@ -261,9 +447,38 @@
     });
   }
 
+  function saveGuestPreferences() {
+    if (getCurrentUser()) return false;
+    try {
+      localStorage.setItem(GUEST_PREFS_KEY, JSON.stringify(snapshotPreferences()));
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   function applyGuestPreferences() {
-    var preferences = safeParse(localStorage.getItem(GUEST_PREFS_KEY), null);
+    var preferences = safeParse(readStored(GUEST_PREFS_KEY), null);
     applyPreferences(preferences || {});
+  }
+
+  function saveUser(user) {
+    if (!user || !user.id) return false;
+    var profiles = readProfiles();
+    var profile = normalizeProfile(user);
+    profile.updatedAt = new Date().toISOString();
+    profiles.users[user.id] = profile;
+    if (!writeProfiles(profiles)) return false;
+    var identity = readSession();
+    if (identity && identity.id === user.id) {
+      identity.username = profile.username;
+      identity.email = profile.email;
+      identity.createdAt = profile.createdAt;
+      writeSession(identity);
+    }
+    schedulePush();
+    emitChange('profile');
+    return true;
   }
 
   function capturePreferences() {
@@ -273,113 +488,95 @@
     return saveUser(user);
   }
 
-  function setSession(key) {
-    try { localStorage.setItem(SESSION_KEY, key); return true; } catch (error) { return false; }
-  }
-
-  function clearSession() {
-    try { localStorage.removeItem(SESSION_KEY); } catch (error) {}
-  }
-
-  async function createAccount(input) {
-    var check = validateUsername(input && input.username);
-    if (!check.ok) return check;
-    var password = String(input && input.password != null ? input.password : '');
-    if (!password) return { ok: false, error: 'Enter a password.' };
-    var registry = readRegistry();
-    if (registry.users[check.key]) return { ok: false, error: 'That username is already taken.' };
-    if (!cryptoAvailable()) return { ok: false, error: 'This browser does not support secure accounts.' };
-    var salt;
-    var hash;
-    try {
-      salt = randomSalt();
-      hash = await derivePassword(password, salt, ITERATIONS);
-    } catch (error) {
-      return { ok: false, error: error.message || 'Could not secure the password.' };
-    }
-    var now = new Date().toISOString();
-    var user = {
-      key: check.key,
-      username: check.username,
-      salt: salt,
-      passwordHash: hash,
-      iterations: ITERATIONS,
-      recoveryEmail: cleanEmail(input && input.email),
-      history: [],
-      apps: blankApps(),
-      websites: [],
-      preferences: {},
-      createdAt: now,
-      updatedAt: now
-    };
-    registry.users[check.key] = user;
-    if (!writeRegistry(registry)) return { ok: false, error: 'This browser is out of storage.' };
-    if (!setSession(check.key)) {
-      delete registry.users[check.key];
-      writeRegistry(registry);
-      return { ok: false, error: 'Could not start a session in this browser.' };
-    }
-    emitChange('signup');
-    return { ok: true, user: user };
-  }
-
-  async function signIn(username, password) {
-    var user = findUser(username);
-    if (!user || !cryptoAvailable()) return { ok: false, error: 'Username or password is incorrect.' };
-    var hash;
-    try {
-      hash = await derivePassword(String(password == null ? '' : password), user.salt, user.iterations || ITERATIONS);
-    } catch (error) {
-      return { ok: false, error: error.message || 'Could not verify the password.' };
-    }
-    if (hash !== user.passwordHash) return { ok: false, error: 'Username or password is incorrect.' };
-    if (!setSession(user.key)) return { ok: false, error: 'Could not start a session in this browser.' };
-    emitChange('signin');
-    return { ok: true, user: normalizeUser(user) };
-  }
-
-  async function resetPassword(username, email, newPassword) {
-    var user = findUser(username);
-    if (!user) return { ok: false, error: 'No account with that username was found.' };
-    if (!user.recoveryEmail) return { ok: false, error: 'That account does not have a recovery email.' };
-    if (normalizeEmail(email) !== normalizeEmail(user.recoveryEmail)) {
-      return { ok: false, error: 'The recovery email does not match this account.' };
-    }
-    var password = String(newPassword == null ? '' : newPassword);
-    if (!password) return { ok: false, error: 'Enter a new password.' };
-    try {
-      user.salt = randomSalt();
-      user.passwordHash = await derivePassword(password, user.salt, ITERATIONS);
-      user.iterations = ITERATIONS;
-    } catch (error) {
-      return { ok: false, error: error.message || 'Could not update the password.' };
-    }
-    return saveUser(user) ? { ok: true } : { ok: false, error: 'This browser is out of storage.' };
-  }
-
-  function updateRecoveryEmail(email) {
-    var user = getCurrentUser();
-    if (!user) return { ok: false, error: 'Sign in first.' };
-    var cleaned = cleanEmail(email);
-    if (String(email || '').trim() && !cleaned) return { ok: false, error: 'Enter a valid email or leave it blank.' };
-    user.recoveryEmail = cleaned;
-    return saveUser(user) ? { ok: true } : { ok: false, error: 'This browser is out of storage.' };
-  }
-
   function setApps(apps) {
     var user = getCurrentUser();
     if (!user) return { ok: false, error: 'Sign in first.' };
-    var next = blankApps();
-    APP_IDS.forEach(function (id) {
-      var item = apps && apps[id];
-      if (!item) return;
-      next[id] = {
-        handle: cleanText(item.handle, 80),
-        url: cleanUrl(item.url)
-      };
-    });
-    user.apps = next;
+    user.apps = normalizeApps(apps);
     return saveUser(user) ? { ok: true } : { ok: false, error: 'This browser is out of storage.' };
+  }
+
+  function setAvatar(dataUrl) {
+    var user = getCurrentUser();
+    if (!user) return { ok: false, error: 'Sign in first.' };
+    var raw = String(dataUrl == null ? '' : dataUrl).trim();
+    var avatar = normalizeAvatar(raw);
+    if (raw && !avatar) {
+      return { ok: false, error: 'Choose a JPG, PNG, or WebP image smaller than 500 KB.' };
+    }
+    user.avatar = avatar;
+    return saveUser(user)
+      ? { ok: true, avatar: avatar }
+      : { ok: false, error: 'This browser is out of storage.' };
+  }
+
+  function isCloudConfigured() {
+    return !!authClient();
+  }
+
+  async function setUsername(value) {
+    var user = getCurrentUser();
+    if (!user) return { ok: false, error: 'Sign in first.' };
+    var check = validateUsername(value);
+    if (!check.ok) return check;
+    var auth = authClient();
+    if (auth) {
+      try {
+        var result = await auth.auth.updateUser({ data: { username: check.username } });
+        if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
+      } catch (error) {
+        return { ok: false, error: friendlyAuthError(error) };
+      }
+    }
+    user.username = check.username;
+    return saveUser(user)
+      ? { ok: true, username: check.username }
+      : { ok: false, error: 'This browser is out of storage.' };
+  }
+
+  async function syncNow() {
+    var user = getCurrentUser();
+    if (!user) return { ok: false, error: 'Sign in first.' };
+    if (!authClient()) return { ok: false, error: 'Cloud sync is not configured yet.' };
+    var synced = await pushRemoteProfile();
+    if (!synced) return { ok: false, error: 'Could not sync your account. Check the connection and try again.' };
+    cloudReady = true;
+    emitChange('profile');
+    return { ok: true };
+  }
+
+  function getGameProgress(gameId) {
+    var user = getCurrentUser();
+    var key = cleanProgressKey(gameId);
+    var entry = user && user.gameProgress ? user.gameProgress[key] : null;
+    return entry && entry.data ? Object.assign({}, entry.data) : {};
+  }
+
+  function setGameProgress(gameId, data) {
+    var user = getCurrentUser();
+    if (!user) return { ok: false, error: 'Sign in first.' };
+    var key = cleanProgressKey(gameId);
+    if (!key) return { ok: false, error: 'Invalid game.' };
+    var progress = normalizeGameProgress(user.gameProgress);
+    var normalized = normalizeProgressData(data);
+    if (Object.keys(normalized).length) {
+      progress[key] = { data: normalized, updatedAt: new Date().toISOString() };
+    } else {
+      delete progress[key];
+    }
+    user.gameProgress = normalizeGameProgress(progress);
+    if (!saveUser(user)) return { ok: false, error: 'This browser is out of storage.' };
+    return { ok: true };
+  }
+
+  function clearGameProgress(gameId) {
+    var user = getCurrentUser();
+    if (!user) return false;
+    var key = cleanProgressKey(gameId);
+    if (!key) return false;
+    var progress = normalizeGameProgress(user.gameProgress);
+    delete progress[key];
+    user.gameProgress = progress;
+    return saveUser(user);
   }
 
   function addWebsite(input) {
@@ -396,7 +593,7 @@
     };
     user.websites = Array.isArray(user.websites) ? user.websites : [];
     user.websites.unshift(item);
-    user.websites = user.websites.slice(0, 40);
+    user.websites = user.websites.slice(0, MAX_WEBSITES);
     return saveUser(user) ? { ok: true, item: item } : { ok: false, error: 'This browser is out of storage.' };
   }
 
@@ -439,6 +636,400 @@
     return saveUser(user);
   }
 
+  function profilePayload(user) {
+    var preferences = Object.assign({}, user.preferences || {});
+    // Keep multi-hundred-kilobyte logos local instead of uploading them on
+    // every history change.
+    if (preferences.customLogo && preferences.customLogo.length > 120000) delete preferences.customLogo;
+    return {
+      id: user.id,
+      username: user.username,
+      data: {
+        history: user.history || [],
+        apps: user.apps || {},
+        websites: user.websites || [],
+        avatar: user.avatar || '',
+        gameProgress: user.gameProgress || {},
+        preferences: preferences
+      },
+      updated_at: new Date().toISOString()
+    };
+  }
+
+  function pushProfileNow(user) {
+    var auth = authClient();
+    if (!auth || !user) return;
+    try {
+      Promise.resolve(auth.from('profiles').upsert(profilePayload(user), { onConflict: 'id' }))
+        .then(function (result) {
+          if (!result || !result.error) cloudReady = true;
+        })
+        .catch(function () {});
+    } catch (error) {}
+  }
+
+  function schedulePush(delay) {
+    if (!authClient()) return;
+    clearTimeout(pushTimer);
+    pushTimer = window.setTimeout(function () {
+      pushRemoteProfile();
+    }, typeof delay === 'number' ? delay : PUSH_DELAY);
+  }
+
+  async function pushRemoteProfile() {
+    var auth = authClient();
+    var user = getCurrentUser();
+    if (!auth || !user) return false;
+    try {
+      var result = await auth.from('profiles').upsert(profilePayload(user), { onConflict: 'id' });
+      if (!result.error) {
+        cloudReady = true;
+        return true;
+      }
+    } catch (error) {}
+    return false;
+  }
+
+  async function pullRemoteProfile(authUser) {
+    var auth = authClient();
+    if (!auth || !authUser) return null;
+    try {
+      var result = await auth.from('profiles')
+        .select('username,data,updated_at')
+        .eq('id', authUser.id)
+        .maybeSingle();
+      if (result.error || !result.data) return null;
+      return result.data;
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function mergeRemoteProfile(local, remote, identity) {
+    var data = remote && remote.data && typeof remote.data === 'object' ? remote.data : {};
+    return normalizeProfile({
+      id: identity.id,
+      username: identity.username,
+      email: identity.email,
+      createdAt: identity.createdAt,
+      updatedAt: remote.updated_at || new Date().toISOString(),
+      history: Array.isArray(data.history) ? data.history : local.history,
+      apps: data.apps && typeof data.apps === 'object' ? data.apps : local.apps,
+      websites: Array.isArray(data.websites) ? data.websites : local.websites,
+      avatar: data.avatar !== undefined ? data.avatar : local.avatar,
+      gameProgress: data.gameProgress !== undefined ? data.gameProgress : local.gameProgress,
+      preferences: data.preferences && typeof data.preferences === 'object' ? data.preferences : local.preferences
+    });
+  }
+
+  async function adoptSession(authUser, reason) {
+    if (!authUser || !authUser.id) return getCurrentUser();
+    var identity = identityFromAuthUser(authUser);
+    var profiles = readProfiles();
+    var profile = profiles.users[identity.id];
+    var fresh = !profile;
+    if (!profile) {
+      profile = blankProfile(identity);
+      mergeLegacyProfile(profile, identity);
+    }
+    profile = normalizeProfile(Object.assign({}, profile, identity, {
+      id: identity.id,
+      username: identity.username,
+      email: identity.email,
+      createdAt: identity.createdAt
+    }));
+    profiles.users[identity.id] = profile;
+    writeProfiles(profiles);
+    writeSession(identity);
+    emitChange(reason || 'restore');
+
+    var remote = await pullRemoteProfile(authUser);
+    if (remote) {
+      var next = readProfiles();
+      var local = next.users[identity.id] || profile;
+      next.users[identity.id] = mergeRemoteProfile(local, remote, identity);
+      writeProfiles(next);
+      cloudReady = true;
+      emitChange('profile');
+    } else if (fresh) {
+      schedulePush(0);
+    }
+    return getCurrentUser();
+  }
+
+  function adoptQuietly(authUser, reason) {
+    adoptSession(authUser, reason).catch(function () {});
+  }
+
+  function setRecoveryFlag() {
+    recoveryPending = true;
+    try { sessionStorage.setItem(RECOVERY_FLAG_KEY, '1'); } catch (error) {}
+  }
+
+  function clearRecoveryFlag() {
+    recoveryPending = false;
+    try { sessionStorage.removeItem(RECOVERY_FLAG_KEY); } catch (error) {}
+  }
+
+  function isRecoveryPending() {
+    if (recoveryPending) return true;
+    try {
+      if (sessionStorage.getItem(RECOVERY_FLAG_KEY) === '1') {
+        recoveryPending = true;
+      }
+    } catch (error) {}
+    return recoveryPending;
+  }
+
+  function siteUrl() {
+    var configured = String((window.CUH_AUTH_CONFIG || {}).siteUrl || '').trim();
+    if (configured) return configured.replace(/\/+$/, '') + '/';
+    return location.origin + location.pathname.replace(/[^/]*$/, '');
+  }
+
+  function friendlyAuthError(error) {
+    var message = String((error && (error.message || error.error_description)) || '');
+    var code = String((error && error.code) || '');
+    if (code === 'invalid_credentials' || /invalid login credentials/i.test(message)) {
+      return 'Email or password is incorrect.';
+    }
+    if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) {
+      return 'Confirm your email first. Check your inbox for the confirmation link.';
+    }
+    if (code === 'user_already_exists' || code === 'email_exists' || /already registered|already been registered/i.test(message)) {
+      return 'An account with that email already exists. Sign in instead.';
+    }
+    if (code === 'weak_password' || /password should be at least/i.test(message)) {
+      return 'Use a password with at least 6 characters.';
+    }
+    if (code === 'over_email_send_rate_limit' || code === 'over_request_rate_limit' || /rate limit|too many/i.test(message)) {
+      return 'Too many attempts. Wait a minute and try again.';
+    }
+    if (code === 'otp_expired' || code === 'invalid_otp' || /token has expired|invalid.*(?:otp|token)|(?:otp|token).*(?:expired|invalid)/i.test(message)) {
+      return 'That code is incorrect or has expired. Check the email or request a new code.';
+    }
+    if (code === 'same_password' || /different from the old password|same password/i.test(message)) {
+      return 'Choose a password you have not used before.';
+    }
+    if (/redirect.*not allowed|url.*not allowed/i.test(message)) {
+      return 'This site address is not allowed for email links yet. Add it in Supabase Auth URL Configuration.';
+    }
+    if (/auth session missing|session.*missing/i.test(message)) {
+      return 'That reset link has expired. Send yourself a new one.';
+    }
+    if (/failed to fetch|networkerror|load failed/i.test(message)) {
+      return 'Could not reach the account server. Check your connection and try again.';
+    }
+    if (/email.*invalid/i.test(message)) {
+      return 'Enter a valid email address.';
+    }
+    return message || 'The account server returned an error. Try again.';
+  }
+
+  function authClient() {
+    if (client) return client;
+    if (clientChecked) return null;
+    clientChecked = true;
+    var config = window.CUH_AUTH_CONFIG || {};
+    var url = String(config.supabaseUrl || '').trim().replace(/\/+$/, '');
+    var key = String(config.supabaseAnonKey || '').trim();
+    if (!url || !key || !window.supabase || typeof window.supabase.createClient !== 'function') {
+      if (window.CUH_AUTH_CONFIG) {
+        console.warn('Online accounts are not configured. Add the Supabase URL and anon key in js/auth-config.js.');
+      }
+      return null;
+    }
+    try {
+      client = window.supabase.createClient(url, key, {
+        auth: {
+          persistSession: true,
+          autoRefreshToken: true,
+          detectSessionInUrl: true,
+          storageKey: AUTH_STORAGE_KEY,
+          flowType: 'implicit'
+        }
+      });
+    } catch (error) {
+      client = null;
+      return null;
+    }
+
+    try {
+      client.auth.onAuthStateChange(function (event, session) {
+        window.setTimeout(function () {
+          if (event === 'PASSWORD_RECOVERY') setRecoveryFlag();
+          if (session && session.user) {
+            if (event !== 'TOKEN_REFRESHED' || !readSession()) {
+              adoptQuietly(session.user, event === 'SIGNED_IN' ? 'signin' : 'restore');
+            }
+            return;
+          }
+          if (event === 'SIGNED_OUT' && readSession()) {
+            clearSession();
+            applyGuestPreferences();
+            emitChange('signout');
+          }
+        }, 0);
+      });
+    } catch (error) {}
+
+    try {
+      Promise.resolve(client.auth.getSession()).then(function (result) {
+        var session = result && result.data ? result.data.session : null;
+        if (session && session.user) {
+          adoptQuietly(session.user, 'restore');
+        } else if (readSession()) {
+          clearSession();
+          applyGuestPreferences();
+          emitChange('signout');
+        }
+      }).catch(function () {});
+    } catch (error) {}
+
+    return client;
+  }
+
+  async function createAccount(input) {
+    var check = validateUsername(input && input.username);
+    if (!check.ok) return check;
+    var email = cleanEmail(input && input.email);
+    if (!email) return { ok: false, error: 'Enter a valid email address. You will use it to sign in.' };
+    var password = String(input && input.password != null ? input.password : '');
+    if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+
+    var result;
+    try {
+      result = await auth.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          data: { username: check.username },
+          emailRedirectTo: siteUrl() + '?account=confirmed'
+        }
+      });
+    } catch (error) {
+      return { ok: false, error: friendlyAuthError(error) };
+    }
+    if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
+    var data = result.data || {};
+    if (!data.session) {
+      return { ok: true, needsConfirmation: true, email: email, user: null };
+    }
+    var authUser = data.user || (data.session && data.session.user);
+    var user = await adoptSession(authUser, 'signup');
+    return { ok: true, needsConfirmation: false, user: user };
+  }
+
+  async function signIn(email, password) {
+    var clean = cleanEmail(email);
+    if (!clean) return { ok: false, error: 'Enter the email address for your account.' };
+    if (!password) return { ok: false, error: 'Enter your password.' };
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+
+    var result;
+    try {
+      result = await auth.auth.signInWithPassword({ email: clean, password: String(password) });
+    } catch (error) {
+      return { ok: false, error: friendlyAuthError(error) };
+    }
+    if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
+    var data = result.data || {};
+    var authUser = data.user || (data.session && data.session.user);
+    if (!authUser) return { ok: false, error: 'Could not start a session. Try again.' };
+    var user = await adoptSession(authUser, 'signin');
+    return { ok: true, user: user };
+  }
+
+  async function sendRecoveryCode(email) {
+    var clean = cleanEmail(email);
+    if (!clean) return { ok: false, error: 'Enter the email address for your account.' };
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+    try {
+      // No redirect is needed for a code reset. The Reset Password email
+      // template must include {{ .Token }} for the six-digit code.
+      var result = await auth.auth.resetPasswordForEmail(clean);
+      if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
+      return { ok: true, email: clean };
+    } catch (error) {
+      return { ok: false, error: friendlyAuthError(error) };
+    }
+  }
+
+  async function verifyRecoveryCode(email, token, newPassword) {
+    var clean = cleanEmail(email);
+    var code = String(token == null ? '' : token).replace(/\s+/g, '');
+    var password = String(newPassword == null ? '' : newPassword);
+    if (!clean) return { ok: false, error: 'Enter the email address for your account.' };
+    if (!/^\d{6,10}$/.test(code)) return { ok: false, error: 'Enter the code from your recovery email.' };
+    if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+
+    var verification;
+    try {
+      verification = await auth.auth.verifyOtp({ email: clean, token: code, type: 'recovery' });
+    } catch (error) {
+      return { ok: false, error: friendlyAuthError(error) };
+    }
+    if (verification.error) return { ok: false, error: friendlyAuthError(verification.error) };
+    var verifiedUser = verification.data && verification.data.user;
+    if (!verifiedUser) return { ok: false, error: 'That code could not be verified. Request a new code.' };
+
+    var update;
+    try {
+      update = await auth.auth.updateUser({ password: password });
+    } catch (error) {
+      return { ok: false, verified: true, error: friendlyAuthError(error) };
+    }
+    if (update.error) return { ok: false, verified: true, error: friendlyAuthError(update.error) };
+
+    clearRecoveryFlag();
+    var authUser = (update.data && update.data.user) || verifiedUser;
+    await adoptSession(authUser, 'profile');
+    return { ok: true, user: getCurrentUser() };
+  }
+
+  async function completeRecovery(newPassword) {
+    var password = String(newPassword == null ? '' : newPassword);
+    if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+    try {
+      var result = await auth.auth.updateUser({ password: password });
+      if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
+      clearRecoveryFlag();
+      var authUser = result.data && result.data.user;
+      if (authUser) await adoptSession(authUser, 'profile');
+      return { ok: true, user: getCurrentUser() };
+    } catch (error) {
+      return { ok: false, error: friendlyAuthError(error) };
+    }
+  }
+
+  function cancelRecovery() {
+    clearRecoveryFlag();
+  }
+
+  function signOut() {
+    var user = getCurrentUser();
+    if (user) {
+      user.preferences = snapshotPreferences();
+      saveUser(user);
+      pushProfileNow(user);
+    }
+    clearSession();
+    var auth = authClient();
+    if (auth) {
+      try { Promise.resolve(auth.auth.signOut()).catch(function () {}); } catch (error) {}
+    }
+    applyGuestPreferences();
+    emitChange('signout');
+  }
+
   function isAccountKey(key) {
     return ACCOUNT_KEYS.indexOf(String(key || '')) !== -1;
   }
@@ -452,10 +1043,8 @@
   function snapshotAccountKeys() {
     var snapshot = {};
     ACCOUNT_KEYS.forEach(function (key) {
-      try {
-        var value = localStorage.getItem(key);
-        if (value !== null) snapshot[key] = value;
-      } catch (error) {}
+      var value = readStored(key);
+      if (value !== null) snapshot[key] = value;
     });
     return snapshot;
   }
@@ -463,9 +1052,61 @@
   function restoreAccountKeys(snapshot) {
     Object.keys(snapshot || {}).forEach(function (key) {
       if (!isAccountKey(key)) return;
-      try { localStorage.setItem(key, snapshot[key]); } catch (error) {}
+      writeStored(key, snapshot[key]);
     });
   }
+
+  window.CoolAccountStore = {
+    keys: {
+      accounts: PROFILES_KEY,
+      session: SESSION_KEY,
+      guestPreferences: GUEST_PREFS_KEY
+    },
+    appIds: APP_IDS.slice(),
+    preferenceKeys: PREF_KEYS.slice(),
+    getCurrentUser: getCurrentUser,
+    getUserCount: function () { return Object.keys(readProfiles().users).length; },
+    createAccount: createAccount,
+    signIn: signIn,
+    sendRecoveryCode: sendRecoveryCode,
+    resetPassword: sendRecoveryCode,
+    verifyRecoveryCode: verifyRecoveryCode,
+    completeRecovery: completeRecovery,
+    isRecoveryPending: isRecoveryPending,
+    cancelRecovery: cancelRecovery,
+    signOut: signOut,
+    saveGuestPreferences: saveGuestPreferences,
+    applyPreferences: applyPreferences,
+    applyGuestPreferences: applyGuestPreferences,
+    capturePreferences: capturePreferences,
+    snapshotPreferences: snapshotPreferences,
+    setApps: setApps,
+    setAvatar: setAvatar,
+    setUsername: setUsername,
+    isCloudConfigured: isCloudConfigured,
+    syncNow: syncNow,
+    getGameProgress: getGameProgress,
+    setGameProgress: setGameProgress,
+    clearGameProgress: clearGameProgress,
+    addWebsite: addWebsite,
+    removeWebsite: removeWebsite,
+    addHistory: addHistory,
+    clearHistory: clearHistory,
+    hasLegacyAccounts: hasLegacyAccounts,
+    cloudSyncEnabled: function () { return cloudReady; },
+    redactStorageSnapshot: redactStorageSnapshot,
+    isAccountKey: isAccountKey,
+    snapshotAccountKeys: snapshotAccountKeys,
+    restoreAccountKeys: restoreAccountKeys
+  };
+
+  // If Supabase redirected back with a recovery token, remember it before the
+  // client consumes the URL so the account modal can ask for a new password.
+  try {
+    if (/type=recovery/.test(location.hash) || /[?&]type=recovery(?:[=&]|$)/.test(location.search)) {
+      setRecoveryFlag();
+    }
+  } catch (error) {}
 
   // Apply the signed-in account's preferences before main.js initializes settings.
   try {
@@ -473,39 +1114,5 @@
     if (initialUser) applyPreferences(initialUser.preferences);
   } catch (error) {}
 
-  window.CoolAccountStore = {
-    keys: {
-      accounts: ACCOUNTS_KEY,
-      session: SESSION_KEY,
-      guestPreferences: GUEST_PREFS_KEY
-    },
-    appIds: APP_IDS.slice(),
-    preferenceKeys: PREF_KEYS.slice(),
-    getCurrentUser: getCurrentUser,
-    getUserCount: function () { return Object.keys(readRegistry().users).length; },
-    createAccount: createAccount,
-    signIn: signIn,
-    resetPassword: resetPassword,
-    signOut: function () {
-      capturePreferences();
-      clearSession();
-      applyGuestPreferences();
-      emitChange('signout');
-    },
-    saveGuestPreferences: saveGuestPreferences,
-    applyPreferences: applyPreferences,
-    applyGuestPreferences: applyGuestPreferences,
-    capturePreferences: capturePreferences,
-    snapshotPreferences: snapshotPreferences,
-    updateRecoveryEmail: updateRecoveryEmail,
-    setApps: setApps,
-    addWebsite: addWebsite,
-    removeWebsite: removeWebsite,
-    addHistory: addHistory,
-    clearHistory: clearHistory,
-    redactStorageSnapshot: redactStorageSnapshot,
-    isAccountKey: isAccountKey,
-    snapshotAccountKeys: snapshotAccountKeys,
-    restoreAccountKeys: restoreAccountKeys
-  };
+  try { authClient(); } catch (error) {}
 })();

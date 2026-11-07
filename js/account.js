@@ -9,12 +9,15 @@
   var authView = $('accountAuthView');
   var dashboard = $('accountDashboard');
   var accountTab = $('accountTab');
-  var accountNavLabel = $('accountNavLabel');
   var toast = $('accountToast');
+  var DEFAULT_AVATAR = 'images/default-avatar.svg';
   var toastTimer = 0;
   var prefTimer = 0;
   var initialized = false;
   var activeAuthMode = 'signin';
+  var recoveryEmail = '';
+  var resendTimer = 0;
+  var resendUntil = 0;
 
   function setHidden(element, hidden) {
     if (!element) return;
@@ -22,11 +25,20 @@
     element.style.display = hidden ? 'none' : '';
   }
 
-  function showError(id, message) {
+  function showMessage(id, message, success) {
     var element = $(id);
     if (!element) return;
     element.textContent = message || '';
     element.hidden = !message;
+    element.classList.toggle('is-success', !!success);
+  }
+
+  function showError(id, message) {
+    showMessage(id, message, false);
+  }
+
+  function showSuccess(id, message) {
+    showMessage(id, message, true);
   }
 
   function showToast(message) {
@@ -38,7 +50,7 @@
     toastTimer = window.setTimeout(function () {
       toast.classList.remove('is-visible');
       window.setTimeout(function () { toast.hidden = true; }, 220);
-    }, 2600);
+    }, 3200);
   }
 
   function setBusy(form, busy, busyLabel) {
@@ -55,31 +67,90 @@
     return Store.getCurrentUser();
   }
 
+  function updateResendButton() {
+    var button = $('resendRecovery');
+    if (!button) return;
+    var remaining = Math.ceil((resendUntil - Date.now()) / 1000);
+    if (remaining > 0) {
+      button.disabled = true;
+      button.textContent = 'Resend code in ' + remaining + 's';
+    } else {
+      button.disabled = false;
+      button.textContent = 'Resend code';
+      if (resendTimer) {
+        clearInterval(resendTimer);
+        resendTimer = 0;
+      }
+    }
+  }
+
+  function startResendCooldown() {
+    resendUntil = Date.now() + 60000;
+    updateResendButton();
+    clearInterval(resendTimer);
+    resendTimer = window.setInterval(updateResendButton, 1000);
+  }
+
   function setAuthMode(mode) {
     activeAuthMode = mode;
+    var codeStep = mode === 'code';
+    var resetting = mode === 'password';
+    var onRecovery = mode === 'recovery' || codeStep || resetting;
     document.querySelectorAll('[data-auth-mode]').forEach(function (button) {
       button.classList.toggle('is-active', button.getAttribute('data-auth-mode') === mode);
     });
     setHidden($('signinForm'), mode !== 'signin');
     setHidden($('signupForm'), mode !== 'signup');
-    setHidden($('recoveryForm'), mode !== 'recovery');
+    setHidden($('recoveryForm'), !onRecovery);
+
     var lede = $('accountLede');
     if (lede) {
+      lede.hidden = onRecovery;
       lede.textContent = mode === 'signup'
-        ? 'Create a username and password. An email is optional.'
-        : mode === 'recovery'
-          ? 'Use the optional recovery email saved on the account.'
-          : 'Sign in to keep your games, browsing history, and preferences together.';
+        ? 'Create an account once and use it on every address this site moves to.'
+        : 'Sign in to keep your games, browsing history, and preferences together.';
     }
+    if ($('recoveryLede')) {
+      $('recoveryLede').textContent = codeStep
+        ? 'Enter the code from your email and choose a new password.'
+        : resetting
+          ? 'Choose a new password for your account.'
+          : 'Enter the email on your account and we will send you a recovery code.';
+    }
+    setHidden($('recoveryEmailLabel'), mode !== 'recovery');
+    setHidden($('recoveryCodeLabel'), !codeStep);
+    setHidden($('recoveryPasswordLabel'), !codeStep && !resetting);
+    setHidden($('resendRecovery'), !codeStep);
+    if ($('recoverySubmit')) {
+      $('recoverySubmit').textContent = codeStep
+        ? 'Reset password'
+        : resetting
+          ? 'Save new password'
+          : 'Send code';
+      delete $('recoverySubmit').dataset.label;
+    }
+    if ($('cancelRecovery')) {
+      $('cancelRecovery').textContent = codeStep
+        ? 'Use a different email'
+        : resetting
+          ? 'Back to sign in'
+          : 'Back';
+    }
+    if (mode === 'recovery') {
+      if ($('recoveryCode')) $('recoveryCode').value = '';
+      if ($('recoveryNewPassword')) $('recoveryNewPassword').value = '';
+    }
+    updateResendButton();
+    if (mode === 'recovery' || mode === 'code') {
+      var title = $('accountModalTitle');
+      if (title) title.textContent = 'Reset your password';
+    }
+
     showError('signinError', '');
     showError('signupError', '');
+    showSuccess('signupSuccess', '');
     showError('recoveryError', '');
-    showError('recoverySuccess', '');
-  }
-
-  function initials(name) {
-    var value = String(name || '?').replace(/^@/, '').trim();
-    return (value.charAt(0) || '?').toUpperCase();
+    showSuccess('recoverySuccess', '');
   }
 
   function safeHistoryLink(value) {
@@ -121,12 +192,27 @@
     return node;
   }
 
+  function avatarSource(user) {
+    return user && user.avatar ? user.avatar : DEFAULT_AVATAR;
+  }
+
+  function setAvatarImages(user) {
+    var src = avatarSource(user);
+    ['accountNavAvatar', 'accountHeadAvatar', 'accountAvatarImage', 'accountAvatarPreviewImage'].forEach(function (id) {
+      var image = $(id);
+      if (image && image.getAttribute('src') !== src) image.src = src;
+    });
+    var reset = $('avatarReset');
+    if (reset) reset.disabled = !(user && user.avatar);
+  }
+
   function renderNav() {
     var user = currentUser();
-    if (accountNavLabel) accountNavLabel.textContent = user ? '@' + user.username : 'ACCOUNT';
+    setAvatarImages(user);
     if (accountTab) {
       accountTab.classList.toggle('has-account', !!user);
-      accountTab.setAttribute('aria-label', user ? 'Open account for ' + user.username : 'Open account');
+      accountTab.setAttribute('aria-label', user ? 'Open account settings for ' + user.username : 'Open account settings');
+      accountTab.title = user ? '@' + user.username + ' · account settings' : 'Account settings';
     }
   }
 
@@ -225,12 +311,40 @@
       ' · Tab title, favicon, logo, and favorites are included.';
   }
 
+  function renderSyncStatus() {
+    var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
+    var synced = Store.cloudSyncEnabled ? Store.cloudSyncEnabled() : false;
+    var pill = $('accountSyncPill');
+    var message = $('accountSyncMessage');
+    var syncButton = $('accountSyncNow');
+    var passwordButton = $('accountChangePassword');
+    if (pill) {
+      pill.className = 'account-sync-pill ' + (configured ? (synced ? 'is-synced' : 'is-online') : 'is-local');
+      pill.textContent = configured ? (synced ? 'Synced' : 'Online account') : 'Local only';
+    }
+    if (message) {
+      message.className = 'account-sync-message';
+      message.textContent = configured
+        ? (synced
+          ? 'Your profile is stored online and follows your account to a new domain.'
+          : 'Your online account is ready. Sync now to upload the latest profile.')
+        : 'This account is saved in this browser only. Cloud sync has not been turned on yet.';
+    }
+    if (syncButton) syncButton.disabled = !configured;
+    if (passwordButton) passwordButton.disabled = !configured;
+  }
+
   function renderDashboard(user) {
     if (!user) return;
-    $('accountAvatar').textContent = initials(user.username);
+    var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
+    setAvatarImages(user);
     $('accountUsername').textContent = '@' + user.username;
-    $('accountJoined').textContent = 'Member since ' + formatDate(user.createdAt) + ' · local account';
-    $('accountRecoveryEmail').value = user.recoveryEmail || '';
+    $('accountJoined').textContent = 'Member since ' + formatDate(user.createdAt) +
+      (configured ? ' · online account' : ' · saved in this browser');
+    var displayName = $('accountDisplayName');
+    if (displayName && document.activeElement !== displayName) displayName.value = user.username || '';
+    $('accountRecoveryEmail').value = user.email || '';
+    renderSyncStatus();
     $('accountHistoryCount').textContent = String((user.history || []).length);
     $('accountAccountCount').textContent = String((user.websites || []).length +
       Object.keys(user.apps || {}).filter(function (id) { return user.apps[id] && user.apps[id].handle; }).length);
@@ -250,16 +364,23 @@
 
   function render() {
     var user = currentUser();
+    var recovery = Store.isRecoveryPending();
     renderNav();
     renderAppCards();
-    setHidden(authView, !!user);
-    setHidden(dashboard, !user);
-    if (user) {
+    setHidden(authView, !!user && !recovery);
+    setHidden(dashboard, !user || recovery);
+    if (recovery) {
+      setAuthMode('password');
+      $('accountModalTitle').textContent = 'Choose a new password';
+    } else if (user) {
       renderDashboard(user);
-      $('accountModalTitle').textContent = 'Your account';
+      $('accountModalTitle').textContent = 'Account settings';
     } else {
+      if (activeAuthMode === 'password') activeAuthMode = 'signin';
       setAuthMode(activeAuthMode || 'signin');
-      $('accountModalTitle').textContent = 'Sign in or create an account';
+      $('accountModalTitle').textContent = (activeAuthMode === 'recovery' || activeAuthMode === 'code')
+        ? 'Reset your password'
+        : 'Sign in or create an account';
     }
   }
 
@@ -273,7 +394,13 @@
     document.body.classList.add('account-open');
     document.body.style.overflow = 'hidden';
     window.setTimeout(function () {
-      var first = currentUser() ? $('accountSignOut') : (activeAuthMode === 'signup' ? $('signupUsername') : $('signinUsername'));
+      var first;
+      if (Store.isRecoveryPending()) first = $('recoveryNewPassword');
+      else if (activeAuthMode === 'code') first = $('recoveryCode');
+      else if (currentUser()) first = $('accountDisplayName');
+      else if (activeAuthMode === 'signup') first = $('signupUsername');
+      else if (activeAuthMode === 'recovery') first = $('recoveryEmail');
+      else first = $('signinEmail');
       if (first) first.focus();
     }, 30);
   }
@@ -292,27 +419,36 @@
     event.preventDefault();
     var form = $('signupForm');
     var username = $('signupUsername').value;
-    var password = $('signupPassword').value;
     var email = $('signupEmail').value;
+    var password = $('signupPassword').value;
     showError('signupError', '');
-    if (!password) {
-      showError('signupError', 'Enter a password.');
+    showSuccess('signupSuccess', '');
+    if (password.length < 6) {
+      showError('signupError', 'Use a password with at least 6 characters.');
       $('signupPassword').focus();
       return;
     }
     Store.saveGuestPreferences();
     setBusy(form, true, 'Creating…');
-    var result = await Store.createAccount({ username: username, password: password, email: email });
+    var result = await Store.createAccount({ username: username, email: email, password: password });
     setBusy(form, false);
     if (!result.ok) {
       showError('signupError', result.error);
       return;
     }
+    if (result.needsConfirmation) {
+      var confirmationEmail = email;
+      $('signupForm').reset();
+      showSuccess('signupSuccess', 'Account created. Check ' + confirmationEmail +
+        ' for the confirmation link, then sign in.');
+      showToast('Check your email to confirm the account.');
+      return;
+    }
     Store.capturePreferences();
     $('signupForm').reset();
-    setAuthMode('signin');
+    activeAuthMode = 'signin';
     render();
-    showToast('Account created. Your history and preferences will be saved to it.');
+    showToast('Account created. It will work on every future domain.');
   }
 
   async function submitSignin(event) {
@@ -321,7 +457,7 @@
     showError('signinError', '');
     Store.saveGuestPreferences();
     setBusy(form, true, 'Signing in…');
-    var result = await Store.signIn($('signinUsername').value, $('signinPassword').value);
+    var result = await Store.signIn($('signinEmail').value, $('signinPassword').value);
     setBusy(form, false);
     if (!result.ok) {
       showError('signinError', result.error);
@@ -336,35 +472,124 @@
 
   async function submitRecovery(event) {
     event.preventDefault();
+    if (activeAuthMode === 'password') return submitNewPassword(event);
+    if (activeAuthMode === 'code') return submitRecoveryCode(event);
     var form = $('recoveryForm');
     showError('recoveryError', '');
-    showError('recoverySuccess', '');
-    setBusy(form, true, 'Resetting…');
-    var result = await Store.resetPassword(
-      $('recoveryUsername').value,
-      $('recoveryEmail').value,
-      $('recoveryPassword').value
-    );
+    showSuccess('recoverySuccess', '');
+    var email = $('recoveryEmail').value;
+    setBusy(form, true, 'Sending…');
+    var result = await Store.sendRecoveryCode(email);
     setBusy(form, false);
     if (!result.ok) {
       showError('recoveryError', result.error);
       return;
     }
-    var username = $('recoveryUsername').value;
-    $('recoveryForm').reset();
-    setAuthMode('signin');
-    $('signinUsername').value = username;
-    showToast('Password reset. Sign in with the new password.');
+    recoveryEmail = result.email || email;
+    setAuthMode('code');
+    showSuccess('recoverySuccess', 'We sent a recovery code to ' + recoveryEmail + '. Check your inbox and spam folder.');
+    startResendCooldown();
+    if ($('recoveryCode')) $('recoveryCode').focus();
   }
 
-  function saveRecoveryEmail() {
-    var result = Store.updateRecoveryEmail($('accountRecoveryEmail').value);
-    var message = $('accountEmailMessage');
-    if (message) {
-      message.textContent = result.ok ? 'Recovery email saved.' : result.error;
-      message.className = 'account-inline-message ' + (result.ok ? 'is-success' : 'is-error');
+  async function submitRecoveryCode(event) {
+    event.preventDefault();
+    var form = $('recoveryForm');
+    var token = String($('recoveryCode').value || '').replace(/\D/g, '');
+    var password = $('recoveryNewPassword').value;
+    showError('recoveryError', '');
+    if (token.length < 6) {
+      showError('recoveryError', 'Enter the code from your recovery email.');
+      $('recoveryCode').focus();
+      return;
     }
-    if (result.ok) showToast('Recovery email saved.');
+    if (password.length < 6) {
+      showError('recoveryError', 'Use a password with at least 6 characters.');
+      $('recoveryNewPassword').focus();
+      return;
+    }
+    setBusy(form, true, 'Resetting…');
+    var result = await Store.verifyRecoveryCode(recoveryEmail, token, password);
+    setBusy(form, false);
+    if (!result.ok) {
+      showError('recoveryError', result.error);
+      if (result.verified) {
+        // The code was accepted but saving the password failed. The recovery
+        // session is still valid, so ask for the password without the code.
+        setHidden(authView, false);
+        setHidden(dashboard, true);
+        setAuthMode('password');
+        showError('recoveryError', result.error);
+      }
+      return;
+    }
+    $('recoveryForm').reset();
+    recoveryEmail = '';
+    Store.cancelRecovery();
+    if (result.user && result.user.preferences) Store.applyPreferences(result.user.preferences);
+    activeAuthMode = 'signin';
+    render();
+    showToast('Password updated. You are signed in.');
+    window.setTimeout(function () {
+      Store.cancelRecovery();
+      window.location.reload();
+    }, 350);
+  }
+
+  async function resendRecoveryCode() {
+    if (!recoveryEmail) {
+      setAuthMode('recovery');
+      return;
+    }
+    var button = $('resendRecovery');
+    if (!button || button.disabled) return;
+    showError('recoveryError', '');
+    showSuccess('recoverySuccess', '');
+    button.disabled = true;
+    button.textContent = 'Sending…';
+    var result = await Store.sendRecoveryCode(recoveryEmail);
+    if (!result.ok) {
+      showError('recoveryError', result.error);
+      updateResendButton();
+      return;
+    }
+    showSuccess('recoverySuccess', 'A new recovery code was sent to ' + recoveryEmail + '.');
+    startResendCooldown();
+  }
+
+  async function submitNewPassword(event) {
+    event.preventDefault();
+    var form = $('recoveryForm');
+    showError('recoveryError', '');
+    var password = $('recoveryNewPassword').value;
+    if (password.length < 6) {
+      showError('recoveryError', 'Use a password with at least 6 characters.');
+      $('recoveryNewPassword').focus();
+      return;
+    }
+    setBusy(form, true, 'Saving…');
+    var result = await Store.completeRecovery(password);
+    setBusy(form, false);
+    if (!result.ok) {
+      showError('recoveryError', result.error);
+      return;
+    }
+    $('recoveryForm').reset();
+    activeAuthMode = 'signin';
+    render();
+    showToast('Password updated. You are signed in.');
+  }
+
+  function cancelRecovery() {
+    if (activeAuthMode === 'code') {
+      setAuthMode('recovery');
+      if ($('recoveryEmail')) $('recoveryEmail').focus();
+      return;
+    }
+    if (Store.isRecoveryPending()) Store.cancelRecovery();
+    activeAuthMode = 'signin';
+    setAuthMode('signin');
+    render();
   }
 
   function saveApps() {
@@ -459,6 +684,133 @@
     window.__cuhLessonHistoryHooked = true;
   }
 
+  function loadAvatarImage(file) {
+    return new Promise(function (resolve, reject) {
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error('Could not read that image.')); };
+      reader.onload = function () {
+        var image = new Image();
+        image.onerror = function () { reject(new Error('Could not open that image.')); };
+        image.onload = function () { resolve(image); };
+        image.src = String(reader.result || '');
+      };
+      reader.readAsDataURL(file);
+    });
+  }
+
+  function makeSquareAvatar(file) {
+    return loadAvatarImage(file).then(function (image) {
+      var size = 256;
+      var canvas = document.createElement('canvas');
+      canvas.width = size;
+      canvas.height = size;
+      var context = canvas.getContext('2d');
+      if (!context) throw new Error('Could not prepare that image.');
+      context.fillStyle = '#0b1020';
+      context.fillRect(0, 0, size, size);
+      var scale = Math.max(size / image.naturalWidth, size / image.naturalHeight);
+      var width = Math.round(image.naturalWidth * scale);
+      var height = Math.round(image.naturalHeight * scale);
+      context.drawImage(image, Math.round((size - width) / 2), Math.round((size - height) / 2), width, height);
+      var data = canvas.toDataURL('image/webp', 0.86);
+      if (data.indexOf('data:image/webp') !== 0) data = canvas.toDataURL('image/jpeg', 0.86);
+      return data;
+    });
+  }
+
+  async function handleAvatarUpload(event) {
+    var input = event.target;
+    var file = input.files && input.files[0];
+    input.value = '';
+    showError('avatarError', '');
+    if (!file) return;
+    if (!/^image\/(?:png|jpe?g|webp)$/i.test(file.type)) {
+      showError('avatarError', 'Choose a JPG, PNG, or WebP image.');
+      return;
+    }
+    if (file.size > 8 * 1024 * 1024) {
+      showError('avatarError', 'That image is too large. Choose one under 8 MB.');
+      return;
+    }
+    if (!currentUser()) {
+      showError('avatarError', 'Sign in first.');
+      return;
+    }
+    var reset = $('avatarReset');
+    if (reset) reset.disabled = true;
+    showToast('Updating profile picture…');
+    try {
+      var data = await makeSquareAvatar(file);
+      var result = Store.setAvatar(data);
+      if (!result.ok) {
+        showError('avatarError', result.error);
+        return;
+      }
+      renderDashboard(currentUser());
+      showToast('Profile picture updated.');
+    } catch (error) {
+      showError('avatarError', 'Could not read that image. Try a different file.');
+    } finally {
+      var user = currentUser();
+      if (reset) reset.disabled = !(user && user.avatar);
+    }
+  }
+
+  function resetAvatar() {
+    showError('avatarError', '');
+    var result = Store.setAvatar('');
+    if (!result.ok) {
+      showError('avatarError', result.error);
+      return;
+    }
+    renderDashboard(currentUser());
+    showToast('Default profile picture restored.');
+  }
+
+  async function saveDisplayName() {
+    var input = $('accountDisplayName');
+    var button = $('saveDisplayName');
+    if (!input || !button) return;
+    button.disabled = true;
+    var result = await Store.setUsername(input.value);
+    button.disabled = false;
+    if (!result.ok) {
+      showToast(result.error);
+      return;
+    }
+    renderDashboard(currentUser());
+    showToast('Display name updated.');
+  }
+
+  function beginPasswordReset() {
+    var user = currentUser();
+    if (!user) return;
+    if (!Store.isCloudConfigured || !Store.isCloudConfigured()) {
+      showToast('Cloud sync is not turned on yet, so passwords cannot be changed here.');
+      return;
+    }
+    recoveryEmail = user.email;
+    if ($('recoveryEmail')) $('recoveryEmail').value = user.email;
+    setHidden(authView, false);
+    setHidden(dashboard, true);
+    setAuthMode('recovery');
+    if ($('accountModalTitle')) $('accountModalTitle').textContent = 'Reset your password';
+    showSuccess('recoverySuccess', 'We will send a reset code to ' + user.email + '.');
+    if ($('recoveryEmail')) $('recoveryEmail').focus();
+  }
+
+  async function syncAccount() {
+    var button = $('accountSyncNow');
+    if (!button) return;
+    var label = button.textContent;
+    button.disabled = true;
+    button.textContent = 'Syncing…';
+    var result = await Store.syncNow();
+    button.textContent = label;
+    renderSyncStatus();
+    showToast(result.ok ? 'Account synced.' : result.error);
+  }
+
   function bindEvents() {
     document.querySelectorAll('[data-account-close]').forEach(function (element) {
       element.addEventListener('click', closeAccount);
@@ -466,27 +818,41 @@
     document.querySelectorAll('[data-auth-mode]').forEach(function (button) {
       button.addEventListener('click', function () { setAuthMode(button.getAttribute('data-auth-mode')); });
     });
-    $('signupForm').addEventListener('submit', submitSignup);
-    $('signinForm').addEventListener('submit', submitSignin);
-    $('recoveryForm').addEventListener('submit', submitRecovery);
-    $('showRecovery').addEventListener('click', function () { setAuthMode('recovery'); });
-    $('cancelRecovery').addEventListener('click', function () { setAuthMode('signin'); });
-    $('accountSignOut').addEventListener('click', function () {
-      Store.signOut();
-      activeAuthMode = 'signin';
-      render();
-      showToast('Signed out. Guest preferences restored.');
-      window.setTimeout(function () { window.location.reload(); }, 350);
-    });
-    $('saveRecoveryEmail').addEventListener('click', saveRecoveryEmail);
-    $('saveAppAccounts').addEventListener('click', saveApps);
-    $('websiteForm').addEventListener('submit', addWebsite);
-    $('clearHistory').addEventListener('click', clearHistory);
-    $('savePreferences').addEventListener('click', savePreferencesNow);
-    $('websiteList').addEventListener('click', function (event) {
-      var button = event.target.closest('[data-remove-website]');
-      if (button) removeWebsite(button.getAttribute('data-remove-website'));
-    });
+    if ($('signupForm')) $('signupForm').addEventListener('submit', submitSignup);
+    if ($('signinForm')) $('signinForm').addEventListener('submit', submitSignin);
+    if ($('recoveryForm')) $('recoveryForm').addEventListener('submit', submitRecovery);
+    if ($('resendRecovery')) $('resendRecovery').addEventListener('click', resendRecoveryCode);
+    if ($('recoveryCode')) {
+      $('recoveryCode').addEventListener('input', function () {
+        this.value = this.value.replace(/\D/g, '').slice(0, 10);
+      });
+    }
+    if ($('showRecovery')) $('showRecovery').addEventListener('click', function () { setAuthMode('recovery'); });
+    if ($('cancelRecovery')) $('cancelRecovery').addEventListener('click', cancelRecovery);
+    if ($('accountSignOut')) {
+      $('accountSignOut').addEventListener('click', function () {
+        Store.signOut();
+        activeAuthMode = 'signin';
+        render();
+        showToast('Signed out. Guest preferences restored.');
+        window.setTimeout(function () { window.location.reload(); }, 350);
+      });
+    }
+    if ($('saveAppAccounts')) $('saveAppAccounts').addEventListener('click', saveApps);
+    if ($('websiteForm')) $('websiteForm').addEventListener('submit', addWebsite);
+    if ($('clearHistory')) $('clearHistory').addEventListener('click', clearHistory);
+    if ($('savePreferences')) $('savePreferences').addEventListener('click', savePreferencesNow);
+    if ($('avatarUpload')) $('avatarUpload').addEventListener('change', handleAvatarUpload);
+    if ($('avatarReset')) $('avatarReset').addEventListener('click', resetAvatar);
+    if ($('saveDisplayName')) $('saveDisplayName').addEventListener('click', saveDisplayName);
+    if ($('accountChangePassword')) $('accountChangePassword').addEventListener('click', beginPasswordReset);
+    if ($('accountSyncNow')) $('accountSyncNow').addEventListener('click', syncAccount);
+    if ($('websiteList')) {
+      $('websiteList').addEventListener('click', function (event) {
+        var button = event.target.closest('[data-remove-website]');
+        if (button) removeWebsite(button.getAttribute('data-remove-website'));
+      });
+    }
     document.addEventListener('click', function (event) {
       var appOpen = event.target.closest('[data-app-open]');
       if (appOpen) {
@@ -525,6 +891,11 @@
     window.addEventListener('cuh-account-change', function (event) {
       renderNav();
       renderAppCards();
+      if (modal && !modal.hidden) renderSyncStatus();
+      if (event.detail && ['signin', 'signup', 'signout', 'restore'].indexOf(event.detail.reason) !== -1) {
+        if (modal && !modal.hidden) render();
+        return;
+      }
       var user = currentUser();
       if (user && dashboard && !dashboard.hidden) {
         var count = $('accountHistoryCount');
@@ -535,6 +906,7 @@
           return;
         }
         if (event.detail && event.detail.reason === 'profile' && $('historyList')) {
+          setAvatarImages(user);
           renderHistory(user);
           renderWebsites(user);
           renderAppCards();
@@ -549,6 +921,17 @@
     initialized = true;
     bindEvents();
     render();
+    if (Store.isRecoveryPending()) {
+      window.setTimeout(openAccount, 0);
+      // Supabase finishes parsing the recovery URL just after this script runs.
+      // Render again once it has had a moment to establish the recovery session.
+      window.setTimeout(function () {
+        if (Store.isRecoveryPending()) {
+          render();
+          openAccount();
+        }
+      }, 700);
+    }
   }
 
   window.openAccount = function () {

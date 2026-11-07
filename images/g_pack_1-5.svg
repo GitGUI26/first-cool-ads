@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img" aria-label="Minecraft 1.5 cover art">
+<defs>
+  <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#0b1426"/><stop offset=".52" stop-color="#09111f"/><stop offset="1" stop-color="#050910"/></linearGradient>
+  <linearGradient id="accent" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#a3e635"/><stop offset="1" stop-color="#38bdf8"/></linearGradient>
+  <radialGradient id="glow" cx=".78" cy=".34" r=".62"><stop offset="0" stop-color="#a3e635" stop-opacity=".22"/><stop offset="1" stop-color="#a3e635" stop-opacity="0"/></radialGradient>
+  <filter id="soft" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="18"/></filter>
+</defs>
+<rect width="640" height="360" fill="url(#bg)"/>
+<rect width="640" height="360" fill="url(#glow)"/>
+<g stroke="#a3e635" stroke-opacity=".12" stroke-width="2"><path d="M-80 360L240 0M0 360L320 0M80 360L400 0M160 360L480 0M240 360L560 0M320 360L640 0"/></g>
+<circle cx="550" cy="56" r="110" fill="#a3e635" opacity=".08" filter="url(#soft)"/>
+<path d="M0 0H640V4H0Z" fill="url(#accent)" opacity=".6"/>
+<g transform="translate(42 38)">
+  <path d="M0 0H28V5H5V28H0Z" fill="#a3e635" opacity=".8"/>
+  <text x="0" y="52" fill="#a3e635" font-family="Arial, Helvetica, sans-serif" font-size="11" font-weight="700" letter-spacing="3">SANDBOX</text>
+</g>
+<g transform="translate(482 174)">
+  <rect x="-92" y="-92" width="184" height="184" rx="34" fill="#07101d" fill-opacity=".72" stroke="#a3e635" stroke-opacity=".28"/>
+  <g color="#a3e635" transform="translate(0 2)"><g fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M0 -48L48 -22 0 4-48 -22Z"/><path d="M-48 -22V28L0 54V4M48 -22V28L0 54"/><path d="M0 4V54M-48 28L0 4M48 28L0 4" opacity=".55"/></g></g>
+  <path d="M-58 68H58" stroke="url(#accent)" stroke-width="2" opacity=".55"/>
+</g>
+<text x="42" y="189.9" fill="#f8fbff" font-family="Arial, Helvetica, sans-serif" font-size="45" font-weight="800" letter-spacing="-1">MINECRAFT 1.5</text>
+<g transform="translate(42 326)">
+  <text fill="#9aa8c7" font-family="Arial, Helvetica, sans-serif" font-size="10" font-weight="700" letter-spacing="2">COOL TUTORING HUB</text>
+</g>
+<g transform="translate(598 326)" text-anchor="end">
+  <text fill="#a3e635" font-family="Arial, Helvetica, sans-serif" font-size="9" font-weight="700" letter-spacing="2">PROGRESS SAVES</text>
+</g>
+</svg>
