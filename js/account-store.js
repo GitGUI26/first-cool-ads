@@ -14,6 +14,7 @@
   'use strict';
 
   var GUEST_PREFS_KEY = 'cuh_guest_prefs_v1';
+  var LOCAL_AUTH_KEY = 'cuh_local_auth_v1';
   var LEGACY_ACCOUNTS_KEY = 'cuh_accounts_v1';
   var LEGACY_SESSION_KEY = 'cuh_session_v1';
   var PROFILES_KEY = 'cuh_profiles_v2';
@@ -30,6 +31,7 @@
   var MAX_PROGRESS_GAME_BYTES = 250000;
   var MAX_PROGRESS_TOTAL_BYTES = 1000000;
   var PUSH_DELAY = 900;
+  var LOCAL_AUTH_ITERATIONS = 120000;
 
   var PREF_KEYS = [
     'selectedTheme',
@@ -64,6 +66,7 @@
     LEGACY_ACCOUNTS_KEY,
     LEGACY_SESSION_KEY,
     GUEST_PREFS_KEY,
+    LOCAL_AUTH_KEY,
     PROFILES_KEY,
     SESSION_KEY,
     AUTH_STORAGE_KEY,
@@ -195,6 +198,79 @@
       if (window.crypto && typeof window.crypto.randomUUID === 'function') return window.crypto.randomUUID();
     } catch (error) {}
     return 'id-' + Date.now().toString(36) + '-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  function bytesToBase64(bytes) {
+    var binary = '';
+    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary);
+  }
+
+  function base64ToBytes(value) {
+    var binary = atob(String(value || ''));
+    var bytes = new Uint8Array(binary.length);
+    for (var i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+    return bytes;
+  }
+
+  function constantTimeEqual(a, b) {
+    var left = String(a || '');
+    var right = String(b || '');
+    var diff = left.length ^ right.length;
+    var length = Math.min(left.length, right.length);
+    for (var i = 0; i < length; i++) diff |= left.charCodeAt(i) ^ right.charCodeAt(i);
+    return diff === 0;
+  }
+
+  function readLocalAuth() {
+    var data = safeParse(readStored(LOCAL_AUTH_KEY), null);
+    if (!data || data.version !== 1 || !data.users || typeof data.users !== 'object') {
+      return { version: 1, users: {} };
+    }
+    return data;
+  }
+
+  function writeLocalAuth(registry) {
+    try {
+      return writeStored(LOCAL_AUTH_KEY, JSON.stringify(registry));
+    } catch (error) {
+      return false;
+    }
+  }
+
+  function localAuthFor(email) {
+    var key = normalizeEmail(email);
+    if (!key) return null;
+    return readLocalAuth().users[key] || null;
+  }
+
+  function localAuthAvailable() {
+    return !!(window.crypto && window.crypto.subtle &&
+      typeof window.crypto.subtle.deriveBits === 'function' &&
+      typeof TextEncoder === 'function' && typeof btoa === 'function' && typeof atob === 'function');
+  }
+
+  function newSalt() {
+    var bytes = new Uint8Array(16);
+    window.crypto.getRandomValues(bytes);
+    return bytesToBase64(bytes);
+  }
+
+  async function hashLocalPassword(password, salt, iterations) {
+    var key = await window.crypto.subtle.importKey(
+      'raw',
+      new TextEncoder().encode(String(password || '')),
+      'PBKDF2',
+      false,
+      ['deriveBits']
+    );
+    var bits = await window.crypto.subtle.deriveBits({
+      name: 'PBKDF2',
+      salt: base64ToBytes(salt),
+      iterations: iterations || LOCAL_AUTH_ITERATIONS,
+      hash: 'SHA-256'
+    }, key, 256);
+    return bytesToBase64(new Uint8Array(bits));
   }
 
   function blankApps() {
@@ -528,9 +604,16 @@
       }
     }
     user.username = check.username;
-    return saveUser(user)
-      ? { ok: true, username: check.username }
-      : { ok: false, error: 'This browser is out of storage.' };
+    if (!saveUser(user)) {
+      return { ok: false, error: 'This browser is out of storage.' };
+    }
+    var local = readLocalAuth();
+    var record = local.users[normalizeEmail(user.email)];
+    if (record && record.id === user.id && record.username !== check.username) {
+      record.username = check.username;
+      writeLocalAuth(local);
+    }
+    return { ok: true, username: check.username };
   }
 
   async function syncNow() {
@@ -761,6 +844,106 @@
     adoptSession(authUser, reason).catch(function () {});
   }
 
+  function localIdentity(record) {
+    return {
+      id: String(record.id),
+      username: cleanText(record.username, 24),
+      email: normalizeEmail(record.email),
+      createdAt: record.createdAt || new Date().toISOString()
+    };
+  }
+
+  function ensureLocalProfile(identity) {
+    var profiles = readProfiles();
+    var profile = profiles.users[identity.id];
+    if (!profile) {
+      profile = blankProfile(identity);
+      if (!mergeLegacyProfile(profile, identity)) {
+        profile.preferences = snapshotPreferences();
+      }
+      profiles.users[identity.id] = normalizeProfile(profile);
+      writeProfiles(profiles);
+      profile = normalizeProfile(profiles.users[identity.id]);
+    }
+    return profile;
+  }
+
+  function beginLocalSession(identity, reason) {
+    var profile = ensureLocalProfile(identity);
+    writeSession(identity);
+    if (profile && profile.preferences && Object.keys(profile.preferences).length) {
+      applyPreferences(profile.preferences);
+    }
+    emitChange(reason);
+    return getCurrentUser();
+  }
+
+  async function createLocalAccount(check, email, password) {
+    if (!localAuthAvailable()) {
+      return { ok: false, error: 'Accounts need a secure connection in this browser.' };
+    }
+    var registry = readLocalAuth();
+    if (registry.users[email]) {
+      return { ok: false, error: 'An account with that email already exists in this browser. Sign in instead.' };
+    }
+    var profiles = readProfiles();
+    var name = normalizeUsername(check.username);
+    var taken = Object.keys(profiles.users).some(function (id) {
+      return normalizeUsername(profiles.users[id].username) === name;
+    }) || Object.keys(registry.users).some(function (key) {
+      return normalizeUsername(registry.users[key].username) === name;
+    });
+    if (taken) {
+      return { ok: false, error: 'That username is already taken. Pick another one.' };
+    }
+    var salt = newSalt();
+    var hash;
+    try {
+      hash = await hashLocalPassword(password, salt, LOCAL_AUTH_ITERATIONS);
+    } catch (error) {
+      return { ok: false, error: 'Could not secure that password in this browser. Try again.' };
+    }
+    var identity = {
+      id: 'local-' + randomId(),
+      username: check.username,
+      email: email,
+      createdAt: new Date().toISOString()
+    };
+    registry.users[email] = {
+      id: identity.id,
+      username: identity.username,
+      email: identity.email,
+      salt: salt,
+      hash: hash,
+      iterations: LOCAL_AUTH_ITERATIONS,
+      createdAt: identity.createdAt
+    };
+    if (!writeLocalAuth(registry)) {
+      return { ok: false, error: 'This browser is out of storage.' };
+    }
+    return { ok: true, needsConfirmation: false, user: beginLocalSession(identity, 'signup') };
+  }
+
+  async function signInLocal(email, password) {
+    if (!localAuthAvailable()) {
+      return { ok: false, error: 'Accounts need a secure connection in this browser.' };
+    }
+    var record = localAuthFor(email);
+    if (!record) {
+      return { ok: false, error: 'No account with that email is saved in this browser.' };
+    }
+    var hash;
+    try {
+      hash = await hashLocalPassword(password, record.salt, record.iterations || LOCAL_AUTH_ITERATIONS);
+    } catch (error) {
+      return { ok: false, error: 'Could not verify that password in this browser. Try again.' };
+    }
+    if (!constantTimeEqual(hash, record.hash)) {
+      return { ok: false, error: 'Incorrect password.' };
+    }
+    return { ok: true, user: beginLocalSession(localIdentity(record), 'signin') };
+  }
+
   function setRecoveryFlag() {
     recoveryPending = true;
     try { sessionStorage.setItem(RECOVERY_FLAG_KEY, '1'); } catch (error) {}
@@ -897,7 +1080,7 @@
     var password = String(input && input.password != null ? input.password : '');
     if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
     var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+    if (!auth) return createLocalAccount(check, email, password);
 
     var result;
     try {
@@ -927,7 +1110,7 @@
     if (!clean) return { ok: false, error: 'Enter the email address for your account.' };
     if (!password) return { ok: false, error: 'Enter your password.' };
     var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+    if (!auth) return signInLocal(clean, String(password));
 
     var result;
     try {
@@ -947,7 +1130,7 @@
     var clean = cleanEmail(email);
     if (!clean) return { ok: false, error: 'Enter the email address for your account.' };
     var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+    if (!auth) return { ok: false, error: 'Password recovery is only available for online accounts.' };
     try {
       // No redirect is needed for a code reset. The Reset Password email
       // template must include {{ .Token }} for the six-digit code.
@@ -967,7 +1150,7 @@
     if (!/^\d{6,10}$/.test(code)) return { ok: false, error: 'Enter the code from your recovery email.' };
     if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
     var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+    if (!auth) return { ok: false, error: 'Password recovery is only available for online accounts.' };
 
     var verification;
     try {
@@ -997,7 +1180,7 @@
     var password = String(newPassword == null ? '' : newPassword);
     if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
     var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are temporarily unavailable. Try again later.' };
+    if (!auth) return { ok: false, error: 'Password recovery is only available for online accounts.' };
     try {
       var result = await auth.auth.updateUser({ password: password });
       if (result.error) return { ok: false, error: friendlyAuthError(result.error) };

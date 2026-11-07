@@ -103,13 +103,24 @@
     setHidden($('signupForm'), mode !== 'signup');
     setHidden($('recoveryForm'), !onRecovery);
 
+    var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
     var lede = $('accountLede');
     if (lede) {
       lede.hidden = onRecovery;
-      lede.textContent = mode === 'signup'
-        ? 'Create an account once and use it on every address this site moves to.'
-        : 'Sign in to keep your games, browsing history, and preferences together.';
+      lede.textContent = configured
+        ? (mode === 'signup'
+          ? 'Create an account once and use it on every address this site moves to.'
+          : 'Sign in to keep your games, browsing history, and preferences together.')
+        : (mode === 'signup'
+          ? 'Create an account saved in this browser. Add Supabase settings later to turn on online sync.'
+          : 'Sign in to keep your games, browsing history, and preferences together on this device.');
     }
+    var recoveryLink = $('showRecovery');
+    if (recoveryLink) recoveryLink.hidden = !configured;
+    document.querySelectorAll('.account-local-note').forEach(function (note) {
+      var copy = note.getAttribute(configured ? 'data-online-copy' : 'data-local-copy');
+      if (copy) note.textContent = copy;
+    });
     if ($('recoveryLede')) {
       $('recoveryLede').textContent = codeStep
         ? 'Enter the code from your email and choose a new password.'
@@ -448,7 +459,10 @@
     $('signupForm').reset();
     activeAuthMode = 'signin';
     render();
-    showToast('Account created. It will work on every future domain.');
+    var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
+    showToast(configured
+      ? 'Account created. It will work on every future domain.'
+      : 'Account created and saved in this browser.');
   }
 
   async function submitSignin(event) {

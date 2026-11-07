@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-07',
+            title: 'Accounts work without Supabase',
+            items: [
+                'Sign-up and sign-in no longer fail with “online accounts are temporarily unavailable” when no Supabase project is connected.',
+                'Browser-only accounts use salted PBKDF2 password hashes stored on this device.',
+                'Adding a Supabase URL and anon key in js/auth-config.js switches the same screens back to online accounts and sync.'
+            ]
+        },
+        {
+            date: '2026-11-07',
             title: 'Site updates page added',
             items: [
                 'New UPDATES tab collects every change to the site in one place.',

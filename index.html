@@ -484,7 +484,7 @@
             <div class="account-error" id="signinError" role="alert" hidden></div>
             <button class="account-primary" type="submit">Sign in</button>
             <button class="account-link" id="showRecovery" type="button">Forgot password?</button>
-            <p class="account-local-note">Your account is stored online, so it follows the site to a new address.</p>
+            <p class="account-local-note" data-online-copy="Your account is stored online, so it follows the site to a new address." data-local-copy="Online sign-in is not connected, so this account stays in this browser.">Your account is stored online, so it follows the site to a new address.</p>
           </form>
           <form class="account-form" id="signupForm" hidden>
             <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. This is your display name.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
@@ -493,7 +493,7 @@
             <div class="account-error" id="signupError" role="alert" hidden></div>
             <div class="account-error is-success" id="signupSuccess" role="status" hidden></div>
             <button class="account-primary" type="submit">Create account</button>
-            <p class="account-local-note">One account works on every domain this site uses. If you had a browser-only account, use the same username and email to bring its saved data along.</p>
+            <p class="account-local-note" data-online-copy="One account works on every domain this site uses. If you had a browser-only account, use the same username and email to bring its saved data along." data-local-copy="This account is saved in this browser only. It will not follow you to another device.">One account works on every domain this site uses. If you had a browser-only account, use the same username and email to bring its saved data along.</p>
           </form>
           <form class="account-form" id="recoveryForm" hidden novalidate>
             <p class="account-lede" id="recoveryLede">Enter the email on your account and we will send you a recovery code.</p>
@@ -589,12 +589,12 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=1"></script>
-  <script src="js/account-store.js?v=6"></script>
+  <script src="js/account-store.js?v=7"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=11"></script>
   <script src="js/main.js?v=16"></script>
-  <script src="js/updates.js?v=1"></script>
-  <script src="js/account.js?v=6"></script>
+  <script src="js/updates.js?v=2"></script>
+  <script src="js/account.js?v=7"></script>
   <script src="js/music.js?v=2"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
     <button aria-label="Close advertisement" class="ad-mobile-close" type="button"

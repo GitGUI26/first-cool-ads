@@ -26,6 +26,8 @@ Free instances sleep after ~15 min idle, so the first load can take about a minu
 
 Accounts are stored by Supabase Auth, so they keep working when the site moves to a new domain or host. The browser only caches the signed-in profile.
 
+If `js/auth-config.js` is left empty, the account screens fall back to browser-only accounts. Sign-up and sign-in still work, and salted PBKDF2 password hashes plus the profile stay in that browser's `localStorage`; nothing syncs across devices. Adding the Supabase URL and anon key switches the same screens back to online accounts and sync.
+
 1. Create a project at https://supabase.com/dashboard.
 2. Open Project Settings -> API and copy the Project URL and the `anon` / publishable key into `js/auth-config.js`.
 3. In Authentication -> Providers -> Email, keep Email enabled. For instant sign-up, turn off "Confirm email"; otherwise users must click the link before signing in.
