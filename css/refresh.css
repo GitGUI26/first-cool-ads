@@ -872,27 +872,9 @@ header {
   transition: opacity 0.2s ease;
 }
 
-.card-play i {
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.94);
-  color: #06101a;
-  font-size: 0.76rem;
-  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
-  transform: scale(0.85);
-  transition: transform 0.2s ease;
-}
-
 #allLessonsGrid .lesson-card:hover .card-play,
-#allLessonsGrid .lesson-card:focus-visible .card-play {
+#allLessonsGrid .lesson-card:focus-within .card-play {
   opacity: 1;
-}
-
-#allLessonsGrid .lesson-card:hover .card-play i {
-  transform: scale(1);
 }
 
 .card-body {
@@ -921,18 +903,6 @@ header {
   text-shadow: none !important;
   text-transform: none;
   white-space: nowrap;
-}
-
-.card-arrow {
-  flex: 0 0 auto;
-  color: #6d7897;
-  font-size: 0.62rem;
-  transition: color 0.18s ease, transform 0.18s ease;
-}
-
-#allLessonsGrid .lesson-card:hover .card-arrow {
-  color: var(--accent);
-  transform: translateX(2px);
 }
 
 .card-badge {
@@ -1538,10 +1508,6 @@ header {
   color: #ff6b9d;
 }
 
-#allLessonsGrid .card-favorite.is-favorite i {
-  filter: drop-shadow(0 0 6px rgba(255, 107, 157, 0.55));
-}
-
 .game-toolbar .btn.is-copied {
   border-color: var(--accent, #22d3ee);
   color: var(--accent, #22d3ee);
@@ -1560,4 +1526,55 @@ header {
   #allLessonsGrid .card-favorite {
     transition: none;
   }
+}
+
+
+/* Keep decorative card icons out of the DOM. */
+#allLessonsGrid .card-play::before {
+  content: "04b";
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.94);
+  color: #06101a;
+  font-family: "Font Awesome 6 Free";
+  font-size: 0.76rem;
+  font-weight: 900;
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.35);
+  transform: scale(0.85);
+  transition: transform 0.2s ease;
+}
+
+#allLessonsGrid .lesson-card:hover .card-play::before,
+#allLessonsGrid .lesson-card:focus-within .card-play::before {
+  transform: scale(1);
+}
+
+#allLessonsGrid .card-body::after {
+  content: "061" / "";
+  flex: 0 0 auto;
+  color: #6d7897;
+  font-family: "Font Awesome 6 Free";
+  font-size: 0.62rem;
+  font-weight: 900;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+#allLessonsGrid .lesson-card:hover .card-body::after {
+  color: var(--accent);
+  transform: translateX(2px);
+}
+
+#allLessonsGrid .card-favorite::before {
+  content: "004";
+  font-family: "Font Awesome 6 Free";
+  font-size: 0.72rem;
+  font-weight: 900;
+  line-height: 1;
+}
+
+#allLessonsGrid .card-favorite.is-favorite::before {
+  filter: drop-shadow(0 0 6px rgba(255, 107, 157, 0.55));
 }

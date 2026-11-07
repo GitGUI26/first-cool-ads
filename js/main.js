@@ -504,14 +504,13 @@ function gameCardMarkup(game, isRandom = false) {
       <div class="card-cover">
         <img src="${escapeHtml(game.image)}" alt="${escapeHtml(displayTitle)} cover art" class="lesson-image${isRandom ? ' flash-image' : ''}" width="640" height="360" loading="${isRandom ? 'eager' : 'lazy'}" decoding="async"${isRandom ? ' fetchpriority="high"' : ''}>
         ${isRandom ? '<span class="card-badge card-badge-random">Random</span>' : (game.tag ? `<span class="card-badge">${escapeHtml(game.tag)}</span>` : '')}
-        <div class="card-play" aria-hidden="true"><i class="fas fa-play"></i></div>
+        <div class="card-play" aria-hidden="true"></div>
       </div>
       <div class="card-body">
         <h3 class="lesson-title">${escapeHtml(displayTitle)}</h3>
-        <i class="fas fa-arrow-right card-arrow" aria-hidden="true"></i>
       </div>
     </${innerTag}>
-    ${isRandom ? '' : `<button class="card-favorite${isFavorite ? ' is-favorite' : ''}" type="button" data-game-title="${escapeHtml(game.title)}" aria-pressed="${isFavorite ? 'true' : 'false'}" aria-label="${escapeHtml(favoriteLabel)}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}"><i class="fas fa-heart" aria-hidden="true"></i></button>`}
+    ${isRandom ? '' : `<button class="card-favorite${isFavorite ? ' is-favorite' : ''}" type="button" data-game-title="${escapeHtml(game.title)}" aria-pressed="${isFavorite ? 'true' : 'false'}" aria-label="${escapeHtml(favoriteLabel)}" title="${isFavorite ? 'Remove from favorites' : 'Add to favorites'}"></button>`}
   </${isRandom ? 'div' : 'article'}>`;
 }
 function bindLessonGridEvents(grid) {
