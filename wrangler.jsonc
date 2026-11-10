@@ -6,6 +6,24 @@
     "directory": ".",
     "binding": "ASSETS",
     "html_handling": "none",
-    "run_worker_first": ["/p", "/p/*"]
-  }
+    "run_worker_first": ["/p", "/p/*", "/api", "/api/*"]
+  },
+  "vars": {
+    "SUPABASE_URL": "https://wpefdqygzqoipbsborqk.supabase.co",
+    "SUPABASE_ANON_KEY": "sb_publishable_IJ6zRJBgC7HLhcFCLpZn9g_rKEl2npg"
+  },
+  "durable_objects": {
+    "bindings": [
+      {
+        "name": "CHAT_ROOM",
+        "class_name": "ChatRoom"
+      }
+    ]
+  },
+  "migrations": [
+    {
+      "tag": "v1",
+      "new_sqlite_classes": ["ChatRoom"]
+    }
+  ]
 }

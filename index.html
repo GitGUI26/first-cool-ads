@@ -48,27 +48,8 @@
 <link href="css/account.css?v=4" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
-  <script>
-    // Ad placements (Adsterra). Each slot writes its own atOptions + invoke pair
-    // while the page is parsing, so every unit is served at its own size.
-    function adsAllowed() {
-      try {
-        return localStorage.getItem('adsDisabled') !== 'true';
-      }
-      catch (error) {
-        return true;
-      }
-    }
-    function writeAd(key, width, height) {
-      if (!adsAllowed())
-        return;
-      var options = { key: key, format: 'iframe', height: height, width: width, params: {} };
-      document.write('<div class="ad-unit"><span class="ad-unit-label">Advertisement</span>' +
-        '<script>atOptions = ' + JSON.stringify(options) + ';<\/script>' +
-        '<script src="https://bauval.org/22/' + key + '"><\/script>' +
-        '</div>');
-    }
-  </script>
+<link href="css/ads.css?v=1" rel="stylesheet">
+<link href="css/chat.css?v=1" rel="stylesheet">
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -282,6 +263,7 @@
           <div class="nav-tabs">
             <button class="nav-tab active" id="lessonsTab" type="button" onclick="switchTab('lessons')" aria-current="page">GAMES</button>
             <button class="nav-tab" id="musicTab" type="button" onclick="switchTab('music')">MUSIC</button>
+            <button class="nav-tab" id="chatTab" type="button" onclick="openChat()">CHAT</button>
             <button class="nav-tab" id="updatesTab" type="button" onclick="switchTab('updates')">UPDATES</button>
             <button class="nav-tab" id="settingsTab" type="button" onclick="switchTab('settings')">SETTINGS</button>
             <button class="nav-tab" id="browserTab" type="button" onclick="openBrowserOverlay()" aria-expanded="false">BROWSER</button>
@@ -300,11 +282,7 @@
       </div>
     </header>
     <div class="ad-slot ad-slot-top">
-      <script>
-        if (window.matchMedia('(min-width: 820px)').matches) {
-          writeAd('3dfb504a3be1a57a2b674ecf2bc0d2bd', 728, 90);
-        }
-      </script>
+      <div class="ad-unit" id="adTop"></div>
     </div>
     <section id="home-section">
       <div class="home-hero">
@@ -371,11 +349,7 @@
       </div>
     </section>
     <div class="ad-slot ad-slot-hero">
-      <script>
-        if (window.matchMedia('(min-width: 600px)').matches) {
-          writeAd('3313fa7c1217bab1ba47f1e00e070586', 468, 60);
-        }
-      </script>
+      <div class="ad-unit" id="adHero"></div>
     </div>
     <section id="all-lessons">
       <div class="library-head">
@@ -411,28 +385,47 @@
       <div class="lessons-layout">
         <div class="lessons-main">
           <div class="ad-slot-lead">
-            <div class="ad-slot ad-slot-rect">
-              <script>
-                writeAd('cf302e89f6a183752cc396043460fc22', 300, 250);
-              </script>
-            </div>
-            <div class="ad-slot ad-slot-rect160">
-              <script>
-                if (window.matchMedia('(min-width: 1100px)').matches) {
-                  writeAd('301a368811a1568839aec19fa9f165e0', 160, 300);
-                }
-              </script>
-            </div>
+            <div class="ad-slot ad-slot-rect"><div class="ad-unit" id="adLeadRect"></div></div>
+            <div class="ad-slot ad-slot-rect160"><div class="ad-unit" id="adLeadRect160"></div></div>
           </div>
           <div class="lessons-grid" id="allLessonsGrid"></div>
         </div>
         <aside aria-label="Advertisement" class="ad-rail">
-          <script>
-            if (window.matchMedia('(min-width: 1100px)').matches) {
-              writeAd('ff8b51f3e239de6830774a80d719e14d', 160, 600);
-            }
-          </script>
+          <div class="ad-unit" id="adRail"></div>
+          <a class="ad-sponsor" id="adPopupSponsor" href="https://araplhn.org/4/692a941bbc55f2c6ad94e07d6053328d" target="_blank" rel="sponsored noopener noreferrer" hidden>
+            <span class="ad-sponsor-kicker">Sponsored popup</span>
+            <span class="ad-sponsor-title">Open partner offer</span>
+            <span class="ad-sponsor-copy">Only shown when popup ads are enabled in Settings.</span>
+          </a>
+          <p class="ad-sponsor-note">Display ads stay on. Popup offers can be turned off in Settings.</p>
         </aside>
+      </div>
+    </section>
+    <section id="chat-section" class="chat-page" hidden aria-hidden="true" aria-labelledby="chatTitle">
+      <div class="chat-shell">
+        <header class="chat-page-head">
+          <div><span class="section-kicker">Community</span><h2 id="chatTitle">CHAT</h2></div>
+          <p>One room for everyone. Sign in with an online account to join the conversation.</p>
+        </header>
+        <div class="chat-layout">
+          <aside class="chat-sidebar">
+            <div class="chat-room-mark"><span><i class="fas fa-comments" aria-hidden="true"></i></span><div><strong>The Lounge</strong><small>One room · everyone welcome</small></div></div>
+            <div class="chat-presence"><i aria-hidden="true"></i><b id="chatOnline">0</b> online</div>
+            <p>This is the one shared chat room for the whole site. Messages are visible to every signed-in member.</p>
+            <ul class="chat-rules"><li>Be friendly and keep it school-safe.</li><li>No spam, personal info, or links.</li><li>Keep the room welcoming for everyone.</li></ul>
+            <a class="chat-account-link" href="#" onclick="openAccount(); return false;">Manage account</a>
+          </aside>
+          <div class="chat-card">
+            <div class="chat-toolbar"><span class="chat-connection" id="chatConnection" data-state="offline">Disconnected</span><span class="chat-toolbar-note">Live room</span></div>
+            <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
+            <form class="chat-form" id="chatForm">
+              <label class="visually-hidden" for="chatInput">Message</label>
+              <textarea id="chatInput" rows="1" maxlength="500" placeholder="Message the room..." disabled></textarea>
+              <button class="chat-send" id="chatSend" type="submit" disabled>Send</button>
+            </form>
+            <p class="chat-hint">Enter to send · Shift+Enter for a new line. Keep it friendly.</p>
+          </div>
+        </div>
       </div>
     </section>
     <section id="settings-section">
@@ -539,6 +532,16 @@
             </div><button class="apply-btn" onclick="revertLogo(this)" style="margin-top: 10px; width: 100%;"><i
                 class="fas fa-undo"></i> Revert to Default Logo</button>
           </div>
+          <div class="setting-item setting-ads">
+            <div class="setting-label"><i class="fas fa-rectangle-ad"></i> Popup ads</div>
+            <div class="setting-description">Control the sponsored popup offer. Standard display ads always stay on.</div>
+            <label class="settings-toggle">
+              <input id="popupAdsToggle" type="checkbox" checked onchange="setPopupAdsPreference(this.checked)">
+              <span class="settings-toggle-track" aria-hidden="true"></span>
+              <span>Allow popup ads</span>
+            </label>
+            <p class="settings-ad-note">Turning this off hides the popup offer only. Display ads cannot be disabled.</p>
+          </div>
           <div class="setting-item setting-import">
             <div class="setting-label">
               <i class="fas fa-database"></i> Export/Import Site Data
@@ -575,13 +578,7 @@
       </div>
     </section>
     <div class="ad-slot ad-slot-native ad-in-feed" id="adInFeed">
-      <script>
-        if (adsAllowed()) {
-          document.write('<div class="ad-unit"><span class="ad-unit-label">Advertisement</span>' +
-            '<div id="container-8e16e0b638c242dfb0dba220c537b6f2"></div></div>' +
-            '<script data-cfasync="false" src="https://bauval.org/21/8e16e0b638c242dfb0dba220c537b6f2"><\/script>');
-        }
-      </script>
+      <div class="ad-unit" id="adNative"></div>
     </div>
     <footer class="site-footer">
       <div class="site-footer-left">
@@ -801,22 +798,21 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=2"></script>
-  <script src="js/account-store.js?v=7"></script>
+  <script src="js/account-store.js?v=8"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=12"></script>
-  <script src="js/main.js?v=25"></script>
-  <script src="js/updates.js?v=8"></script>
+  <script src="js/main.js?v=26"></script>
+  <script src="js/updates.js?v=9"></script>
   <script src="js/account.js?v=7"></script>
   <script src="js/music.js?v=2"></script>
+  <script src="js/chat.js?v=1"></script>
+  <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
     <button aria-label="Close advertisement" class="ad-mobile-close" type="button"
       onclick="document.getElementById('adMobileSticky').classList.add('ad-mobile-sticky-hidden')">×</button>
-    <script>
-      if (window.matchMedia('(max-width: 819px)').matches) {
-        writeAd('640192fb270e94b2eed0eb1ffc4bddac', 320, 50);
-      }
-    </script>
+    <div class="ad-unit" id="adMobile"></div>
   </div>
+
   <script>
     (function () {
       const overlay = document.getElementById('browserOverlay');

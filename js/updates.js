@@ -5,6 +5,17 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-10',
+            title: 'One shared chat and refreshed ads',
+            items: [
+                'Added a CHAT section with one shared room for the whole site. Guests are sent to sign in or create an account first.',
+                'The chat room is verified against an online account on the server, and signed-in browser-only accounts can add an email to join.',
+                'Replaced the old ad units with the new placements, including a responsive leaderboard, library banners, a desktop rail, an in-feed native unit, and a mobile banner.',
+                'Added a Settings option for popup ads. Display ads stay on; only the sponsored popup offer can be hidden.',
+                'Ad frames are sandboxed so they cannot redirect the site or open new tabs, and known adult destinations are blocked from the popup offer.'
+            ]
+        },
+        {
             date: '2026-11-07',
             title: 'Faster, shareable, and personal',
             items: [

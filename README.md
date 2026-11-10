@@ -39,6 +39,14 @@ The Forgot password form now sends a recovery code, verifies it, and asks for a 
 
 Signed-in users get an Account settings panel for their display name, email, profile picture, password reset, and sync status. Profile pictures are cropped and resized to 256 × 256 in the browser, then stored in the account profile so they follow the account across domains and devices. A default avatar is shown until a picture is uploaded, and the profile picture card can restore it at any time.
 
+### Chat
+
+CHAT is one shared room for the whole site. It uses a Cloudflare Durable Object named `global` and requires a
+Supabase-authenticated online account; the Worker verifies the Supabase access token before opening the WebSocket.
+Browser-only accounts are prompted to add a verified email first. The room keeps the latest 100 messages and has a
+small per-connection send cooldown. The binding and migration are in `wrangler.jsonc`; the health endpoint is
+`/api/chat/health`.
+
 ### Game progress
 
 Signed-in players' progress is saved to their account. The game loader injects a small bridge that mirrors each game's `localStorage` into the account profile under `gameProgress`, keyed by the game's URL, and seeds it again the next time the game opens. With Supabase configured, that profile syncs through the `profiles` table, so progress follows the account across domains and devices. Limits: 80 games per profile, 120 keys per game, 1 MB per profile. Only `localStorage` saves are captured; games that keep progress in IndexedDB or on their own servers manage it themselves. Signed-out visitors keep the game's native local storage.
@@ -65,8 +73,10 @@ builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scra
 
 The site uses labeled Adsterra placements: a desktop leaderboard, a banner below the hero, a 300x250 and
 160x300 above the game library, a sticky 160x600 desktop rail, a native unit after the first five rows of games,
-and a dismissible 320x50 banner on mobile. Set `localStorage.adsDisabled = 'true'` to suppress ad scripts locally;
-update the keys in `index.html` when changing units.
+and a dismissible 320x50 banner on mobile. Display ads are always on. Settings has one ad control, **Popup ads**,
+which hides the sponsored popup offer only; it never turns off the display units. Each display unit is rendered in
+a sandboxed iframe without popup or top-navigation permission, and the popup offer is checked against known adult
+destinations before it can open. Update the unit keys in `js/ads.js` when changing campaigns.
 
 ## Games from the Offline HTML Games Pack
 

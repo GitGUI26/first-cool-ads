@@ -1580,7 +1580,9 @@ function switchTab(tab) {
     const musicSection = document.getElementById('music-section');
     const updatesTab = document.getElementById('updatesTab');
     const updatesSection = document.getElementById('updates-section');
-    const activeTab = tab === 'settings' ? 'settings' : tab === 'music' ? 'music' : tab === 'updates' ? 'updates' : 'lessons';
+    const chatTab = document.getElementById('chatTab');
+    const chatSection = document.getElementById('chat-section');
+    const activeTab = tab === 'settings' ? 'settings' : tab === 'music' ? 'music' : tab === 'updates' ? 'updates' : tab === 'chat' ? 'chat' : 'lessons';
 
     function showSection(section, displayValue) {
         if (!section)
@@ -1593,13 +1595,13 @@ function switchTab(tab) {
         section.style.zIndex = '1';
     }
 
-    [lessonsTab, musicTab, updatesTab, settingsTab].forEach(function (navItem) {
+    [lessonsTab, musicTab, updatesTab, settingsTab, chatTab].forEach(function (navItem) {
         if (navItem) {
             navItem.classList.remove('active');
             navItem.removeAttribute('aria-current');
         }
     });
-    [homeSection, allLessonsSection, settingsSection, musicSection, updatesSection].forEach(function (section) {
+    [homeSection, allLessonsSection, settingsSection, musicSection, updatesSection, chatSection].forEach(function (section) {
         if (section) {
             section.hidden = true;
             section.setAttribute('aria-hidden', 'true');
@@ -1634,6 +1636,13 @@ function switchTab(tab) {
             updatesTab.setAttribute('aria-current', 'page');
         }
         showSection(updatesSection);
+    }
+    else if (activeTab === 'chat') {
+        if (chatTab) {
+            chatTab.classList.add('active');
+            chatTab.setAttribute('aria-current', 'page');
+        }
+        showSection(chatSection);
     }
     else {
         if (settingsTab) {
@@ -2294,6 +2303,22 @@ function openSettings() {
     }
     updateBackgroundSelectionUI();
 }
+function setPopupAdsPreference(enabled) {
+    try {
+        localStorage.setItem('popupAdsDisabled', enabled ? 'false' : 'true');
+    }
+    catch (error) {}
+    const toggle = document.getElementById('popupAdsToggle');
+    if (toggle) toggle.checked = !!enabled;
+    if (window.CUHAds && typeof window.CUHAds.refreshPopupAd === 'function') {
+        window.CUHAds.refreshPopupAd();
+    }
+    if (window.CoolAccountStore && typeof window.CoolAccountStore.capturePreferences === 'function') {
+        window.CoolAccountStore.capturePreferences();
+    }
+    window.dispatchEvent(new CustomEvent('cuh-popup-ads-change', { detail: { enabled: !!enabled } }));
+}
+window.setPopupAdsPreference = setPopupAdsPreference;
 function applySavedTheme(themeName) {
     const body = document.body;
     body.classList.remove('theme-rainbow', 'theme-cyber-green', 'theme-ice-blue', 'theme-solarized', 'theme-purple-haze');
@@ -2757,6 +2782,13 @@ function initializeSettings() {
             }
         }
         setSiteLogos(savedLogo);
+    }
+    const popupAdsToggle = document.getElementById('popupAdsToggle');
+    if (popupAdsToggle) {
+        popupAdsToggle.checked = localStorage.getItem('popupAdsDisabled') !== 'true';
+    }
+    if (window.CUHAds && typeof window.CUHAds.refreshPopupAd === 'function') {
+        window.CUHAds.refreshPopupAd();
     }
     updateBackgroundSelectionUI();
 }
@@ -3305,10 +3337,14 @@ function injectFreezeHarnessIntoHtml(html, gameUrl, gameProgress) {
     const progressScript = getGameProgressBridgeScript(gameProgressKey(gameUrl), gameProgress);
     const harness = baseTag + progressScript + '\n' + getGameFreezeHarnessScript();
     const urlShim = '<script>try{Object.defineProperty(document,"URL",{configurable:true,get:function(){return document.baseURI||"https://cdn.jsdelivr.net/";}});}catch(e){}<\/script>';
-    if (/<head[^>]*>/i.test(html)) {
+    const firstScript = html.search(/<script\b/i);
+    const headMatch = html.search(/<head[^>]*>/i);
+    const bodyMatch = html.search(/<body[^>]*>/i);
+    const beforeFirstScript = index => index >= 0 && (firstScript === -1 || index < firstScript);
+    if (beforeFirstScript(headMatch)) {
         return html.replace(/<head[^>]*>/i, match => `${match}\n${urlShim}\n${harness}`);
     }
-    if (/<body[^>]*>/i.test(html)) {
+    if (beforeFirstScript(bodyMatch)) {
         return html.replace(/<body[^>]*>/i, match => `${match}\n${urlShim}\n${harness}`);
     }
     return `${urlShim}\n${harness}\n${html}`;

@@ -44,6 +44,7 @@
     'customLogo',
     'gameFavorites',
     'flashEnabled',
+    'popupAdsDisabled',
     'lastSearchTerm',
     'sortMethod'
   ];
@@ -57,6 +58,7 @@
     inactiveTabFavicon: 'cuh.png',
     gameFavorites: '[]',
     flashEnabled: 'true',
+    popupAdsDisabled: 'false',
     lastSearchTerm: '',
     sortMethod: 'default'
   };
@@ -637,6 +639,18 @@
 
   function isCloudConfigured() {
     return !!authClient();
+  }
+
+  async function getAccessToken() {
+    var auth = authClient();
+    if (!auth) return '';
+    try {
+      var result = await auth.auth.getSession();
+      var session = result && result.data ? result.data.session : null;
+      return session && session.access_token ? String(session.access_token) : '';
+    } catch (error) {
+      return '';
+    }
   }
 
   async function setUsername(value) {
@@ -1551,6 +1565,7 @@
     setAvatar: setAvatar,
     setUsername: setUsername,
     isCloudConfigured: isCloudConfigured,
+    getAccessToken: getAccessToken,
     syncNow: syncNow,
     getGameProgress: getGameProgress,
     setGameProgress: setGameProgress,
