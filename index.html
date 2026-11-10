@@ -50,6 +50,7 @@
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/ads.css?v=1" rel="stylesheet">
 <link href="css/chat.css?v=1" rel="stylesheet">
+<link href="css/emulators.css?v=1" rel="stylesheet">
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -263,6 +264,7 @@
           <div class="nav-tabs">
             <button class="nav-tab active" id="lessonsTab" type="button" onclick="switchTab('lessons')" aria-current="page">GAMES</button>
             <button class="nav-tab" id="musicTab" type="button" onclick="switchTab('music')">MUSIC</button>
+            <button class="nav-tab" id="emulatorsTab" type="button" onclick="switchTab('emulators')">EMULATORS</button>
             <button class="nav-tab" id="chatTab" type="button" onclick="openChat()">CHAT</button>
             <button class="nav-tab" id="updatesTab" type="button" onclick="switchTab('updates')">UPDATES</button>
             <button class="nav-tab" id="settingsTab" type="button" onclick="switchTab('settings')">SETTINGS</button>
@@ -425,6 +427,53 @@
             </form>
             <p class="chat-hint">Enter to send · Shift+Enter for a new line. Keep it friendly.</p>
           </div>
+        </div>
+      </div>
+    </section>
+        <section id="emulator-section" class="emulator-page" hidden aria-hidden="true" aria-labelledby="emulatorTitle">
+      <header class="emulator-page-head">
+        <div><span class="section-kicker">ROM lab</span><h2 id="emulatorTitle">EMULATORS</h2></div>
+        <p>Drop a ROM from your device and play it in your browser. Nothing is uploaded.</p>
+      </header>
+      <div class="emulator-layout">
+        <aside aria-label="Emulator controls" class="emulator-panel">
+          <div class="emulator-dropzone" id="romDropzone" role="button" tabindex="0">
+            <i class="fas fa-file-arrow-up" aria-hidden="true"></i>
+            <strong>Drop a ROM here</strong>
+            <span>or click to browse</span>
+            <small>NES, SNES, N64, Game Boy, DS, PlayStation, Sega, Atari, arcade, and more</small>
+            <input id="romInput" type="file" hidden>
+          </div>
+          <div class="emulator-file" id="romFile" hidden>
+            <span class="emulator-file-icon"><i class="fas fa-gamepad" aria-hidden="true"></i></span>
+            <span class="emulator-file-copy"><strong id="romFileName">No file selected</strong><small id="romFileMeta"></small></span>
+          </div>
+          <label class="emulator-field" for="emulatorSystem">Console / core
+            <select class="emulator-select" id="emulatorSystem"></select>
+          </label>
+          <p class="emulator-core-note" id="emulatorCoreNote">Pick a ROM to see its matching core.</p>
+          <details class="emulator-bios" id="biosDetails">
+            <summary>Add a BIOS file <span>optional</span></summary>
+            <p id="emulatorBiosNote">Most games do not need a BIOS. Add one only if your core asks for it.</p>
+            <label class="emulator-bios-pick">Choose BIOS <input id="biosInput" type="file" hidden></label>
+            <p class="emulator-bios-file" id="biosFile" hidden></p>
+          </details>
+          <div class="emulator-actions">
+            <button class="emulator-start" id="emulatorStart" type="button" disabled><i class="fas fa-play" aria-hidden="true"></i> Play ROM</button>
+            <button class="emulator-clear" id="emulatorClear" type="button" disabled>Clear</button>
+          </div>
+          <p class="emulator-status" id="emulatorStatus" role="status">Choose a ROM to begin.</p>
+          <p class="emulator-legal">Use ROMs you own or are allowed to use. Files stay in this browser. EmulatorJS loads only when you press Play.</p>
+        </aside>
+        <div class="emulator-panel emulator-stage-card">
+          <div class="emulator-stage-head">
+            <div><span>Player</span><strong id="emulatorStageTitle">No ROM loaded</strong></div>
+            <span>Local ROM / libretro</span>
+          </div>
+          <div class="emulator-stage" id="emulatorStage">
+            <div class="emulator-empty" id="emulatorEmpty"><i class="fas fa-gamepad" aria-hidden="true"></i><h3>Your ROM goes here</h3><p>Choose a supported file, pick its console, and press Play ROM.</p></div>
+          </div>
+          <p class="emulator-stage-hint">Keyboard, touch, and gamepad controls are handled by EmulatorJS. Some systems need a BIOS file; multi-file games should be zipped.</p>
         </div>
       </div>
     </section>
@@ -801,11 +850,12 @@
   <script src="js/account-store.js?v=8"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=12"></script>
-  <script src="js/main.js?v=26"></script>
-  <script src="js/updates.js?v=9"></script>
+  <script src="js/main.js?v=27"></script>
+  <script src="js/updates.js?v=10"></script>
   <script src="js/account.js?v=7"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=1"></script>
+  <script src="js/emulators.js?v=1"></script>
   <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
     <button aria-label="Close advertisement" class="ad-mobile-close" type="button"

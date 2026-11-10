@@ -1,0 +1,498 @@
+/* Local ROM emulators */
+.emulator-page {
+  --emu-accent: #59e3c0;
+  --emu-line: rgba(var(--primary-accent-rgb), 0.24);
+  max-width: 1180px;
+  margin: 28px auto 50px;
+  padding: clamp(20px, 2.6vw, 30px);
+  border: 1px solid var(--emu-line);
+  border-radius: 26px;
+  background: linear-gradient(155deg, rgba(13, 19, 35, 0.82), rgba(7, 11, 21, 0.72));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+}
+
+.emulator-page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.emulator-page-head h2 {
+  max-width: none;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+  box-shadow: none;
+  color: var(--light-text);
+  font-family: var(--font-display);
+  font-size: clamp(1.7rem, 3vw, 2.35rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1;
+  text-align: left;
+  text-shadow: none;
+  text-transform: none;
+}
+
+.emulator-page-head h2:hover {
+  transform: none;
+  box-shadow: none;
+}
+
+.emulator-page-head p {
+  max-width: 460px;
+  margin: 0;
+  color: var(--gray-text);
+  font-size: 0.84rem;
+  line-height: 1.55;
+  text-align: right;
+}
+
+.emulator-layout {
+  display: grid;
+  grid-template-columns: minmax(270px, 350px) minmax(0, 1fr);
+  align-items: start;
+  gap: 16px;
+}
+
+.emulator-panel {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.24);
+  border-radius: 18px;
+  background: linear-gradient(155deg, rgba(17, 24, 43, 0.9), rgba(8, 13, 24, 0.84));
+}
+
+.emulator-dropzone {
+  display: flex;
+  min-height: 190px;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 20px 16px;
+  border: 1px dashed rgba(89, 227, 192, 0.52);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 50% 0, rgba(89, 227, 192, 0.14), transparent 62%),
+    rgba(89, 227, 192, 0.035);
+  color: var(--light-text);
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.emulator-dropzone:hover,
+.emulator-dropzone:focus-visible,
+.emulator-dropzone.is-dragging {
+  border-color: var(--emu-accent);
+  background:
+    radial-gradient(circle at 50% 0, rgba(89, 227, 192, 0.23), transparent 62%),
+    rgba(89, 227, 192, 0.075);
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.emulator-dropzone i {
+  margin-bottom: 3px;
+  color: var(--emu-accent);
+  font-size: 1.9rem;
+}
+
+.emulator-dropzone strong {
+  font-family: var(--font-display);
+  font-size: 1.05rem;
+}
+
+.emulator-dropzone span {
+  color: var(--gray-text);
+  font-size: 0.8rem;
+}
+
+.emulator-dropzone small {
+  max-width: 265px;
+  margin-top: 6px;
+  color: var(--ui-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.emulator-file[hidden],
+.emulator-bios-file[hidden] {
+  display: none;
+}
+
+.emulator-file {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid rgba(89, 227, 192, 0.2);
+  border-radius: 12px;
+  background: rgba(89, 227, 192, 0.055);
+}
+
+.emulator-file-icon {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 9px;
+  color: var(--emu-accent);
+  background: rgba(89, 227, 192, 0.1);
+}
+
+.emulator-file-copy {
+  min-width: 0;
+}
+
+.emulator-file-copy strong,
+.emulator-file-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emulator-file-copy strong {
+  color: var(--light-text);
+  font-size: 0.8rem;
+}
+
+.emulator-file-copy small {
+  margin-top: 2px;
+  color: var(--gray-text);
+  font-size: 0.68rem;
+}
+
+.emulator-field {
+  display: block;
+  margin-top: 16px;
+  color: var(--light-text);
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.emulator-select {
+  display: block;
+  width: 100%;
+  margin-top: 7px;
+  padding: 10px 11px;
+  border: 1px solid var(--ui-line);
+  border-radius: 11px;
+  outline: none;
+  background: #0d1424;
+  color: var(--light-text);
+  font: inherit;
+  font-size: 0.76rem;
+}
+
+.emulator-select:focus-visible {
+  border-color: var(--emu-accent);
+  box-shadow: 0 0 0 3px rgba(89, 227, 192, 0.13);
+}
+
+.emulator-core-note {
+  min-height: 18px;
+  margin: 9px 0 0;
+  color: var(--gray-text);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.emulator-bios {
+  margin-top: 12px;
+  padding: 10px 12px;
+  border: 1px solid var(--ui-line);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.emulator-bios summary {
+  color: var(--light-text);
+  font-size: 0.74rem;
+  cursor: pointer;
+}
+
+.emulator-bios summary span {
+  margin-left: 4px;
+  color: var(--ui-muted);
+  font-size: 0.64rem;
+  font-weight: normal;
+}
+
+.emulator-bios p {
+  margin: 8px 0 0;
+  color: var(--gray-text);
+  font-size: 0.67rem;
+  line-height: 1.5;
+}
+
+.emulator-bios-pick {
+  display: inline-flex;
+  margin-top: 8px;
+  padding: 7px 10px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.3);
+  border-radius: 9px;
+  color: var(--emu-accent);
+  font-size: 0.68rem;
+  cursor: pointer;
+}
+
+.emulator-bios-pick:hover {
+  background: rgba(89, 227, 192, 0.08);
+}
+
+.emulator-bios-file {
+  overflow: hidden;
+  color: var(--gray-text);
+  font-size: 0.67rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emulator-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.emulator-start,
+.emulator-clear {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 14px;
+  border-radius: 10px;
+  font: inherit;
+  font-size: 0.73rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.emulator-start {
+  flex: 1;
+  border: 0;
+  background: linear-gradient(135deg, var(--emu-accent), #7c8cff);
+  color: #041017;
+}
+
+.emulator-start:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.emulator-clear {
+  border: 1px solid var(--ui-line);
+  background: transparent;
+  color: var(--gray-text);
+}
+
+.emulator-clear:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--light-text);
+}
+
+.emulator-start:disabled,
+.emulator-clear:disabled {
+  cursor: not-allowed;
+  opacity: 0.42;
+}
+
+.emulator-status {
+  min-height: 18px;
+  margin: 12px 0 0;
+  color: var(--gray-text);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.emulator-status[data-state="ready"] {
+  color: var(--emu-accent);
+}
+
+.emulator-status[data-state="warning"] {
+  color: #ffd28a;
+}
+
+.emulator-status[data-state="error"] {
+  color: #ff9aa7;
+}
+
+.emulator-status[data-state="loading"] {
+  color: #b8c6ff;
+}
+
+.emulator-legal {
+  margin: 12px 0 0;
+  color: var(--ui-muted);
+  font-size: 0.63rem;
+  line-height: 1.5;
+}
+
+.emulator-stage-card {
+  padding: 0;
+  overflow: hidden;
+}
+
+.emulator-stage-head {
+  display: flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--ui-line);
+}
+
+.emulator-stage-head div {
+  min-width: 0;
+}
+
+.emulator-stage-head span,
+.emulator-stage-head strong {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.emulator-stage-head span {
+  color: var(--emu-accent);
+  font-size: 0.58rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.emulator-stage-head strong {
+  margin-top: 3px;
+  color: var(--light-text);
+  font-family: var(--font-display);
+  font-size: 0.82rem;
+}
+
+.emulator-stage-head > span {
+  flex: 0 0 auto;
+  color: var(--ui-muted);
+  font-size: 0.62rem;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+.emulator-stage {
+  position: relative;
+  display: grid;
+  min-height: 460px;
+  aspect-ratio: 16 / 10;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 20%, rgba(89, 227, 192, 0.1), transparent 58%),
+    #050912;
+}
+
+.emulator-empty {
+  max-width: 320px;
+  padding: 24px;
+  color: var(--gray-text);
+  text-align: center;
+}
+
+.emulator-empty i {
+  margin-bottom: 8px;
+  color: rgba(89, 227, 192, 0.72);
+  font-size: 2rem;
+}
+
+.emulator-empty h3 {
+  margin: 0;
+  color: var(--light-text);
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.emulator-empty p {
+  margin: 7px 0 0;
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.emulator-frame {
+  display: block;
+  width: 100%;
+  height: 100%;
+  min-height: 460px;
+  border: 0;
+  background: #070b15;
+}
+
+.emulator-stage-hint {
+  margin: 0;
+  padding: 10px 16px 12px;
+  border-top: 1px solid var(--ui-line);
+  color: var(--ui-muted);
+  font-size: 0.64rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 900px) {
+  .emulator-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .emulator-stage {
+    min-height: 0;
+    aspect-ratio: 16 / 10;
+  }
+
+  .emulator-frame {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .emulator-page {
+    margin-top: 18px;
+    padding: 16px;
+    border-radius: 20px;
+  }
+
+  .emulator-page-head {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .emulator-page-head p {
+    text-align: left;
+  }
+
+  .emulator-panel {
+    padding: 14px;
+  }
+
+  .emulator-stage-head {
+    padding: 9px 12px;
+  }
+
+  .emulator-stage-hint {
+    padding: 9px 12px 11px;
+  }
+
+  .emulator-actions {
+    flex-wrap: wrap;
+  }
+
+  .emulator-clear {
+    flex: 0 0 auto;
+  }
+}

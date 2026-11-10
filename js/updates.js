@@ -6,6 +6,16 @@
     var updates = [
         {
             date: '2026-11-10',
+            title: 'Bring your own ROMs',
+            items: [
+                'Added an EMULATORS section where you can drop in a local ROM file and play it in the browser.',
+                'The console picker covers the systems available through the EmulatorJS/libretro frontend, from NES and SNES to PlayStation, Sega, Atari, arcade, and classic computers.',
+                'ROMs stay on your device and are never uploaded. Optional BIOS support is available for systems that need one.',
+                'Multi-file games can be zipped, and the player includes keyboard, touch, gamepad, save-state, and fullscreen support from EmulatorJS.'
+            ]
+        },
+        {
+            date: '2026-11-10',
             title: 'One shared chat and refreshed ads',
             items: [
                 'Added a CHAT section with one shared room for the whole site. Guests are sent to sign in or create an account first.',

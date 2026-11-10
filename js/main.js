@@ -1582,7 +1582,9 @@ function switchTab(tab) {
     const updatesSection = document.getElementById('updates-section');
     const chatTab = document.getElementById('chatTab');
     const chatSection = document.getElementById('chat-section');
-    const activeTab = tab === 'settings' ? 'settings' : tab === 'music' ? 'music' : tab === 'updates' ? 'updates' : tab === 'chat' ? 'chat' : 'lessons';
+    const emulatorsTab = document.getElementById('emulatorsTab');
+    const emulatorSection = document.getElementById('emulator-section');
+    const activeTab = tab === 'settings' ? 'settings' : tab === 'music' ? 'music' : tab === 'updates' ? 'updates' : tab === 'chat' ? 'chat' : tab === 'emulators' ? 'emulators' : 'lessons';
 
     function showSection(section, displayValue) {
         if (!section)
@@ -1595,13 +1597,13 @@ function switchTab(tab) {
         section.style.zIndex = '1';
     }
 
-    [lessonsTab, musicTab, updatesTab, settingsTab, chatTab].forEach(function (navItem) {
+    [lessonsTab, musicTab, updatesTab, settingsTab, chatTab, emulatorsTab].forEach(function (navItem) {
         if (navItem) {
             navItem.classList.remove('active');
             navItem.removeAttribute('aria-current');
         }
     });
-    [homeSection, allLessonsSection, settingsSection, musicSection, updatesSection, chatSection].forEach(function (section) {
+    [homeSection, allLessonsSection, settingsSection, musicSection, updatesSection, chatSection, emulatorSection].forEach(function (section) {
         if (section) {
             section.hidden = true;
             section.setAttribute('aria-hidden', 'true');
@@ -1636,6 +1638,13 @@ function switchTab(tab) {
             updatesTab.setAttribute('aria-current', 'page');
         }
         showSection(updatesSection);
+    }
+    else if (activeTab === 'emulators') {
+        if (emulatorsTab) {
+            emulatorsTab.classList.add('active');
+            emulatorsTab.setAttribute('aria-current', 'page');
+        }
+        showSection(emulatorSection);
     }
     else if (activeTab === 'chat') {
         if (chatTab) {

@@ -47,6 +47,16 @@ Browser-only accounts are prompted to add a verified email first. The room keeps
 small per-connection send cooldown. The binding and migration are in `wrangler.jsonc`; the health endpoint is
 `/api/chat/health`.
 
+### Emulators
+
+The EMULATORS tab accepts local ROM files by drag-and-drop or file picker. It uses EmulatorJS, a browser frontend for
+libretro cores, loaded from `https://cdn.emulatorjs.org/stable/data/` only when a game is started. The console picker
+lists the systems exposed by that frontend, including Nintendo, Sony, Sega, Atari, arcade, NEC/SNK, and classic
+computer cores. ROMs are turned into temporary browser blob URLs and are never uploaded. A BIOS can be supplied for
+systems such as PlayStation, Sega CD, Saturn, 3DO, PC-FX, Amiga, Atari 5200, and ColecoVision; cue/bin games should be
+zipped together. EmulatorJS does not have browser cores for every RetroArch target (for example GameCube/Wii,
+Dreamcast, and PlayStation 2 are not available), so the picker only lists systems that can actually run here.
+
 ### Game progress
 
 Signed-in players' progress is saved to their account. The game loader injects a small bridge that mirrors each game's `localStorage` into the account profile under `gameProgress`, keyed by the game's URL, and seeds it again the next time the game opens. With Supabase configured, that profile syncs through the `profiles` table, so progress follows the account across domains and devices. Limits: 80 games per profile, 120 keys per game, 1 MB per profile. Only `localStorage` saves are captured; games that keep progress in IndexedDB or on their own servers manage it themselves. Signed-out visitors keep the game's native local storage.
