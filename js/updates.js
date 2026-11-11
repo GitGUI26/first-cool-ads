@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Compatibility fix and dead games removed',
+            items: [
+                'PEAK now gets past a history-update crash and loads its build inside the sandboxed player.',
+                'Removed The Final Earth and Trombone Champ because their game files are no longer available.',
+                'The catalog now has 653 entries: 652 public cards plus the hidden secret game.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Clearer suggestion and bug-report contacts',
             items: [
                 'Game suggestions and bug reports now have separate email links with pre-filled subjects.',

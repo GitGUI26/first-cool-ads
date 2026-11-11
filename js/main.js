@@ -3484,6 +3484,27 @@ function injectFreezeHarnessIntoHtml(html, gameUrl, gameProgress) {
                 document.cookie = name + '=' + encodeURIComponent(value || '') + expires + '; path=/';
             };
         }
+        // Sandboxed games run from about:srcdoc. Some ports try to stamp a CDN URL
+        // onto history; the browser rejects that cross-origin state and the game
+        // stops before it starts. Keep the state, drop only the unusable URL.
+        if (window.history && typeof window.history.replaceState === 'function') {
+            var nativeReplaceState = window.history.replaceState;
+            var nativePushState = window.history.pushState;
+            window.history.replaceState = function (state, title, url) {
+                try { return nativeReplaceState.call(window.history, state, title, url); }
+                catch (error) {
+                    try { return nativeReplaceState.call(window.history, state, title); } catch (ignored) {}
+                }
+            };
+            if (typeof nativePushState === 'function') {
+                window.history.pushState = function (state, title, url) {
+                    try { return nativePushState.call(window.history, state, title, url); }
+                    catch (error) {
+                        try { return nativePushState.call(window.history, state, title); } catch (ignored) {}
+                    }
+                };
+            }
+        }
         if (typeof window.maeExportApis_ !== 'function') window.maeExportApis_ = function () {};
         if (window.parent && window.parent !== window && typeof window.parent.maeExportApis_ !== 'function') {
             window.parent.maeExportApis_ = function () {};
