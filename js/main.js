@@ -3675,6 +3675,13 @@ function openLesson(t, u, options = {}) {
     }
     const normalizedUrl = (u || '').trim();
     recordRecentGame(t, normalizedUrl);
+    const requestedGame = games.find(item => item.title === t);
+    if (requestedGame && requestedGame.browser && typeof window.openBrowserOverlay === 'function') {
+        if (options.replaceUrl && hasLegacyGameLocation())
+            clearGameUrl('replace');
+        window.openBrowserOverlay(normalizedUrl);
+        return;
+    }
     const activeTab = getActiveGameTab();
     if (activeTab && activeTab.title === t && (activeTab.url || '').trim() === normalizedUrl) {
         updateGameSessionTitle(activeTab.title);

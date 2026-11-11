@@ -238,7 +238,9 @@ function rewriteHTML(html, base) {
       });
     return '<' + tag + attrs + formAction + '>';
   });
-  const inject = '<script>window.__PXB=' + JSON.stringify(pageBase).replace(/</g, '\\u003c') + ';(' + clientShim.toString() + ')();<\/script>';
+  // Wrangler's bundler adds a keep-names helper named __name. The shim is
+  // serialized with toString(), so that helper must exist in the page too.
+  const inject = '<script>window.__PXB=' + JSON.stringify(pageBase).replace(/</g, '\\u003c') + ';function __name(fn){return fn};(' + clientShim.toString() + ')();<\/script>';
   if (/<head\b[^>]*>/i.test(html)) return html.replace(/<head\b[^>]*>/i, match => match + inject);
   return inject + html;
 }

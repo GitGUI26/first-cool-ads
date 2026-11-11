@@ -147,6 +147,7 @@ const STATIC_HOST = /(^|\.)(github\.io|pages\.dev|netlify\.app|vercel\.app|surge
 let PROXY = STATIC_HOST ? RENDER_PROXY : location.origin;
 const $ = (s) => document.querySelector(s);
 let tabs = [], cur = null, uid = 0, online = true, fallback = false;
+let browserReady = false, pendingNavigate = '';
 const HEALTH_TIMEOUT = 25000;
 const HEALTH_ATTEMPTS = 3;
 const FALLBACK = 'https://www.4everproxy.com/';
@@ -343,6 +344,24 @@ function go(raw) {
   cur.frame.src = enc(u);
   select(cur);
 }
+function finishBoot() {
+  browserReady = true;
+  if (pendingNavigate) {
+    const url = pendingNavigate;
+    pendingNavigate = '';
+    go(url);
+  }
+}
+addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'browser-navigate' || typeof e.data.url !== 'string') return;
+  try { if (window.parent !== window && e.source !== parent) return; } catch (error) {}
+  pendingNavigate = e.data.url;
+  if (browserReady) {
+    const url = pendingNavigate;
+    pendingNavigate = '';
+    go(url);
+  }
+});
 addEventListener('message', e => {
   if (!e.data || e.data.type !== 'proxy-nav') return;
   const t = tabs.find(x => x.frame.contentWindow === e.source);
@@ -385,6 +404,7 @@ async function boot() {
   if (!STATIC_HOST && location.origin !== RENDER_PROXY) {
     try {
       await applyProxyHealth(await readProxyHealth(5000));
+      finishBoot();
       return;
     } catch (e) {
       PROXY = RENDER_PROXY;
@@ -393,6 +413,7 @@ async function boot() {
   for (let attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++) {
     try {
       await applyProxyHealth(await readProxyHealth());
+      finishBoot();
       return;
     } catch (e) {
       if (attempt < HEALTH_ATTEMPTS) {
@@ -407,6 +428,7 @@ async function boot() {
   fallback = true;
   online = true;
   notice('The private proxy did not respond. Use the public fallback to continue.', false, true);
+  finishBoot();
 }
 try {
   if (window.parent !== window) {

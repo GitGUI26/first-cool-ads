@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Roblox in the library',
+            items: [
+                'Added Roblox to ALL GAMES. It launches in the site\'s private browser instead of a direct iframe.',
+                'Roblox loads through the same /p proxy as the BROWSER tab, so its links and navigation use the proxy too.',
+                'The library now has 653 public games.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Games stay on the home URL',
             items: [
                 'Opening a game no longer changes the address bar to a game query URL.',

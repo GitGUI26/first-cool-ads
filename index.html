@@ -14,27 +14,27 @@
   <link href="cuh.png" rel="apple-touch-icon">
   <meta content="#7c8cff" name="theme-color">
   <meta content="Cool Tutoring Hub" property="og:site_name">
-  <meta content="Cool Tutoring Hub | 652 Unblocked Games &amp; Lessons" property="og:title">
+  <meta content="Cool Tutoring Hub | 653 Unblocked Games &amp; Lessons" property="og:title">
   <meta
-    content="Play 652 free unblocked games, educational tools, and brain breaks in one fast hub made for students."
+    content="Play 653 free unblocked games, educational tools, and brain breaks in one fast hub made for students."
     property="og:description">
   <meta content="website" property="og:type">
   <meta content="https://rcms.cleazium.workers.dev/" property="og:url">
 <meta content="https://rcms.cleazium.workers.dev/og-image.jpg" property="og:image">
 <meta content="1200" property="og:image:width">
 <meta content="630" property="og:image:height">
-<meta content="Cool Tutoring Hub - 652 unblocked games and educational brain breaks" property="og:image:alt">
+<meta content="Cool Tutoring Hub - 653 unblocked games and educational brain breaks" property="og:image:alt">
   <meta content="en_US" property="og:locale">
   <meta content="summary_large_image" name="twitter:card">
-  <meta content="Cool Tutoring Hub | 652 Unblocked Games" name="twitter:title">
-  <meta content="Play 652 free unblocked games and educational brain breaks in one fast hub for students."
+  <meta content="Cool Tutoring Hub | 653 Unblocked Games" name="twitter:title">
+  <meta    content="Play 653 free unblocked games and educational brain breaks in one fast hub for students."
     name="twitter:description">
   <meta
     content="https://rcms.cleazium.workers.dev/og-image.jpg"
     name="twitter:image">
-  <meta content="Cool Tutoring Hub - 652 unblocked games and educational brain breaks" name="twitter:image:alt">
+  <meta content="Cool Tutoring Hub - 653 unblocked games and educational brain breaks" name="twitter:image:alt">
   <meta
-    content="Cool Tutoring Hub - Play 652 free unblocked games, use educational tools, and take a brain break. A fast, free game library built for students."
+    content="Cool Tutoring Hub - Play 653 free unblocked games, use educational tools, and take a brain break. A fast, free game library built for students."
     name="description">
   <meta content="unblocked games, tutoring, math help, educational games, student resources, online learning"
     name="keywords">
@@ -61,7 +61,7 @@
       "@id": "https://rcms.cleazium.workers.dev/#website",
       "url": "https://rcms.cleazium.workers.dev/",
       "name": "Cool Tutoring Hub",
-      "description": "A fast, free library of 652 unblocked games and educational brain breaks for students.",
+      "description": "A fast, free library of 653 unblocked games and educational brain breaks for students.",
       "inLanguage": "en",
       "potentialAction": {
         "@type": "SearchAction",
@@ -297,7 +297,7 @@
           </div>
           <p class="home-subtitle"><span id="typing-quote"></span><span class="cursor">|</span></p>
           <div class="hero-stats">
-            <div class="hero-stat"><b data-game-count>652</b><span>games</span></div>
+            <div class="hero-stat"><b data-game-count>653</b><span>games</span></div>
           </div>
           <div class="hero-cta">
             <button class="btn-primary" type="button" onclick="document.getElementById('all-lessons').scrollIntoView({behavior:'smooth'})"><i class="fas fa-gamepad"></i> Browse games</button>
@@ -360,11 +360,11 @@
           <span class="section-kicker">The library</span>
           <h2>ALL GAMES</h2>
         </div>
-        <div class="library-count"><b data-game-count>652</b> games · always free</div>
+        <div class="library-count"><b data-game-count>653</b> games · always free</div>
       </div>
       <div class="search-container" role="search">
         <label class="visually-hidden" for="searchInput">Search games</label>
-        <input class="search-box" id="searchInput" placeholder="Search 652 games..." type="text" autocomplete="off" enterkeyhint="search" aria-keyshortcuts="/" aria-describedby="searchStats">
+        <input class="search-box" id="searchInput" placeholder="Search 653 games..." type="text" autocomplete="off" enterkeyhint="search" aria-keyshortcuts="/" aria-describedby="searchStats">
         <div class="search-icon"><i class="fas fa-search"></i></div>
         <button class="search-clear" id="searchClear" type="button" aria-label="Clear search" hidden><i class="fas fa-xmark"></i></button>
       </div>
@@ -939,9 +939,9 @@
   <script src="js/auth-config.js?v=2"></script>
   <script src="js/account-store.js?v=11"></script>
   <script src="scripts/starfield.js?v=3"></script>
-  <script src="js/games.js?v=12"></script>
-  <script src="js/main.js?v=31"></script>
-  <script src="js/updates.js?v=15"></script>
+  <script src="js/games.js?v=13"></script>
+  <script src="js/main.js?v=32"></script>
+  <script src="js/updates.js?v=16"></script>
   <script src="js/account.js?v=9"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=4"></script>
@@ -963,6 +963,8 @@
       const browserTab = document.getElementById('browserTab');
       if (!overlay || !windowEl || !frame || !closeButton || !fullscreenButton) return;
       let loaded = false;
+      let browserFrameReady = false;
+      let pendingBrowserUrl = '';
       let fallbackFullscreen = false;
 
       function nativeFullscreenElement() {
@@ -1025,10 +1027,29 @@
         else enterBrowserFullscreen();
       }
 
-      function openBrowserOverlay() {
+      function sendBrowserUrl(url) {
+        if (!url) return;
+        try {
+          if (frame.contentWindow) frame.contentWindow.postMessage({ type: 'browser-navigate', url: url }, '*');
+        } catch (error) {}
+      }
+
+      frame.addEventListener('load', function () {
+        browserFrameReady = true;
+        if (!pendingBrowserUrl) return;
+        const url = pendingBrowserUrl;
+        pendingBrowserUrl = '';
+        sendBrowserUrl(url);
+      });
+
+      function openBrowserOverlay(url) {
+        if (url) pendingBrowserUrl = url;
         if (!loaded) {
-          frame.src = 'browser/index.html?v=8';
+          frame.src = 'browser/index.html?v=9';
           loaded = true;
+        } else if (url && browserFrameReady) {
+          pendingBrowserUrl = '';
+          sendBrowserUrl(url);
         }
         overlay.hidden = false;
         overlay.classList.add('active');

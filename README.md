@@ -98,7 +98,7 @@ destinations before it can open. Update the unit keys in `js/ads.js` when changi
 
 ## Games from the Offline HTML Games Pack
 
-78 games from the Offline HTML Games Pack remain after 57 that no longer rendered were removed, bringing the catalog to 653 entries: 652 public cards plus the hidden secret game. The pack is 5.3 GB, so those games are not copied into the repo; the catalog points at the pack's public raw GitHub files and the existing loader fetches each game's HTML. Their covers are generated 640x360 SVG title cards in `images/g_pack_*.svg`, checked against every title with no text overflow. Re-running the importer is safe; it skips duplicates by title, URL, alias, and file contents:
+78 games from the Offline HTML Games Pack remain after 57 that no longer rendered were removed, bringing the catalog to 654 entries: 653 public cards plus the hidden secret game. The pack is 5.3 GB, so those games are not copied into the repo; the catalog points at the pack's public raw GitHub files and the existing loader fetches each game's HTML. Their covers are generated 640x360 SVG title cards in `images/g_pack_*.svg`, checked against every title with no text overflow. Re-running the importer is safe; it skips duplicates by title, URL, alias, and file contents:
 
     node tools/import_offline_pack.js "C:/path/to/Offline-HTML-Games-Pack-master/offline"
 
