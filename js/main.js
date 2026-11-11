@@ -1671,7 +1671,6 @@ function switchTab(tab) {
         return;
     let mx = 0, my = 0, cx = 0, cy = 0;
     let cursorHidden = false;
-    let cursorTimeout;
     let cursorVisible = true;
     let isOverIframe = false;
     let iframeCheckTimeout;
@@ -1681,8 +1680,7 @@ function switchTab(tab) {
         return (1 - a) * s + a * e;
     }
     function usesNativeCursorMode() {
-        return document.body.classList.contains('chat-active')
-            || document.body.classList.contains('proto-ui')
+        return document.body.classList.contains('proto-ui')
             || document.body.classList.contains('cursor-disabled');
     }
     function hideCustomCursor() {
@@ -1700,14 +1698,6 @@ function switchTab(tab) {
             cursorVisible = true;
             cursorHidden = false;
         }
-    }
-    function resetCursorTimeout() {
-        clearTimeout(cursorTimeout);
-        cursorTimeout = setTimeout(() => {
-            if (cursorVisible && !isOverIframe) {
-                hideCustomCursor();
-            }
-        }, 3000);
     }
     function checkIfOverIframe(x, y) {
         const iframes = document.querySelectorAll('iframe');
@@ -1756,7 +1746,6 @@ function switchTab(tab) {
             showCustomCursor();
             document.documentElement.style.cursor = 'none';
         }
-        resetCursorTimeout();
     });
     function animate() {
         cx = prefersReducedMotion ? mx : lerp(cx, mx, 0.25);
@@ -1770,7 +1759,6 @@ function switchTab(tab) {
         if (!isOverIframe && !usesNativeCursorMode()) {
             showCustomCursor();
             c.classList.add('click');
-            resetCursorTimeout();
         }
     });
     document.addEventListener('mouseup', () => {
@@ -1784,7 +1772,6 @@ function switchTab(tab) {
             if (!isOverIframe && !usesNativeCursorMode()) {
                 showCustomCursor();
                 c.classList.add('hover');
-                resetCursorTimeout();
             }
         });
         el.addEventListener('mouseleave', (e) => {
@@ -1809,11 +1796,6 @@ function switchTab(tab) {
         });
         observer.observe(gamePage, { attributes: true });
     }
-    ['click', 'keydown', 'scroll'].forEach(eventType => {
-        document.addEventListener(eventType, () => {
-            resetCursorTimeout();
-        });
-    });
     document.addEventListener('visibilitychange', () => {
         if (!document.hidden) {
             if (usesNativeCursorMode()) {
@@ -1823,7 +1805,6 @@ function switchTab(tab) {
             }
             else {
                 showCustomCursor();
-                resetCursorTimeout();
             }
         }
     });
@@ -1834,10 +1815,8 @@ function switchTab(tab) {
     }
     else {
         showCustomCursor();
-        resetCursorTimeout();
     }
     window.addEventListener('beforeunload', () => {
-        clearTimeout(cursorTimeout);
         clearTimeout(iframeCheckTimeout);
     });
 })();
@@ -3344,7 +3323,39 @@ function injectFreezeHarnessIntoHtml(html, gameUrl, gameProgress) {
         try { baseTag = '<base href="' + new URL(gameUrl, location.href).href.replace(/"/g, '%22') + '">'; } catch (e) {}
     }
     const progressScript = getGameProgressBridgeScript(gameProgressKey(gameUrl), gameProgress);
-    const harness = baseTag + progressScript + '\n' + getGameFreezeHarnessScript();
+    const compatibility = `<style id="cool-game-fill">ruffle-player,ruffle-object,object,embed{display:block;width:100% !important;height:100vh !important;max-width:100%;max-height:100%}</style>
+<script>
+(function () {
+    try {
+        if (typeof window.ga !== 'function') window.ga = function () {};
+        if (!window.sdk) window.sdk = {};
+        ['showBanner','hideBanner','showAd','on','gameLoadingFinished','gameStart','gameEnd'].forEach(function (name) {
+            if (typeof window.sdk[name] !== 'function') window.sdk[name] = function () {};
+        });
+        if (typeof window.getCookie !== 'function') {
+            window.getCookie = function (name) {
+                var parts = document.cookie.split('; ');
+                var prefix = name + '=';
+                for (var i = 0; i < parts.length; i++) {
+                    if (parts[i].indexOf(prefix) === 0) return decodeURIComponent(parts[i].slice(prefix.length));
+                }
+                return null;
+            };
+        }
+        if (typeof window.setCookie !== 'function') {
+            window.setCookie = function (name, value, days) {
+                var expires = days ? '; expires=' + new Date(Date.now() + days * 864e5).toUTCString() : '';
+                document.cookie = name + '=' + encodeURIComponent(value || '') + expires + '; path=/';
+            };
+        }
+        if (typeof window.maeExportApis_ !== 'function') window.maeExportApis_ = function () {};
+        if (window.parent && window.parent !== window && typeof window.parent.maeExportApis_ !== 'function') {
+            window.parent.maeExportApis_ = function () {};
+        }
+    } catch (error) {}
+})();
+</script>`;
+    const harness = baseTag + compatibility + progressScript + '\n' + getGameFreezeHarnessScript();
     const urlShim = '<script>try{Object.defineProperty(document,"URL",{configurable:true,get:function(){return document.baseURI||"https://cdn.jsdelivr.net/";}});}catch(e){}<\/script>';
     const firstScript = html.search(/<script\b/i);
     const headMatch = html.search(/<head[^>]*>/i);
@@ -4104,7 +4115,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(typeEffect, 1000);
 });
 const LESSON_GRID_COLUMNS = 3;
-const inFeedAd = document.getElementById('adInFeed');
+var inFeedAd = document.getElementById('adInFeed');
 let inFeedResizeTimer;
 function placeInFeedAd() {
     const grid = document.getElementById('allLessonsGrid');

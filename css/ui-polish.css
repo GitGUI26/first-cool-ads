@@ -1,0 +1,292 @@
+/* Shared interface polish. Loaded after the section styles so the whole site
+   keeps one visual language without rewriting the original stylesheet. */
+
+:root {
+  --polish-radius: 14px;
+  --polish-ease: cubic-bezier(0.2, 0.75, 0.25, 1);
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+}
+
+::selection {
+  background: rgba(var(--primary-accent-rgb), 0.38);
+  color: #fff;
+}
+
+:where(a, button, input, textarea, select, [role="button"], [tabindex]):focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.top-nav-actions {
+  gap: 10px;
+}
+
+.nav-tabs {
+  gap: 3px;
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(5, 10, 21, 0.52);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+}
+
+.nav-tab {
+  min-height: 34px;
+  padding: 7px 12px;
+  border: 0;
+  border-radius: 999px;
+  color: var(--ui-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.07em;
+  transition: color 0.18s var(--polish-ease), background 0.18s var(--polish-ease), box-shadow 0.18s var(--polish-ease);
+}
+
+.nav-tab:hover {
+  color: var(--ui-text);
+  background: rgba(255, 255, 255, 0.055);
+}
+
+.nav-tab.active {
+  color: #fff;
+  background: linear-gradient(145deg, rgba(var(--primary-accent-rgb), 0.3), rgba(var(--primary-accent-rgb), 0.14));
+  box-shadow: inset 0 0 0 1px rgba(var(--primary-accent-rgb), 0.28), 0 4px 16px rgba(0, 0, 0, 0.12);
+}
+
+.nav-random {
+  min-height: 38px;
+  border-radius: 999px;
+}
+
+.account-nav-button {
+  width: 42px;
+  height: 42px;
+  min-width: 42px;
+}
+
+.btn-primary,
+.btn-ghost,
+.apply-btn,
+.file-btn,
+.ad-sponsor,
+.account-primary,
+.account-secondary,
+.account-link,
+.background-option,
+.theme-option {
+  transition: border-color 0.18s var(--polish-ease), background 0.18s var(--polish-ease), color 0.18s var(--polish-ease), box-shadow 0.18s var(--polish-ease), transform 0.18s var(--polish-ease);
+}
+
+.btn-primary:hover,
+.apply-btn:hover,
+.account-primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.section-kicker {
+  letter-spacing: 0.16em;
+  opacity: 0.82;
+}
+
+.library-head {
+  padding-bottom: 4px;
+}
+
+.library-head h2 {
+  letter-spacing: -0.045em;
+}
+
+.search-box {
+  border-radius: 14px;
+  transition: border-color 0.18s var(--polish-ease), box-shadow 0.18s var(--polish-ease), background 0.18s var(--polish-ease);
+}
+
+.search-box:focus {
+  border-color: rgba(var(--primary-accent-rgb), 0.64);
+  box-shadow: 0 0 0 4px rgba(var(--primary-accent-rgb), 0.1);
+}
+
+.sort-select {
+  border-radius: 12px;
+}
+
+.lesson-card {
+  transition: box-shadow 0.2s var(--polish-ease), border-color 0.2s var(--polish-ease);
+}
+
+.lesson-card:hover {
+  border-color: rgba(var(--primary-accent-rgb), 0.34);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, 0.24);
+}
+
+.account-modal .account-backdrop {
+  background: rgba(3, 6, 14, 0.78);
+  backdrop-filter: blur(12px);
+}
+
+.account-modal .account-panel {
+  width: min(100%, 940px);
+  max-height: min(90vh, 880px);
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.2);
+  border-radius: 28px;
+  background:
+    radial-gradient(620px 260px at 0% 0%, rgba(var(--primary-accent-rgb), 0.14), transparent 66%),
+    linear-gradient(160deg, rgba(16, 23, 41, 0.99), rgba(7, 11, 21, 0.99));
+  box-shadow: 0 35px 100px rgba(0, 0, 0, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.account-modal .account-head {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.018);
+}
+
+.account-modal .account-head-avatar {
+  width: 54px;
+  height: 54px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.32);
+  box-shadow: 0 0 0 4px rgba(var(--primary-accent-rgb), 0.06);
+}
+
+.account-modal .account-head-copy h2 {
+  letter-spacing: -0.035em;
+}
+
+.account-modal .account-scroll {
+  padding: 24px;
+}
+
+.account-modal .account-tabs {
+  padding: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.025);
+}
+
+.account-modal .account-tabs button {
+  min-height: 38px;
+  border-radius: 9px;
+  font-weight: 700;
+}
+
+.account-modal .account-tabs button.is-active {
+  background: rgba(var(--primary-accent-rgb), 0.2);
+  color: #fff;
+  box-shadow: inset 0 0 0 1px rgba(var(--primary-accent-rgb), 0.2);
+}
+
+.account-modal .account-form label input,
+.account-modal .account-settings-grid input,
+.account-modal .account-inline-form input,
+.account-modal .account-form select {
+  min-height: 46px;
+  border-radius: 11px;
+  background: rgba(255, 255, 255, 0.045);
+  transition: border-color 0.18s var(--polish-ease), box-shadow 0.18s var(--polish-ease), background 0.18s var(--polish-ease);
+}
+
+.account-modal .account-form label input:focus,
+.account-modal .account-settings-grid input:focus,
+.account-modal .account-inline-form input:focus,
+.account-modal .account-form select:focus {
+  border-color: rgba(var(--primary-accent-rgb), 0.64);
+  background: rgba(255, 255, 255, 0.06);
+  box-shadow: 0 0 0 4px rgba(var(--primary-accent-rgb), 0.1);
+}
+
+.account-modal .account-primary {
+  min-height: 44px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.46);
+  border-radius: 11px;
+  background: linear-gradient(145deg, rgba(var(--primary-accent-rgb), 0.3), rgba(var(--primary-accent-rgb), 0.15));
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.14);
+}
+
+.account-modal .account-secondary {
+  min-height: 40px;
+  border-radius: 10px;
+}
+
+.account-modal .account-card {
+  border-color: rgba(255, 255, 255, 0.09);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.027);
+}
+
+.account-modal .account-card-head h4 {
+  letter-spacing: -0.02em;
+}
+
+.account-modal .account-welcome {
+  padding: 2px 2px 18px;
+}
+
+.account-modal .account-avatar-large {
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.32);
+  box-shadow: 0 0 0 5px rgba(var(--primary-accent-rgb), 0.06);
+}
+
+.account-modal .account-file-button {
+  border-radius: 10px;
+}
+
+.account-modal .account-toast {
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.28);
+  border-radius: 12px;
+  background: rgba(11, 18, 33, 0.98);
+  box-shadow: 0 18px 50px rgba(0, 0, 0, 0.35);
+}
+
+@media (max-width: 900px) {
+  .top-nav-actions {
+    gap: 7px;
+  }
+
+  .nav-tabs {
+    max-width: 100%;
+    overflow-x: auto;
+    overscroll-behavior-inline: contain;
+    scrollbar-width: none;
+  }
+
+  .nav-tabs::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .account-modal {
+    padding: 0;
+  }
+
+  .account-modal .account-panel {
+    max-height: 94vh;
+    border-radius: 22px 22px 0 0;
+  }
+
+  .account-modal .account-scroll {
+    padding: 18px 16px 28px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  .lesson-card,
+  .btn-primary,
+  .apply-btn,
+  .account-primary,
+  .nav-tab {
+    transition: none !important;
+  }
+}

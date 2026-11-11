@@ -5,6 +5,18 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-11',
+            title: 'Chat reliability and account polish',
+            items: [
+                'Chat now blocks slurs and hate speech on the server before a message reaches the room.',
+                'Profile pictures appear beside chat messages and in the online-member stack, with a fallback avatar for members who have not uploaded one.',
+                'Messages now recover through a short history sync, so everyone sees the room even if a live broadcast is missed.',
+                'The custom cursor stays visible instead of disappearing after a few idle seconds, including while chat is open.',
+                'The chat layout, account screens, navigation, focus states, and form controls received a cleaner, more consistent interface pass.',
+                'Email verification now explains link-based confirmation and offers a sign-in-link fallback when a code is not present.'
+            ]
+        },
+        {
             date: '2026-11-10',
             title: 'Bring your own ROMs',
             items: [

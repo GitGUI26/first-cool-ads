@@ -1091,6 +1091,9 @@
     if (code === 'same_password' || /different from the old password|same password/i.test(message)) {
       return 'Choose a password you have not used before.';
     }
+    if (code === 'email_address_not_authorized' || /email address not authorized|email.*not authorized/i.test(message)) {
+      return 'This project cannot deliver email to that address yet. Add a custom SMTP provider in Supabase, or ask the site owner to authorize the address.';
+    }
     if (/redirect.*not allowed|url.*not allowed/i.test(message)) {
       return 'This site address is not allowed for email links yet. Add it in Supabase Auth URL Configuration.';
     }
@@ -1420,6 +1423,26 @@
     }
   }
 
+  async function sendSignInLink(email) {
+    var clean = cleanEmail(email);
+    if (!clean) return { ok: false, error: 'Enter the email address you are verifying.' };
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+    try {
+      var result = await auth.auth.signInWithOtp({
+        email: clean,
+        options: {
+          shouldCreateUser: false,
+          emailRedirectTo: siteUrl() + '?account=confirmed'
+        }
+      });
+      if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
+      return { ok: true, email: clean };
+    } catch (error) {
+      return { ok: false, error: friendlyAuthError(error) };
+    }
+  }
+
   async function sendRecoveryCode(email) {
     var clean = cleanEmail(email);
     if (!clean) return { ok: false, error: 'Enter the email address for your account.' };
@@ -1547,6 +1570,7 @@
     signIn: signIn,
     verifyEmailCode: verifyEmailCode,
     resendEmailCode: resendEmailCode,
+    sendSignInLink: sendSignInLink,
     requestEmailUpgrade: requestEmailUpgrade,
     isLocalAccount: isLocalUser,
     sendRecoveryCode: sendRecoveryCode,

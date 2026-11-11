@@ -105,6 +105,18 @@
     }, 3200);
   }
 
+  function announceEmailLink() {
+    if (!/[?&]account=confirmed(?:[=&]|$)/.test(location.search)) return;
+    window.setTimeout(function () {
+      var user = currentUser();
+      if (user && !isLocalUser(user)) {
+        showToast('Email confirmed. You are signed in.');
+        if (modal && !modal.hidden) render();
+      }
+      try { history.replaceState({}, document.title, location.pathname + location.hash); } catch (error) {}
+    }, 900);
+  }
+
   function setBusy(form, busy, busyLabel) {
     if (!form) return;
     var button = form.querySelector('button[type="submit"]');
@@ -615,8 +627,30 @@
       updateVerifyResendButton();
       return;
     }
-    showSuccess('verifySuccess', 'A new verification code was sent to ' + pendingVerification.email + '.');
+    showSuccess('verifySuccess', 'A new verification email was sent to ' + pendingVerification.email + '. A link also works if no code is shown.');
     startVerifyResendCooldown();
+  }
+
+  async function sendVerificationLink() {
+    if (!pendingVerification) {
+      render();
+      return;
+    }
+    var button = $('sendVerificationLink');
+    if (!button || button.disabled) return;
+    showError('verifyError', '');
+    showSuccess('verifySuccess', '');
+    button.disabled = true;
+    button.textContent = 'Sending link…';
+    var result = await Store.sendSignInLink(pendingVerification.email);
+    button.textContent = 'Email me a sign-in link';
+    button.disabled = false;
+    if (!result.ok) {
+      showError('verifyError', result.error);
+      return;
+    }
+    showSuccess('verifySuccess', 'A sign-in link is on its way to ' + pendingVerification.email + '. Open it to finish signing in without a code.');
+    showToast('Check your email for the sign-in link.');
   }
 
   function cancelVerification() {
@@ -668,8 +702,7 @@
       email: result.email,
       mode: 'upgrade',
       upgrade: result.upgrade || { localId: user.id, username: username }
-    });
-    showSuccess('verifySuccess', 'We sent a verification code to ' + result.email + '. Enter it below to finish syncing.');
+    });      showSuccess('verifySuccess', 'We sent a verification email to ' + result.email + '. Enter the code if present, or open the link.');
     showToast('Check your email for the verification code.');
   }
 
@@ -697,7 +730,7 @@
     if (result.needsConfirmation) {
       $('signupForm').reset();
       beginVerification({ email: result.email, mode: 'signup' });
-      showSuccess('verifySuccess', 'We sent a verification code to ' + result.email + '. Enter it below.');
+      showSuccess('verifySuccess', 'We sent a verification email to ' + result.email + '. Enter the code if present, or open the link.');
       showToast('Check your email for the verification code.');
       return;
     }
@@ -755,7 +788,7 @@
     }
     recoveryEmail = result.email || email;
     setAuthMode('code');
-    showSuccess('recoverySuccess', 'We sent a recovery code to ' + recoveryEmail + '. Check your inbox and spam folder.');
+    showSuccess('recoverySuccess', 'We sent a recovery email to ' + recoveryEmail + '. Use the code or the link inside.');
     startResendCooldown();
     if ($('recoveryCode')) $('recoveryCode').focus();
   }
@@ -1095,6 +1128,7 @@
     if ($('recoveryForm')) $('recoveryForm').addEventListener('submit', submitRecovery);
     if ($('verifyForm')) $('verifyForm').addEventListener('submit', submitVerification);
     if ($('resendVerification')) $('resendVerification').addEventListener('click', resendVerificationCode);
+    if ($('sendVerificationLink')) $('sendVerificationLink').addEventListener('click', sendVerificationLink);
     if ($('cancelVerification')) $('cancelVerification').addEventListener('click', cancelVerification);
     if ($('upgradeEmailForm')) $('upgradeEmailForm').addEventListener('submit', requestEmailUpgrade);
     if ($('verifyCode')) {
@@ -1202,6 +1236,7 @@
     initialized = true;
     bindEvents();
     render();
+    announceEmailLink();
     if (Store.isRecoveryPending()) {
       window.setTimeout(openAccount, 0);
       // Supabase finishes parsing the recovery URL just after this script runs.

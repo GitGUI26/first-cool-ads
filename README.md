@@ -30,12 +30,13 @@ If `js/auth-config.js` is left empty, the account screens fall back to browser-o
 
 1. Create a project at https://supabase.com/dashboard.
 2. Open Project Settings -> API and copy the Project URL and the `anon` / publishable key into `js/auth-config.js`.
-3. In Authentication -> Providers -> Email, keep Email enabled. For instant sign-up, turn off "Confirm email"; otherwise users must click the link before signing in.
-4. In Authentication -> Email Templates -> Reset Password, include `{{ .Token }}` so the email actually contains the recovery code. For example: `<p>Your password reset code is <strong>{{ .Token }}</strong>.</p>`. You can keep `{{ .ConfirmationURL }}` as a fallback link, but that link needs the domain from step 5.
-5. In Authentication -> URL Configuration, set the Site URL to the current site and add every domain the site may use. This is needed for sign-up confirmation links and any reset link; the code reset itself does not need a redirect URL. Normal password sign-in works on any domain.
-6. Optional but recommended: run `supabase/schema.sql` in the SQL editor. That creates the `profiles` table used to sync history, saved sites, and preferences across devices. Without it, sign-in still works and the profile stays in the browser.
+3. In Authentication -> Providers -> Email, keep Email enabled. For instant sign-up, turn off "Confirm email"; otherwise users verify with the link in the message (and with a code when the template includes one).
+4. In Authentication -> Email Templates, add `{{ .Token }}` to both **Confirm signup** and **Reset Password** if you want 6-digit codes. For example: `<p>Your code is <strong>{{ .Token }}</strong>.</p><p>Or open {{ .ConfirmationURL }}</p>`. The site supports the link even when no code is present; the separate "Email me a sign-in link" button uses the Magic Link template.
+5. Supabase's built-in email sender is limited and only delivers to authorized team addresses. For real users, configure Authentication -> SMTP Settings with a custom provider. Without it, the app can show a successful request while no message is delivered.
+6. In Authentication -> URL Configuration, set the Site URL to the current site and add every domain the site may use. This is needed for sign-up confirmation links, sign-in links, and reset links; code verification does not need a redirect URL. Normal password sign-in works on any domain.
+7. Optional but recommended: run `supabase/schema.sql` in the SQL editor. That creates the `profiles` table used to sync history, saved sites, and preferences across devices. Without it, sign-in still works and the profile stays in the browser.
 
-The Forgot password form now sends a recovery code, verifies it, and asks for a new password. If the Reset Password template still contains only the default link, the email will not contain a code; users can click that link instead and the site will ask for the new password.
+The Forgot password form sends a recovery email, verifies a code when one is present, and asks for a new password. If the Reset Password template still contains only the default link, users can click that link instead and the site will ask for the new password. The verification screen also offers a Magic Link fallback when a code never arrives.
 
 Signed-in users get an Account settings panel for their display name, email, profile picture, password reset, and sync status. Profile pictures are cropped and resized to 256 × 256 in the browser, then stored in the account profile so they follow the account across domains and devices. A default avatar is shown until a picture is uploaded, and the profile picture card can restore it at any time.
 
@@ -43,9 +44,10 @@ Signed-in users get an Account settings panel for their display name, email, pro
 
 CHAT is one shared room for the whole site. It uses a Cloudflare Durable Object named `global` and requires a
 Supabase-authenticated online account; the Worker verifies the Supabase access token before opening the WebSocket.
-Browser-only accounts are prompted to add a verified email first. The room keeps the latest 100 messages and has a
-small per-connection send cooldown. The binding and migration are in `wrangler.jsonc`; the health endpoint is
-`/api/chat/health`.
+Browser-only accounts are prompted to add a verified email first. The room keeps the latest 100 messages, blocks
+slurs and hate speech on the server, shows member avatars, and has a short polling fallback so a missed WebSocket
+broadcast does not hide messages from other members. The binding and migration are in `wrangler.jsonc`; the health
+endpoint is `/api/chat/health`.
 
 ### Emulators
 

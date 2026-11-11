@@ -45,11 +45,12 @@
 <link href="css/style.css?v=7" rel="stylesheet">
 <link href="css/refresh.css?v=10" rel="stylesheet">
 <link href="css/browser.css?v=1" rel="stylesheet">
-<link href="css/account.css?v=4" rel="stylesheet">
+<link href="css/account.css?v=5" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/ads.css?v=1" rel="stylesheet">
-<link href="css/chat.css?v=1" rel="stylesheet">
+<link href="css/chat.css?v=3" rel="stylesheet">
+<link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=1" rel="stylesheet">
   <script type="application/ld+json">
 {
@@ -413,19 +414,26 @@
           <aside class="chat-sidebar">
             <div class="chat-room-mark"><span><i class="fas fa-comments" aria-hidden="true"></i></span><div><strong>The Lounge</strong><small>One room · everyone welcome</small></div></div>
             <div class="chat-presence"><i aria-hidden="true"></i><b id="chatOnline">0</b> online</div>
+            <div class="chat-people" id="chatOnlineFaces" aria-label="People online"></div>
             <p>This is the one shared chat room for the whole site. Messages are visible to every signed-in member.</p>
-            <ul class="chat-rules"><li>Be friendly and keep it school-safe.</li><li>No spam, personal info, or links.</li><li>Keep the room welcoming for everyone.</li></ul>
-            <a class="chat-account-link" href="#" onclick="openAccount(); return false;">Manage account</a>
+            <ul class="chat-rules"><li>Be friendly and keep it school-safe.</li><li>No spam, personal info, or links.</li><li>Slurs and hate speech are blocked automatically.</li></ul>
+            <a class="chat-account-link" href="#" onclick="openAccount(); return false;"><i class="fas fa-user-gear" aria-hidden="true"></i> Manage account</a>
           </aside>
           <div class="chat-card">
-            <div class="chat-toolbar"><span class="chat-connection" id="chatConnection" data-state="offline">Disconnected</span><span class="chat-toolbar-note">Live room</span></div>
+            <div class="chat-toolbar">
+              <div class="chat-toolbar-status"><span class="chat-connection" id="chatConnection" data-state="offline">Disconnected</span><span class="chat-toolbar-note">Messages sync live</span></div>
+              <div class="chat-toolbar-presence"><div class="chat-face-stack" id="chatOnlineFacesCompact" aria-hidden="true"></div><span><b id="chatOnlineCompact">0</b> online</span></div>
+            </div>
             <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
-            <form class="chat-form" id="chatForm">
-              <label class="visually-hidden" for="chatInput">Message</label>
-              <textarea id="chatInput" rows="1" maxlength="500" placeholder="Message the room..." disabled></textarea>
-              <button class="chat-send" id="chatSend" type="submit" disabled>Send</button>
-            </form>
-            <p class="chat-hint">Enter to send · Shift+Enter for a new line. Keep it friendly.</p>
+            <div class="chat-composer">
+              <div class="chat-notice" id="chatNotice" role="status" aria-live="polite" hidden></div>
+              <form class="chat-form" id="chatForm">
+                <label class="visually-hidden" for="chatInput">Message</label>
+                <textarea id="chatInput" rows="1" maxlength="500" placeholder="Message the room..." disabled></textarea>
+                <button class="chat-send" id="chatSend" type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
+              </form>
+              <p class="chat-hint"><span>Enter to send · Shift+Enter for a new line</span><span id="chatCharCount">0 / 500</span></p>
+            </div>
           </div>
         </div>
       </div>
@@ -723,7 +731,7 @@
           </form>
           <form class="account-form" id="signupForm" hidden>
             <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. This is your display name.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
-            <label>Email (optional)<span>Add it now or later. You will verify it with a code. Leave blank to keep this account in this browser.</span><input id="signupEmail" type="email" autocomplete="email"></label>
+            <label>Email (optional)<span>Add it now or later. We send a confirmation link and, when enabled, a 6-digit code. Leave blank to keep this account in this browser.</span><input id="signupEmail" type="email" autocomplete="email"></label>
             <label>Password<span>At least 6 characters.</span><input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required></label>
             <div class="account-error" id="signupError" role="alert" hidden></div>
             <div class="account-error is-success" id="signupSuccess" role="status" hidden></div>
@@ -731,22 +739,24 @@
             <p class="account-local-note" data-online-copy="Leave email blank to keep this account in this browser. Add a verified email later to sync it across devices." data-local-copy="This account is saved in this browser only. It will not follow you to another device.">Leave email blank to keep this account in this browser. Add a verified email later to sync it across devices.</p>
           </form>
           <form class="account-form" id="verifyForm" hidden novalidate>
-            <p class="account-lede" id="verifyLede">Enter the verification code from your email.</p>
+            <p class="account-lede" id="verifyLede">Enter the 6-digit code from your email, or click the confirmation link in the message.</p>
             <label>Email<input id="verifyEmail" type="email" autocomplete="email" disabled></label>
-            <label>Verification code<span>Check your inbox and spam folder for the code.</span><input id="verifyCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" required></label>
+            <label>Verification code<span>Check your inbox and spam folder. A confirmation link also finishes verification.</span><input id="verifyCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" required></label>
             <div class="account-error" id="verifyError" role="alert" hidden></div>
             <div class="account-error is-success" id="verifySuccess" role="status" hidden></div>
             <div class="account-card-actions">
               <button class="account-primary" type="submit">Verify email</button>
-              <button class="account-link" id="resendVerification" type="button">Resend code</button>
+              <button class="account-link" id="resendVerification" type="button">Resend email</button>
+              <button class="account-link" id="sendVerificationLink" type="button">Email me a sign-in link</button>
               <button class="account-secondary" id="cancelVerification" type="button">Back</button>
             </div>
+            <p class="account-local-note">If your message only has a link, click it. This page will finish signing you in automatically.</p>
           </form>
           <form class="account-form" id="recoveryForm" hidden novalidate>
-            <p class="account-lede" id="recoveryLede">Enter the email on your account and we will send you a recovery code.</p>
+            <p class="account-lede" id="recoveryLede">Enter the email on your account and we will send a recovery link and code.</p>
 
             <label id="recoveryEmailLabel">Email<input id="recoveryEmail" type="email" autocomplete="email" required></label>
-            <label id="recoveryCodeLabel" hidden>Recovery code<span>Check the email we sent for the code.</span><input id="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" required></label>
+            <label id="recoveryCodeLabel" hidden>Recovery code<span>Check the email we sent. A recovery link works too.</span><input id="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" required></label>
             <button class="account-link" id="resendRecovery" type="button" hidden>Resend code</button>
             <label id="recoveryPasswordLabel" hidden>New password<span>At least 6 characters.</span><input id="recoveryNewPassword" type="password" autocomplete="new-password" minlength="6" required></label>
             <div class="account-error" id="recoveryError" role="alert" hidden></div>
@@ -847,14 +857,14 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=2"></script>
-  <script src="js/account-store.js?v=8"></script>
+  <script src="js/account-store.js?v=10"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=12"></script>
-  <script src="js/main.js?v=27"></script>
-  <script src="js/updates.js?v=10"></script>
-  <script src="js/account.js?v=7"></script>
+  <script src="js/main.js?v=29"></script>
+  <script src="js/updates.js?v=11"></script>
+  <script src="js/account.js?v=9"></script>
   <script src="js/music.js?v=2"></script>
-  <script src="js/chat.js?v=1"></script>
+  <script src="js/chat.js?v=3"></script>
   <script src="js/emulators.js?v=1"></script>
   <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
