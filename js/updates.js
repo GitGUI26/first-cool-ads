@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Username signup fixed',
+            items: [
+                'New accounts use a normal-looking internal login identifier instead of a reserved test domain that Supabase rejects.',
+                'You still enter only a username and password; there is no email field, verification step, or email recovery.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Compatibility fix and dead games removed',
             items: [
                 'PEAK now gets past a history-update crash and loads its build inside the sandboxed player.',

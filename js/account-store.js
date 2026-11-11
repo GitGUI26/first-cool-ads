@@ -21,7 +21,9 @@
   var SESSION_KEY = 'cuh_session_v2';
   var AUTH_STORAGE_KEY = 'cuh_auth_v2';
   var PROFILE_VERSION = 2;
-  var LOGIN_EMAIL_DOMAIN = 'users.cooltutoringhub.invalid';
+  // Supabase rejects reserved test domains (including .invalid) as signup
+  // identifiers, so use a normal-looking, non-deliverable subdomain.
+  var LOGIN_EMAIL_DOMAIN = 'users.cooltutoringhub.com';
   var MAX_HISTORY = 200;
   var MAX_WEBSITES = 40;
   var MAX_AVATAR_LENGTH = 500000;
@@ -1034,8 +1036,8 @@
     if (/failed to fetch|networkerror|load failed/i.test(message)) {
       return 'Could not reach the account server. Check your connection and try again.';
     }
-    if (/email.*invalid/i.test(message)) {
-      return 'Enter a valid email address.';
+    if (code === 'email_address_invalid' || /email.*invalid/i.test(message)) {
+      return 'The account service rejected the login identifier. Please contact the site owner.';
     }
     return message || 'The account server returned an error. Try again.';
   }
