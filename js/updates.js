@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Official cover art across the library',
+            items: [
+                'Replaced generated title cards and gameplay captures with official cover art for 168 games.',
+                'Covers are normalised to 640x360 WebP, and retired placeholder files were removed.',
+                'Games with no published official cover keep their existing in-game artwork.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Username-only accounts',
             items: [
                 'Removed email fields, verification screens, password recovery by email, and email account settings.',
