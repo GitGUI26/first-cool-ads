@@ -24,34 +24,31 @@ Free instances sleep after ~15 min idle, so the first load can take about a minu
 
 ## Accounts (Supabase)
 
-Accounts are stored by Supabase Auth, so they keep working when the site moves to a new domain or host. The browser only caches the signed-in profile.
+Accounts are stored by Supabase Auth and use a username and password. There is no email field, email verification, email sign-in link, or email password recovery in the site.
 
-If `js/auth-config.js` is left empty, the account screens fall back to browser-only accounts. Sign-up and sign-in still work, and salted PBKDF2 password hashes plus the profile stay in that browser's `localStorage`; nothing syncs across devices. Adding the Supabase URL and anon key switches the same screens back to online accounts and sync.
+Because Supabase's password endpoint expects an email-shaped identifier, new accounts receive a hidden, non-deliverable address derived from the normalized username. It is never shown and is never used to send mail. Existing accounts created before this update can still enter their previous email in the username box to sign in for compatibility.
+
+If `js/auth-config.js` is left empty, online accounts are disabled and new browser-only accounts are not created. Add the Supabase URL and anon key to enable username accounts.
 
 1. Create a project at https://supabase.com/dashboard.
 2. Open Project Settings -> API and copy the Project URL and the `anon` / publishable key into `js/auth-config.js`.
-3. In Authentication -> Providers -> Email, keep Email enabled. For instant sign-up, turn off "Confirm email"; otherwise users verify with the link in the message (and with a code when the template includes one).
-4. In Authentication -> Email Templates, add `{{ .Token }}` to both **Confirm signup** and **Reset Password** if you want 6-digit codes. For example: `<p>Your code is <strong>{{ .Token }}</strong>.</p><p>Or open {{ .ConfirmationURL }}</p>`. The site supports the link even when no code is present; the separate "Email me a sign-in link" button uses the Magic Link template.
-5. Supabase's built-in email sender is limited and only delivers to authorized team addresses. For real users, configure Authentication -> SMTP Settings with a custom provider. Without it, the app can show a successful request while no message is delivered.
-6. In Authentication -> URL Configuration, set the Site URL to the current site and add every domain the site may use. This is needed for sign-up confirmation links, sign-in links, and reset links; code verification does not need a redirect URL. Normal password sign-in works on any domain.
-7. Optional but recommended: run `supabase/schema.sql` in the SQL editor. That creates the `profiles` table used to sync history, saved sites, and preferences across devices. Without it, sign-in still works and the profile stays in the browser.
+3. In Authentication -> Providers -> Email, keep Email enabled and turn **off** "Confirm email". This is required: new usernames use an internal address that cannot receive a confirmation message.
+4. In the SQL editor, run `supabase/schema.sql`. It creates the `profiles` table, repairs any older duplicate usernames with a numeric suffix, and adds case-insensitive unique indexes plus triggers. Re-running it is safe.
+5. SMTP, email templates, and Auth URL Configuration are not needed for username accounts because the site never sends account email.
 
-The Forgot password form sends a recovery email, verifies a code when one is present, and asks for a new password. If the Reset Password template still contains only the default link, users can click that link instead and the site will ask for the new password. The verification screen also offers a Magic Link fallback when a code never arrives.
-
-Signed-in users get an Account settings panel for their display name, email, profile picture, password reset, and sync status. Profile pictures are cropped and resized to 256 × 256 in the browser, then stored in the account profile so they follow the account across domains and devices. A default avatar is shown until a picture is uploaded, and the profile picture card can restore it at any time.
+Signed-in users get an Account settings panel for their profile picture, avatar reset, sync status, history, saved sites, app handles, and preferences. Usernames are permanent and are also the login. Passwords cannot be recovered without an email address, so choose them carefully. Profile pictures are cropped and resized to 256 × 256 in the browser, then stored in the account profile so they follow the account across domains and devices.
 
 ### Chat
 
 CHAT is one shared room for the whole site. It uses a Cloudflare Durable Object named `global` and requires a
-Supabase-authenticated online account; the Worker verifies the Supabase access token before opening the WebSocket.
-Browser-only accounts are prompted to add a verified email first. The room keeps the latest 100 messages, blocks
-slurs and hate speech on the server, shows member avatars, and has a short polling fallback so a missed WebSocket
-broadcast does not hide messages from other members.
+Supabase-authenticated username account; the Worker verifies the Supabase access token before opening the WebSocket.
+The room keeps the latest 100 messages, blocks slurs and hate speech on the server, shows member avatars, and has a
+short polling fallback so a missed WebSocket broadcast does not hide messages from other members.
 
 Friends and direct messages live in the same Durable Object. Friend requests can target only members who are online
 at that moment, and direct messages are server-checked to be friends-only and to require an online recipient. Offline
 friends remain visible in the friend list but cannot be messaged. Usernames are unique case-insensitively; run
-`supabase/schema.sql` so the `profiles` and `auth.users` triggers enforce that rule for new accounts and name changes.
+`supabase/schema.sql` so the `profiles` and `auth.users` unique indexes and triggers enforce that rule for new accounts.
 The binding and migration are in `wrangler.jsonc`; the health endpoint is `/api/chat/health`.
 
 ### Emulators
@@ -68,7 +65,7 @@ Dreamcast, and PlayStation 2 are not available), so the picker only lists system
 
 Signed-in players' progress is saved to their account. The game loader injects a small bridge that mirrors each game's `localStorage` into the account profile under `gameProgress`, keyed by the game's URL, and seeds it again the next time the game opens. With Supabase configured, that profile syncs through the `profiles` table, so progress follows the account across domains and devices. Limits: 80 games per profile, 120 keys per game, 1 MB per profile. Only `localStorage` saves are captured; games that keep progress in IndexedDB or on their own servers manage it themselves. Signed-out visitors keep the game's native local storage.
 
-Never put the `service_role` key in `js/auth-config.js`; it would be public. Accounts created before this update lived only in one browser, so those users need to create an account again; if they use the same username or recovery email, their saved history and preferences are copied over automatically.
+Never put the `service_role` key in `js/auth-config.js`; it would be public. Existing online accounts keep their saved profiles. If the schema finds duplicate usernames, the newer rows are given a numeric suffix and their auth metadata is updated so chat and account pages stay consistent; those users can still sign in with their previous email.
 
 ## Site updates
 

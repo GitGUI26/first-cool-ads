@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Username-only accounts',
+            items: [
+                'Removed email fields, verification screens, password recovery by email, and email account settings.',
+                'New accounts use a unique username and password; usernames are permanent and case-insensitive.',
+                'The database now rejects duplicate usernames and resolves older duplicates once during setup.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Hotline Miami gets a newer script',
             items: [
                 'Hotline Miami now loads its game script from the newer jsDelivr-hosted web port.',

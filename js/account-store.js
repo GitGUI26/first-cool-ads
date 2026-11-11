@@ -20,8 +20,8 @@
   var PROFILES_KEY = 'cuh_profiles_v2';
   var SESSION_KEY = 'cuh_session_v2';
   var AUTH_STORAGE_KEY = 'cuh_auth_v2';
-  var RECOVERY_FLAG_KEY = 'cuh_recovery_pending_v1';
   var PROFILE_VERSION = 2;
+  var LOGIN_EMAIL_DOMAIN = 'users.cooltutoringhub.invalid';
   var MAX_HISTORY = 200;
   var MAX_WEBSITES = 40;
   var MAX_AVATAR_LENGTH = 500000;
@@ -77,15 +77,13 @@
     LOCAL_AUTH_KEY,
     PROFILES_KEY,
     SESSION_KEY,
-    AUTH_STORAGE_KEY,
-    RECOVERY_FLAG_KEY
+    AUTH_STORAGE_KEY
   ];
 
   var client = null;
   var clientChecked = false;
   var pushTimer = 0;
   var cloudReady = false;
-  var recoveryPending = false;
 
   function readStored(key) {
     try { return localStorage.getItem(key); } catch (error) { return null; }
@@ -129,6 +127,26 @@
       return { ok: false, error: 'Use letters, numbers, periods, dashes, or underscores for the username.' };
     }
     return { ok: true, username: display, key: normalizeUsername(display) };
+  }
+
+  // Supabase's email/password endpoint needs an email-shaped identifier even
+  // though the site no longer has an email system. New accounts get a stable,
+  // non-deliverable address derived from their unique username; it is never
+  // displayed or used for messages.
+  function loginEmailForUsername(value) {
+    var key = normalizeUsername(value);
+    var hex = '';
+    for (var i = 0; i < key.length; i++) {
+      hex += ('0' + key.charCodeAt(i).toString(16)).slice(-2);
+    }
+    return 'u' + hex + '@' + LOGIN_EMAIL_DOMAIN;
+  }
+
+  function loginEmailForIdentifier(value) {
+    var raw = String(value == null ? '' : value).trim();
+    if (raw.indexOf('@') !== -1) return cleanEmail(raw);
+    var check = validateUsername(raw);
+    return check.ok ? loginEmailForUsername(check.key) : '';
   }
 
   function normalizeAvatar(value) {
@@ -665,6 +683,10 @@
     var check = validateUsername(value);
     if (!check.ok) return check;
     var local = isLocalUser(user);
+    if (!local && normalizeEmail(user.email) === loginEmailForUsername(user.username) &&
+      normalizeUsername(user.username) !== check.key) {
+      return { ok: false, error: 'Usernames cannot be changed after the account is created.' };
+    }
     if (usernameTakenLocally(check.username, user.id)) {
       return { ok: false, error: 'That username is already taken. Pick another one.' };
     }
@@ -967,123 +989,26 @@
     return getCurrentUser();
   }
 
-  async function createLocalAccount(check, email, password) {
-    if (!localAuthAvailable()) {
-      return { ok: false, error: 'Accounts need a secure connection in this browser.' };
-    }
-    var registry = readLocalAuth();
-    var profiles = readProfiles();
-    var name = normalizeUsername(check.username);
-    var emailTaken = !!email && Object.keys(registry.users).some(function (key) {
-      var record = registry.users[key];
-      return record && normalizeEmail(record.email) === email;
-    });
-    if (emailTaken) {
-      return { ok: false, error: 'An account with that email already exists in this browser. Sign in instead.' };
-    }
-    var taken = Object.keys(profiles.users).some(function (id) {
-      return normalizeUsername(profiles.users[id].username) === name;
-    }) || Object.keys(registry.users).some(function (key) {
-      return normalizeUsername(registry.users[key].username) === name;
-    });
-    if (taken) {
-      return { ok: false, error: 'That username is already taken. Pick another one.' };
-    }
-    var salt = newSalt();
-    var hash;
-    try {
-      hash = await hashLocalPassword(password, salt, LOCAL_AUTH_ITERATIONS);
-    } catch (error) {
-      return { ok: false, error: 'Could not secure that password in this browser. Try again.' };
-    }
-    var identity = {
-      id: 'local-' + randomId(),
-      username: check.username,
-      email: email,
-      createdAt: new Date().toISOString()
-    };
-    var key = email || ('user:' + name);
-    registry.users[key] = {
-      id: identity.id,
-      username: identity.username,
-      email: identity.email,
-      salt: salt,
-      hash: hash,
-      iterations: LOCAL_AUTH_ITERATIONS,
-      createdAt: identity.createdAt
-    };
-    if (!writeLocalAuth(registry)) {
-      return { ok: false, error: 'This browser is out of storage.' };
-    }
-    return { ok: true, needsConfirmation: false, localOnly: true, user: beginLocalSession(identity, 'signup') };
-  }
-
-  async function signInLocal(email, password) {
-    if (!localAuthAvailable()) {
-      return { ok: false, error: 'Accounts need a secure connection in this browser.' };
-    }
-    var record = localAuthFor(email);
-    if (!record) {
-      return { ok: false, error: 'No account with that email or username is saved in this browser.' };
-    }
-    var hash;
-    try {
-      hash = await hashLocalPassword(password, record.salt, record.iterations || LOCAL_AUTH_ITERATIONS);
-    } catch (error) {
-      return { ok: false, error: 'Could not verify that password in this browser. Try again.' };
-    }
-    if (!constantTimeEqual(hash, record.hash)) {
-      return { ok: false, error: 'Incorrect password.' };
-    }
-    return { ok: true, user: beginLocalSession(localIdentity(record), 'signin') };
-  }
-
-  function setRecoveryFlag() {
-    recoveryPending = true;
-    try { sessionStorage.setItem(RECOVERY_FLAG_KEY, '1'); } catch (error) {}
-  }
-
-  function clearRecoveryFlag() {
-    recoveryPending = false;
-    try { sessionStorage.removeItem(RECOVERY_FLAG_KEY); } catch (error) {}
-  }
-
-  function isRecoveryPending() {
-    if (recoveryPending) return true;
-    try {
-      if (sessionStorage.getItem(RECOVERY_FLAG_KEY) === '1') {
-        recoveryPending = true;
-      }
-    } catch (error) {}
-    return recoveryPending;
-  }
-
-  function siteUrl() {
-    var configured = String((window.CUH_AUTH_CONFIG || {}).siteUrl || '').trim();
-    if (configured) return configured.replace(/\/+$/, '') + '/';
-    return location.origin + location.pathname.replace(/[^/]*$/, '');
-  }
-
   function friendlyAuthError(error) {
     var message = String((error && (error.message || error.error_description)) || '');
     var code = String((error && error.code) || '');
     if (code === 'invalid_credentials' || /invalid login credentials/i.test(message)) {
-      return 'Email or password is incorrect.';
+      return 'Username or password is incorrect.';
     }
     if (code === 'email_not_confirmed' || /email not confirmed/i.test(message)) {
-      return 'Confirm your email first. Enter the verification code from your inbox.';
+      return 'This account still needs email confirmation. Email verification has been removed; contact the site owner.';
     }
     if (code === 'username_taken' || /username_taken|duplicate key.*username/i.test(message)) {
       return 'That username is already taken. Pick another one.';
     }
     if (/database error saving new user/i.test(message)) {
-      return 'That email or username is already in use. Try signing in instead.';
+      return 'That username is already taken. Try signing in instead.';
     }
     if (/already confirmed/i.test(message)) {
       return 'That email is already verified. Sign in instead.';
     }
     if (code === 'user_already_exists' || code === 'email_exists' || /already registered|already been registered/i.test(message)) {
-      return 'An account with that email already exists. Sign in instead.';
+      return 'That username is already taken. Sign in instead.';
     }
     if (code === 'weak_password' || /password should be at least/i.test(message)) {
       return 'Use a password with at least 6 characters.';
@@ -1146,7 +1071,6 @@
     try {
       client.auth.onAuthStateChange(function (event, session) {
         window.setTimeout(function () {
-          if (event === 'PASSWORD_RECOVERY') setRecoveryFlag();
           if (session && session.user) {
             if (event !== 'TOKEN_REFRESHED' || !readSession()) {
               adoptQuietly(session.user, event === 'SIGNED_IN' ? 'signin' : 'restore');
@@ -1181,26 +1105,10 @@
   async function createAccount(input) {
     var check = validateUsername(input && input.username);
     if (!check.ok) return check;
-    var rawEmail = String(input && input.email != null ? input.email : '').trim();
-    var email = cleanEmail(rawEmail);
-    if (rawEmail && !email) {
-      return { ok: false, error: 'Enter a valid email address, or leave it blank to use a browser-only account.' };
-    }
     var password = String(input && input.password != null ? input.password : '');
     if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
     var auth = authClient();
-    if (!auth) return createLocalAccount(check, email, password);
-
-    if (!email) {
-      // No-email accounts stay in this browser until the user verifies an
-      // email. Best-effort check so a browser account cannot shadow an online
-      // username when the network is available.
-      try {
-        var localAvailable = await usernameAvailableOnline(check.username);
-        if (!localAvailable) return { ok: false, error: 'That username is already taken. Pick another one.' };
-      } catch (error) {}
-      return createLocalAccount(check, '', password);
-    }
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
 
     if (usernameTakenLocally(check.username)) {
       return { ok: false, error: 'That username is already taken. Pick another one.' };
@@ -1215,12 +1123,9 @@
     var result;
     try {
       result = await auth.auth.signUp({
-        email: email,
+        email: loginEmailForUsername(check.key),
         password: password,
-        options: {
-          data: { username: check.username },
-          emailRedirectTo: siteUrl() + '?account=confirmed'
-        }
+        options: { data: { username: check.username } }
       });
     } catch (error) {
       return { ok: false, error: friendlyAuthError(error) };
@@ -1228,296 +1133,35 @@
     if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
     var data = result.data || {};
     if (!data.session) {
-      return { ok: true, needsConfirmation: true, email: email, user: null };
+      return { ok: false, error: 'Account created, but sign-in could not start. Email confirmation must be disabled in Supabase for username accounts.' };
     }
     var authUser = data.user || (data.session && data.session.user);
+    if (!authUser) return { ok: false, error: 'Could not start a session. Try again.' };
     var user = await adoptSession(authUser, 'signup');
-    return { ok: true, needsConfirmation: false, user: user };
+    return { ok: true, user: user };
   }
 
   async function signIn(identifier, password) {
     var raw = String(identifier == null ? '' : identifier).trim();
-    if (!raw) return { ok: false, error: 'Enter your email or username.' };
+    if (!raw) return { ok: false, error: 'Enter your username.' };
     if (!password) return { ok: false, error: 'Enter your password.' };
-    var local = localAuthFor(raw);
-    if (local) return signInLocal(raw, String(password));
+    var email = loginEmailForIdentifier(raw);
+    if (!email) return { ok: false, error: 'Enter a valid username.' };
     var auth = authClient();
-    var clean = cleanEmail(raw);
-    if (!auth) {
-      return {
-        ok: false,
-        error: clean
-          ? 'No browser account with that email is saved in this browser.'
-          : 'No browser account with that username is saved in this browser.'
-      };
-    }
-    if (!clean) {
-      return { ok: false, error: 'Online accounts sign in with their email address. Browser-only accounts use their username.' };
-    }
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
 
     var result;
     try {
-      result = await auth.auth.signInWithPassword({ email: clean, password: String(password) });
+      result = await auth.auth.signInWithPassword({ email: email, password: String(password) });
     } catch (error) {
       return { ok: false, error: friendlyAuthError(error) };
     }
-    if (result.error) {
-      var message = String(result.error.message || '');
-      if (result.error.code === 'email_not_confirmed' || /email not confirmed/i.test(message)) {
-        return {
-          ok: false,
-          needsConfirmation: true,
-          email: clean,
-          error: 'This email still needs a verification code. Enter the code from your inbox or resend one below.'
-        };
-      }
-      return { ok: false, error: friendlyAuthError(result.error) };
-    }
+    if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
     var data = result.data || {};
     var authUser = data.user || (data.session && data.session.user);
     if (!authUser) return { ok: false, error: 'Could not start a session. Try again.' };
     var user = await adoptSession(authUser, 'signin');
     return { ok: true, user: user };
-  }
-
-  async function finishLocalUpgrade(authUser, localId, username) {
-    var localProfile = localId ? (readProfiles().users[localId] || null) : null;
-    await adoptSession(authUser, 'signup');
-    var newUser = getCurrentUser();
-    if (!localProfile || !newUser || isLocalUser(newUser)) return newUser;
-    var merged = normalizeProfile(Object.assign({}, newUser, {
-      username: cleanText(username, 24) || localProfile.username || newUser.username,
-      email: newUser.email,
-      avatar: localProfile.avatar,
-      gameProgress: localProfile.gameProgress,
-      history: localProfile.history,
-      apps: localProfile.apps,
-      websites: localProfile.websites,
-      preferences: localProfile.preferences,
-      createdAt: localProfile.createdAt || newUser.createdAt
-    }));
-    var profiles = readProfiles();
-    profiles.users[newUser.id] = merged;
-    delete profiles.users[localId];
-    writeProfiles(profiles);
-    var registry = readLocalAuth();
-    var keys = Object.keys(registry.users);
-    for (var i = 0; i < keys.length; i++) {
-      if (String(registry.users[keys[i]].id) === String(localId)) delete registry.users[keys[i]];
-    }
-    writeLocalAuth(registry);
-    writeSession({
-      id: newUser.id,
-      username: merged.username,
-      email: merged.email,
-      createdAt: merged.createdAt
-    });
-    saveUser(merged);
-    await pushRemoteProfile();
-    return getCurrentUser();
-  }
-
-  async function requestEmailUpgrade(input) {
-    var user = getCurrentUser();
-    if (!user) return { ok: false, error: 'Sign in first.' };
-    if (!isLocalUser(user)) return { ok: false, error: 'This account already has an email attached.' };
-    var rawEmail = String(input && input.email != null ? input.email : '').trim();
-    var email = cleanEmail(rawEmail);
-    if (rawEmail && !email) return { ok: false, error: 'Enter a valid email address.' };
-    if (!email) return { ok: false, error: 'Enter an email address to add.' };
-    var password = String(input && input.password != null ? input.password : '');
-    if (password.length < 6) return { ok: false, error: 'Enter the password for this browser account.' };
-    var check = validateUsername(input && input.username ? input.username : user.username);
-    if (!check.ok) return check;
-    var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
-    if (usernameTakenLocally(check.username, user.id)) {
-      return { ok: false, error: 'That username is already taken. Pick another one.' };
-    }
-    try {
-      var available = await usernameAvailableOnline(check.username);
-      if (!available) return { ok: false, error: 'That username is already taken. Pick another one.' };
-    } catch (error) {
-      return { ok: false, error: 'Could not check whether that username is available. Check your connection and try again.' };
-    }
-    var registry = readLocalAuth();
-    var emailTakenLocal = Object.keys(registry.users).some(function (key) {
-      var record = registry.users[key];
-      return record && String(record.id) !== String(user.id) && normalizeEmail(record.email) === email;
-    });
-    if (emailTakenLocal) return { ok: false, error: 'An account with that email already exists in this browser.' };
-    var record = localRecordForUser(user);
-    if (!record) return { ok: false, error: 'Sign in to this browser account again before adding an email.' };
-    var hash;
-    try {
-      hash = await hashLocalPassword(password, record.salt, record.iterations || LOCAL_AUTH_ITERATIONS);
-    } catch (error) {
-      return { ok: false, error: 'Could not verify that password in this browser. Try again.' };
-    }
-    if (!constantTimeEqual(hash, record.hash)) return { ok: false, error: 'Incorrect password.' };
-
-    var result;
-    try {
-      result = await auth.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: { username: check.username },
-          emailRedirectTo: siteUrl() + '?account=confirmed'
-        }
-      });
-    } catch (error) {
-      return { ok: false, error: friendlyAuthError(error) };
-    }
-    if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
-    var data = result.data || {};
-    if (!data.session) {
-      return {
-        ok: true,
-        needsConfirmation: true,
-        email: email,
-        upgrade: { localId: user.id, username: check.username }
-      };
-    }
-    var authUser = data.user || (data.session && data.session.user);
-    var upgraded = await finishLocalUpgrade(authUser, user.id, check.username);
-    return { ok: true, needsConfirmation: false, user: upgraded };
-  }
-
-  async function verifyEmailCode(email, token, upgrade) {
-    var clean = cleanEmail(email);
-    var code = String(token == null ? '' : token).replace(/\s+/g, '');
-    if (!clean) return { ok: false, error: 'Enter the email address you are verifying.' };
-    if (!/^\d{6,10}$/.test(code)) return { ok: false, error: 'Enter the code from your verification email.' };
-    var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
-
-    var verification;
-    try {
-      verification = await auth.auth.verifyOtp({ email: clean, token: code, type: 'signup' });
-    } catch (error) {
-      return { ok: false, error: friendlyAuthError(error) };
-    }
-    if (verification.error) return { ok: false, error: friendlyAuthError(verification.error) };
-    var authUser = verification.data && verification.data.user;
-    if (!authUser) return { ok: false, error: 'That code could not be verified. Request a new code.' };
-
-    if (upgrade && upgrade.localId) {
-      var upgraded = await finishLocalUpgrade(authUser, upgrade.localId, upgrade.username);
-      return { ok: true, user: upgraded, email: clean };
-    }
-    await adoptSession(authUser, 'signup');
-    await pushRemoteProfile();
-    return { ok: true, user: getCurrentUser(), email: clean };
-  }
-
-  async function resendEmailCode(email) {
-    var clean = cleanEmail(email);
-    if (!clean) return { ok: false, error: 'Enter the email address you are verifying.' };
-    var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
-    try {
-      var result = await auth.auth.resend({
-        type: 'signup',
-        email: clean,
-        options: { emailRedirectTo: siteUrl() + '?account=confirmed' }
-      });
-      if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
-      return { ok: true, email: clean };
-    } catch (error) {
-      return { ok: false, error: friendlyAuthError(error) };
-    }
-  }
-
-  async function sendSignInLink(email) {
-    var clean = cleanEmail(email);
-    if (!clean) return { ok: false, error: 'Enter the email address you are verifying.' };
-    var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
-    try {
-      var result = await auth.auth.signInWithOtp({
-        email: clean,
-        options: {
-          shouldCreateUser: false,
-          emailRedirectTo: siteUrl() + '?account=confirmed'
-        }
-      });
-      if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
-      return { ok: true, email: clean };
-    } catch (error) {
-      return { ok: false, error: friendlyAuthError(error) };
-    }
-  }
-
-  async function sendRecoveryCode(email) {
-    var clean = cleanEmail(email);
-    if (!clean) return { ok: false, error: 'Enter the email address for your account.' };
-    var auth = authClient();
-    if (!auth) return { ok: false, error: 'Password recovery is only available for online accounts.' };
-    try {
-      // No redirect is needed for a code reset. The Reset Password email
-      // template must include {{ .Token }} for the six-digit code.
-      var result = await auth.auth.resetPasswordForEmail(clean);
-      if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
-      return { ok: true, email: clean };
-    } catch (error) {
-      return { ok: false, error: friendlyAuthError(error) };
-    }
-  }
-
-  async function verifyRecoveryCode(email, token, newPassword) {
-    var clean = cleanEmail(email);
-    var code = String(token == null ? '' : token).replace(/\s+/g, '');
-    var password = String(newPassword == null ? '' : newPassword);
-    if (!clean) return { ok: false, error: 'Enter the email address for your account.' };
-    if (!/^\d{6,10}$/.test(code)) return { ok: false, error: 'Enter the code from your recovery email.' };
-    if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
-    var auth = authClient();
-    if (!auth) return { ok: false, error: 'Password recovery is only available for online accounts.' };
-
-    var verification;
-    try {
-      verification = await auth.auth.verifyOtp({ email: clean, token: code, type: 'recovery' });
-    } catch (error) {
-      return { ok: false, error: friendlyAuthError(error) };
-    }
-    if (verification.error) return { ok: false, error: friendlyAuthError(verification.error) };
-    var verifiedUser = verification.data && verification.data.user;
-    if (!verifiedUser) return { ok: false, error: 'That code could not be verified. Request a new code.' };
-
-    var update;
-    try {
-      update = await auth.auth.updateUser({ password: password });
-    } catch (error) {
-      return { ok: false, verified: true, error: friendlyAuthError(error) };
-    }
-    if (update.error) return { ok: false, verified: true, error: friendlyAuthError(update.error) };
-
-    clearRecoveryFlag();
-    var authUser = (update.data && update.data.user) || verifiedUser;
-    await adoptSession(authUser, 'profile');
-    return { ok: true, user: getCurrentUser() };
-  }
-
-  async function completeRecovery(newPassword) {
-    var password = String(newPassword == null ? '' : newPassword);
-    if (password.length < 6) return { ok: false, error: 'Use a password with at least 6 characters.' };
-    var auth = authClient();
-    if (!auth) return { ok: false, error: 'Password recovery is only available for online accounts.' };
-    try {
-      var result = await auth.auth.updateUser({ password: password });
-      if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
-      clearRecoveryFlag();
-      var authUser = result.data && result.data.user;
-      if (authUser) await adoptSession(authUser, 'profile');
-      return { ok: true, user: getCurrentUser() };
-    } catch (error) {
-      return { ok: false, error: friendlyAuthError(error) };
-    }
-  }
-
-  function cancelRecovery() {
-    clearRecoveryFlag();
   }
 
   function signOut() {
@@ -1574,17 +1218,7 @@
     getUserCount: function () { return Object.keys(readProfiles().users).length; },
     createAccount: createAccount,
     signIn: signIn,
-    verifyEmailCode: verifyEmailCode,
-    resendEmailCode: resendEmailCode,
-    sendSignInLink: sendSignInLink,
-    requestEmailUpgrade: requestEmailUpgrade,
     isLocalAccount: isLocalUser,
-    sendRecoveryCode: sendRecoveryCode,
-    resetPassword: sendRecoveryCode,
-    verifyRecoveryCode: verifyRecoveryCode,
-    completeRecovery: completeRecovery,
-    isRecoveryPending: isRecoveryPending,
-    cancelRecovery: cancelRecovery,
     signOut: signOut,
     saveGuestPreferences: saveGuestPreferences,
     applyPreferences: applyPreferences,
@@ -1611,14 +1245,6 @@
     snapshotAccountKeys: snapshotAccountKeys,
     restoreAccountKeys: restoreAccountKeys
   };
-
-  // If Supabase redirected back with a recovery token, remember it before the
-  // client consumes the URL so the account modal can ask for a new password.
-  try {
-    if (/type=recovery/.test(location.hash) || /[?&]type=recovery(?:[=&]|$)/.test(location.search)) {
-      setRecoveryFlag();
-    }
-  } catch (error) {}
 
   // Apply the signed-in account's preferences before main.js initializes settings.
   try {

@@ -800,48 +800,20 @@
             <button type="button" class="is-active" data-auth-mode="signin" role="tab">Sign in</button>
             <button type="button" data-auth-mode="signup" role="tab">Create account</button>
           </div>
-          <p class="account-lede" id="accountLede">Sign in to keep your games, browsing history, and preferences together.</p>
+          <p class="account-lede" id="accountLede">Sign in with your username and password.</p>
           <form class="account-form" id="signinForm">
-            <label>Email or username<span>Online accounts use their email; browser-only accounts use their username.</span><input id="signinEmail" type="text" autocomplete="username" required></label>
+            <label>Username<span>Use the unique username you chose for this site.</span><input id="signinUsername" type="text" autocomplete="username" required></label>
             <label>Password<input id="signinPassword" type="password" autocomplete="current-password" required></label>
             <div class="account-error" id="signinError" role="alert" hidden></div>
             <button class="account-primary" type="submit">Sign in</button>
-            <button class="account-link" id="showRecovery" type="button">Forgot password?</button>
-            <p class="account-local-note" data-online-copy="Online accounts sign in with their email. Accounts without an email sign in with their username." data-local-copy="Online sign-in is not connected, so this account stays in this browser.">Online accounts sign in with their email. Accounts without an email sign in with their username.</p>
           </form>
           <form class="account-form" id="signupForm" hidden>
-            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. Usernames are unique and case-insensitive. Chat and friends require an online account.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
-            <label>Email (optional)<span>Add it now or later. We send a confirmation link and, when enabled, a 6-digit code. Leave blank for a browser-only account; it cannot use chat or friends.</span><input id="signupEmail" type="email" autocomplete="email"></label>
+            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. Usernames are unique, case-insensitive, and permanent.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
             <label>Password<span>At least 6 characters.</span><input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required></label>
             <div class="account-error" id="signupError" role="alert" hidden></div>
             <div class="account-error is-success" id="signupSuccess" role="status" hidden></div>
             <button class="account-primary" type="submit">Create account</button>
-            <p class="account-local-note" data-online-copy="Leave email blank to keep this account in this browser. Add a verified email later to sync it across devices." data-local-copy="This account is saved in this browser only. It will not follow you to another device.">Leave email blank to keep this account in this browser. Add a verified email later to sync it across devices.</p>
-          </form>
-          <form class="account-form" id="verifyForm" hidden novalidate>
-            <p class="account-lede" id="verifyLede">Enter the 6-digit code from your email, or click the confirmation link in the message.</p>
-            <label>Email<input id="verifyEmail" type="email" autocomplete="email" disabled></label>
-            <label>Verification code<span>Check your inbox and spam folder. A confirmation link also finishes verification.</span><input id="verifyCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" required></label>
-            <div class="account-error" id="verifyError" role="alert" hidden></div>
-            <div class="account-error is-success" id="verifySuccess" role="status" hidden></div>
-            <div class="account-card-actions">
-              <button class="account-primary" type="submit">Verify email</button>
-              <button class="account-link" id="resendVerification" type="button">Resend email</button>
-              <button class="account-link" id="sendVerificationLink" type="button">Email me a sign-in link</button>
-              <button class="account-secondary" id="cancelVerification" type="button">Back</button>
-            </div>
-            <p class="account-local-note">If your message only has a link, click it. This page will finish signing you in automatically.</p>
-          </form>
-          <form class="account-form" id="recoveryForm" hidden novalidate>
-            <p class="account-lede" id="recoveryLede">Enter the email on your account and we will send a recovery link and code.</p>
-
-            <label id="recoveryEmailLabel">Email<input id="recoveryEmail" type="email" autocomplete="email" required></label>
-            <label id="recoveryCodeLabel" hidden>Recovery code<span>Check the email we sent. A recovery link works too.</span><input id="recoveryCode" type="text" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456" required></label>
-            <button class="account-link" id="resendRecovery" type="button" hidden>Resend code</button>
-            <label id="recoveryPasswordLabel" hidden>New password<span>At least 6 characters.</span><input id="recoveryNewPassword" type="password" autocomplete="new-password" minlength="6" required></label>
-            <div class="account-error" id="recoveryError" role="alert" hidden></div>
-            <div class="account-error is-success" id="recoverySuccess" role="status" hidden></div>
-            <div class="account-card-actions"><button class="account-primary" id="recoverySubmit" type="submit">Send code</button><button class="account-secondary" id="cancelRecovery" type="button">Back</button></div>
+            <p class="account-local-note">Your username is your login. Choose carefully; it cannot be changed later.</p>
           </form>
         </div>
         <div id="accountDashboard" hidden>
@@ -855,31 +827,14 @@
               <div class="account-card-head">
                 <div>
                   <h4>Account settings</h4>
-                  <p>Manage your display name, email, and how your account stays synced.</p>
+                  <p>Your username is permanent. Manage sync for your profile.</p>
                 </div>
                 <span class="account-sync-pill" id="accountSyncPill" role="status">Checking sync…</span>
               </div>
-              <div class="account-settings-grid">
-                <label>Display name<input id="accountDisplayName" type="text" maxlength="24" autocomplete="nickname"></label>
-                <label>Email<input id="accountRecoveryEmail" type="email" autocomplete="email" disabled></label>
-              </div>
               <div class="account-card-actions">
-                <button class="account-primary" id="saveDisplayName" type="button">Save display name</button>
-                <button class="account-secondary" id="accountChangePassword" type="button">Change password</button>
                 <button class="account-secondary" id="accountSyncNow" type="button">Sync now</button>
               </div>
               <p class="account-sync-message" id="accountSyncMessage" role="status"></p>
-              <div class="account-email-upgrade" id="accountEmailUpgrade" hidden>
-                <h5>Add an email</h5>
-                <p>Keep this browser account, or add a verified email to sync it across devices.</p>
-                <form class="account-form" id="upgradeEmailForm" novalidate>
-                  <label>Email<input id="upgradeEmail" type="email" autocomplete="email" required></label>
-                  <label>Username<span>This name must be available online too.</span><input id="upgradeUsername" type="text" autocomplete="username" maxlength="24" required></label>
-                  <label>Current password<span>Confirm the password for this browser account.</span><input id="upgradePassword" type="password" autocomplete="current-password" required></label>
-                  <div class="account-error" id="upgradeError" role="alert" hidden></div>
-                  <button class="account-primary" type="submit">Send verification code</button>
-                </form>
-              </div>
             </section>
             <section class="account-card">
               <div class="account-card-head"><div><h4>Profile picture</h4><p>Choose a square image. It is cropped and resized to 256 × 256 and saved with your account.</p></div></div>
@@ -936,15 +891,15 @@
     </div>
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
-  <script src="js/auth-config.js?v=2"></script>
-  <script src="js/account-store.js?v=11"></script>
+  <script src="js/auth-config.js?v=3"></script>
+  <script src="js/account-store.js?v=12"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=15"></script>
   <script src="js/main.js?v=32"></script>
-  <script src="js/updates.js?v=19"></script>
-  <script src="js/account.js?v=9"></script>
+  <script src="js/updates.js?v=20"></script>
+  <script src="js/account.js?v=10"></script>
   <script src="js/music.js?v=2"></script>
-  <script src="js/chat.js?v=4"></script>
+  <script src="js/chat.js?v=5"></script>
   <script src="js/emulators.js?v=1"></script>
   <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">

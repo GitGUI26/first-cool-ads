@@ -118,13 +118,6 @@
     if (isLocal(user)) {
       setPending(true);
       showAccountPrompt();
-      window.setTimeout(function () {
-        var email = $('upgradeEmail');
-        if (email) {
-          email.focus();
-          email.scrollIntoView({ behavior: 'smooth', block: 'center' });
-        }
-      }, 180);
       return;
     }
     if (typeof window.switchTab === 'function') {

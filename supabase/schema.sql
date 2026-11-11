@@ -1,6 +1,6 @@
--- Run this once in Supabase Dashboard -> SQL Editor.
--- Sign-in works without it; this only enables syncing history, saved sites,
--- and preferences across devices.
+-- Run this in Supabase Dashboard -> SQL Editor.
+-- Sign-in works without it; this enables syncing history, saved sites, and
+-- preferences across devices and enforces unique usernames.
 
 create table if not exists public.profiles (
   id uuid primary key references auth.users (id) on delete cascade,
@@ -29,15 +29,135 @@ create policy "profiles_update_own" on public.profiles
 
 grant select, insert, update on public.profiles to authenticated;
 
--- Usernames are global and case-insensitive. Existing duplicate usernames are
--- grandfathered so those real accounts keep working; new accounts and username
--- changes are rejected. The profile trigger covers direct profile writes and
--- the auth trigger reserves names while signup is waiting for its code.
+-- Drop the old triggers while historical duplicates are repaired. Without
+-- this, renaming the duplicate rows would fire the old checks mid-migration.
+drop trigger if exists enforce_unique_username on auth.users;
+drop trigger if exists enforce_unique_profile_username on public.profiles;
+
+-- Repair duplicate auth metadata first. One row keeps the original name; each
+-- later duplicate gets a deterministic numeric suffix. The same suffix is
+-- written to its profile so chat and account pages stay consistent.
+do $$
+declare
+  rec record;
+  base text;
+  suffix integer;
+  candidate text;
+begin
+  for rec in
+    select id, username
+    from (
+      select u.id,
+             btrim(coalesce(u.raw_user_meta_data->>'username', '')) as username,
+             row_number() over (
+               partition by lower(btrim(coalesce(u.raw_user_meta_data->>'username', '')))
+               order by u.created_at asc nulls last, u.id asc
+             ) as duplicate_rank
+      from auth.users u
+      where btrim(coalesce(u.raw_user_meta_data->>'username', '')) <> ''
+    ) ranked
+    where duplicate_rank > 1
+  loop
+    base := left(rec.username, 18);
+    suffix := 1;
+    loop
+      candidate := left(base, greatest(1, 24 - length(suffix::text) - 1)) || '-' || suffix::text;
+      exit when not exists (
+        select 1 from auth.users u
+        where u.id <> rec.id
+          and lower(btrim(coalesce(u.raw_user_meta_data->>'username', ''))) = lower(candidate)
+      ) and not exists (
+        select 1 from public.profiles p
+        where p.id <> rec.id
+          and lower(btrim(coalesce(p.username, ''))) = lower(candidate)
+      );
+      suffix := suffix + 1;
+    end loop;
+    update auth.users
+       set raw_user_meta_data = jsonb_set(
+         coalesce(raw_user_meta_data, '{}'::jsonb),
+         '{username}',
+         to_jsonb(candidate),
+         true
+       )
+     where id = rec.id;
+    update public.profiles
+       set username = candidate,
+           updated_at = timezone('utc', now())
+     where id = rec.id;
+  end loop;
+end $$;
+
+-- Repair any remaining duplicate profile names (for example, a profile whose
+-- auth metadata was already missing or different).
+do $$
+declare
+  rec record;
+  base text;
+  suffix integer;
+  candidate text;
+begin
+  for rec in
+    select id, username
+    from (
+      select p.id,
+             btrim(coalesce(p.username, '')) as username,
+             row_number() over (
+               partition by lower(btrim(coalesce(p.username, '')))
+               order by p.updated_at asc nulls last, p.id asc
+             ) as duplicate_rank
+      from public.profiles p
+      where btrim(coalesce(p.username, '')) <> ''
+    ) ranked
+    where duplicate_rank > 1
+  loop
+    base := left(rec.username, 18);
+    suffix := 1;
+    loop
+      candidate := left(base, greatest(1, 24 - length(suffix::text) - 1)) || '-' || suffix::text;
+      exit when not exists (
+        select 1 from public.profiles p
+        where p.id <> rec.id
+          and lower(btrim(coalesce(p.username, ''))) = lower(candidate)
+      ) and not exists (
+        select 1 from auth.users u
+        where u.id <> rec.id
+          and lower(btrim(coalesce(u.raw_user_meta_data->>'username', ''))) = lower(candidate)
+      );
+      suffix := suffix + 1;
+    end loop;
+    update public.profiles
+       set username = candidate,
+           updated_at = timezone('utc', now())
+     where id = rec.id;
+    update auth.users
+       set raw_user_meta_data = jsonb_set(
+         coalesce(raw_user_meta_data, '{}'::jsonb),
+         '{username}',
+         to_jsonb(candidate),
+         true
+       )
+     where id = rec.id;
+  end loop;
+end $$;
+
+-- The unique indexes are the final guard against races. Case and surrounding
+-- spaces are ignored, so "Alice" and " alice " are the same username.
+create unique index if not exists profiles_username_unique
+  on public.profiles (lower(btrim(username)))
+  where username is not null and btrim(username) <> '';
+
+create unique index if not exists auth_users_username_unique
+  on auth.users (lower(btrim(raw_user_meta_data->>'username')))
+  where btrim(coalesce(raw_user_meta_data->>'username', '')) <> '';
+
+-- Friendly trigger errors for normal writes; the unique indexes above remain
+-- the hard guarantee if a write bypasses the trigger.
 create or replace function public.enforce_unique_profile_username()
 returns trigger
 language plpgsql
 security definer
-set search_path = public
+set search_path = public, auth
 as $$
 declare
   candidate text;
@@ -52,6 +172,10 @@ begin
     select 1 from public.profiles p
     where p.id <> new.id
       and lower(btrim(coalesce(p.username, ''))) = candidate
+  ) or exists (
+    select 1 from auth.users u
+    where u.id <> new.id
+      and lower(btrim(coalesce(u.raw_user_meta_data->>'username', ''))) = candidate
   ) then
     raise exception 'username_taken' using errcode = '23505';
   end if;
@@ -59,7 +183,6 @@ begin
 end;
 $$;
 
-drop trigger if exists enforce_unique_profile_username on public.profiles;
 create trigger enforce_unique_profile_username
   before insert or update of username on public.profiles
   for each row execute function public.enforce_unique_profile_username();
@@ -70,7 +193,7 @@ language sql
 security definer
 set search_path = public, auth
 as $$
-  select not exists (
+  select btrim(coalesce(candidate, '')) <> '' and not exists (
     select 1 from public.profiles p
     where p.username is not null
       and lower(btrim(p.username)) = lower(btrim(candidate))
@@ -102,6 +225,10 @@ begin
     select 1 from auth.users u
     where u.id <> new.id
       and lower(btrim(coalesce(u.raw_user_meta_data->>'username', ''))) = candidate
+  ) or exists (
+    select 1 from public.profiles p
+    where p.id <> new.id
+      and lower(btrim(coalesce(p.username, ''))) = candidate
   ) then
     raise exception 'username_taken' using errcode = '23505';
   end if;
@@ -109,7 +236,6 @@ begin
 end;
 $$;
 
-drop trigger if exists enforce_unique_username on auth.users;
 create trigger enforce_unique_username
   before insert or update of raw_user_meta_data on auth.users
   for each row execute function public.enforce_unique_username();
