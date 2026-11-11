@@ -26,7 +26,7 @@ Free instances sleep after ~15 min idle, so the first load can take about a minu
 
 Accounts are stored by Supabase Auth and use a username and password. There is no email field, email verification, email sign-in link, or email password recovery in the site.
 
-Because Supabase's password endpoint expects an email-shaped identifier, new accounts receive a hidden, non-deliverable address derived from the normalized username. It is never shown and is never used to send mail. Existing accounts created before this update can still enter their previous email in the username box to sign in for compatibility.
+Because Supabase's password endpoint expects an email-shaped identifier, new accounts receive a hidden login address derived from the normalized username, using a plus-addressed alias on the site's contact mailbox. It is never shown, and the site never sends account email to it. Supabase rejects reserved and non-resolving test domains, so the alias must stay on a real mail domain. Existing accounts created before this update can still enter their previous email in the username box to sign in for compatibility.
 
 If `js/auth-config.js` is left empty, online accounts are disabled and new browser-only accounts are not created. Add the Supabase URL and anon key to enable username accounts.
 

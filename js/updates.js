@@ -8,7 +8,7 @@
             date: '2026-11-11',
             title: 'Username signup fixed',
             items: [
-                'New accounts use a normal-looking internal login identifier instead of a reserved test domain that Supabase rejects.',
+                'New accounts use a hidden login identifier on a real mail domain instead of a reserved or non-resolving test domain that Supabase rejects.',
                 'You still enter only a username and password; there is no email field, verification step, or email recovery.'
             ]
         },

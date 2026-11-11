@@ -21,9 +21,11 @@
   var SESSION_KEY = 'cuh_session_v2';
   var AUTH_STORAGE_KEY = 'cuh_auth_v2';
   var PROFILE_VERSION = 2;
-  // Supabase rejects reserved test domains (including .invalid) as signup
-  // identifiers, so use a normal-looking, non-deliverable subdomain.
-  var LOGIN_EMAIL_DOMAIN = 'users.cooltutoringhub.com';
+  // Supabase rejects reserved and non-resolving domains as signup identifiers.
+  // Use a hidden plus alias on the site's real contact mailbox; the site never
+  // sends account email to it.
+  var LOGIN_EMAIL_DOMAIN = 'outlook.com';
+  var LOGIN_EMAIL_LOCAL_PREFIX = 'arrestmrmann+u';
   var MAX_HISTORY = 200;
   var MAX_WEBSITES = 40;
   var MAX_AVATAR_LENGTH = 500000;
@@ -133,15 +135,15 @@
 
   // Supabase's email/password endpoint needs an email-shaped identifier even
   // though the site no longer has an email system. New accounts get a stable,
-  // non-deliverable address derived from their unique username; it is never
-  // displayed or used for messages.
+  // hidden address derived from their unique username; it is never displayed
+  // or used by the site to send messages.
   function loginEmailForUsername(value) {
     var key = normalizeUsername(value);
     var hex = '';
     for (var i = 0; i < key.length; i++) {
       hex += ('0' + key.charCodeAt(i).toString(16)).slice(-2);
     }
-    return 'u' + hex + '@' + LOGIN_EMAIL_DOMAIN;
+    return LOGIN_EMAIL_LOCAL_PREFIX + hex + '@' + LOGIN_EMAIL_DOMAIN;
   }
 
   function loginEmailForIdentifier(value) {
