@@ -9,6 +9,7 @@
             title: 'Compatibility fix and dead games removed',
             items: [
                 'PEAK now gets past a history-update crash and loads its build inside the sandboxed player.',
+                'Undertale Yellow now runs in a real-URL frame, so its intro and game canvas render instead of staying blank.',
                 'Removed The Final Earth and Trombone Champ because their game files are no longer available.',
                 'The catalog now has 653 entries: 652 public cards plus the hidden secret game.'
             ]

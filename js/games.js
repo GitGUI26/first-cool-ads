@@ -27,7 +27,7 @@ const games = [
   { title: "FNAF 4: Halloween Edition", desc: "The Halloween update to Five Nights at Freddy's 4, with new animatronic horrors and extra challenges.", url: "games/fnaf-4-halloween.html", image: "images/thumbs/g_fnaf-4-halloween.webp" },
   { title: "Geometry Dash Lite", desc: "The free lite edition of the rhythm platformer. Jump and fly through spike-filled levels.", url: "games/geometry-dash-lite.html", image: "images/thumbs/g_geometry-dash-lite.webp" },
   { title: "Super Mario 63", desc: "A fan-made 2.5D Mario adventure with 64-style moves, secret stars, and huge levels.", url: "games/super-mario-63.html", image: "images/thumbs/g_super-mario-63.webp" },
-  { title: "Undertale Yellow", desc: "A fan-made Undertale prequel following the yellow soul through the Underground.", url: "games/undertale-yellow.html", image: "images/thumbs/g_undertale-yellow.webp" },
+  { title: "Undertale Yellow", desc: "A fan-made Undertale prequel following the yellow soul through the Underground.", url: "games/undertale-yellow-frame.html", image: "images/thumbs/g_undertale-yellow.webp" },
   { title: "Dead Plate", desc: "A short horror RPG about a waiter's final shift at a sinister restaurant.", url: "games/dead-plate/index.html", image: "images/thumbs/g_dead-plate.webp" },
   { title: "Evil Glitch", desc: "Play Evil Glitch.", url: "games/pack/evil-glitch.html", image: "images/thumbs/g_evil-glitch.webp" },
   { title: "2048", desc: "Play 2048.", url: "games/pack/2048.html", image: "images/thumbs/g_2048.webp" },
