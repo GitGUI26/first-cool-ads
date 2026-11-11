@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Clearer suggestion and bug-report contacts',
+            items: [
+                'Game suggestions and bug reports now have separate email links with pre-filled subjects.',
+                'Each link explains what to include so reports are easier to act on.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Official cover art across the library',
             items: [
                 'Replaced generated title cards and gameplay captures with official cover art for 168 games.',

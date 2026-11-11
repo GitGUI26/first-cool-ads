@@ -1080,6 +1080,10 @@ a.account-history-title:hover {
   line-height: 1.5;
 }
 
+.site-footer-left .footer-recommendation + .footer-recommendation {
+  margin-top: 2px;
+}
+
 .footer-recommendation a {
   color: var(--accent);
   text-decoration: underline;
