@@ -239,3 +239,22 @@ $$;
 create trigger enforce_unique_username
   before insert or update of raw_user_meta_data on auth.users
   for each row execute function public.enforce_unique_username();
+
+-- Allow a signed-in user to permanently delete their own auth account. The
+-- security-definer function runs with the owner's privileges, while auth.uid()
+-- restricts the delete to the caller. Profile rows cascade from auth.users.
+create or replace function public.delete_own_account()
+returns void
+language sql
+security definer
+set search_path = ''
+as $$
+  delete from auth.users
+  where id = (select auth.uid());
+$$;
+
+revoke all on function public.delete_own_account() from public;
+revoke all on function public.delete_own_account() from anon;
+grant execute on function public.delete_own_account() to authenticated;
+
+notify pgrst, 'reload schema';

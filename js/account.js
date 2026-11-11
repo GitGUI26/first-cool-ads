@@ -582,6 +582,31 @@
     showToast(result.ok ? 'Account synced.' : result.error);
   }
 
+  async function deleteCurrentAccount() {
+    var user = currentUser();
+    if (!user) return;
+    var confirmed = window.confirm('Permanently delete @' + user.username + '? This removes your login, profile, history, saved sites, app handles, preferences, and game progress. This cannot be undone.');
+    if (!confirmed) return;
+    var button = $('accountDelete');
+    var label = button ? button.textContent : '';
+    showError('accountDeleteError', '');
+    if (button) {
+      button.disabled = true;
+      button.textContent = 'Deleting…';
+    }
+    var result = await Store.deleteAccount();
+    if (!result.ok) {
+      if (button) {
+        button.disabled = false;
+        button.textContent = label;
+      }
+      showError('accountDeleteError', result.error);
+      return;
+    }
+    showToast('Account deleted. Signed out.');
+    window.setTimeout(function () { window.location.reload(); }, 500);
+  }
+
   function bindEvents() {
     document.querySelectorAll('[data-account-close]').forEach(function (element) {
       element.addEventListener('click', closeAccount);
@@ -600,6 +625,7 @@
         window.setTimeout(function () { window.location.reload(); }, 350);
       });
     }
+    if ($('accountDelete')) $('accountDelete').addEventListener('click', deleteCurrentAccount);
     if ($('saveAppAccounts')) $('saveAppAccounts').addEventListener('click', saveApps);
     if ($('websiteForm')) $('websiteForm').addEventListener('submit', addWebsite);
     if ($('clearHistory')) $('clearHistory').addEventListener('click', clearHistory);

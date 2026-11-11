@@ -38,6 +38,8 @@ If `js/auth-config.js` is left empty, online accounts are disabled and new brows
 
 Signed-in users get an Account settings panel for their profile picture, avatar reset, sync status, history, saved sites, app handles, and preferences. Usernames are permanent and are also the login. Passwords cannot be recovered without an email address, so choose them carefully. Profile pictures are cropped and resized to 256 × 256 in the browser, then stored in the account profile so they follow the account across domains and devices.
 
+Signed-in users can permanently delete their account from Account settings. Deletion removes the Supabase auth user, synced profile, saved history, sites, app handles, game progress, and the local session. Chat messages already posted in shared rooms may remain. There is no undo.
+
 ### Chat
 
 CHAT is one shared room for the whole site. It uses a Cloudflare Durable Object named `global` and requires a

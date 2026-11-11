@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Delete your account',
+            items: [
+                'Signed-in users can now permanently delete their account from Account settings.',
+                'Deletion removes the login, profile, saved data, game progress, and local session; shared chat messages that were already posted may remain.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Username signup fixed',
             items: [
                 'New accounts use a hidden login identifier on a real mail domain instead of a reserved or non-resolving test domain that Supabase rejects.',

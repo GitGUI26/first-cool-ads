@@ -1184,6 +1184,64 @@
     emitChange('signout');
   }
 
+  function purgeLocalAccount(user) {
+    var profiles = readProfiles();
+    if (profiles.users && profiles.users[user.id]) {
+      delete profiles.users[user.id];
+      writeProfiles(profiles);
+    }
+    var registry = readLocalAuth();
+    var changed = false;
+    Object.keys(registry.users || {}).forEach(function (key) {
+      var record = registry.users[key];
+      if (record && String(record.id) === String(user.id)) {
+        delete registry.users[key];
+        changed = true;
+      }
+    });
+    if (changed) writeLocalAuth(registry);
+    clearSession();
+    removeStored(AUTH_STORAGE_KEY);
+    var auth = authClient();
+    if (auth) {
+      try { Promise.resolve(auth.auth.signOut({ scope: 'local' })).catch(function () {}); } catch (error) {}
+    }
+    applyGuestPreferences();
+    emitChange('delete');
+  }
+
+  function deleteAccountError(error) {
+    var message = String((error && (error.message || error.error_description)) || '');
+    var code = String((error && error.code) || '');
+    if (code === 'PGRST202' || /could not find the function|function .* does not exist|schema cache/i.test(message)) {
+      return 'Account deletion is not available yet. Contact the site owner.';
+    }
+    if (code === 'PGRST301' || /jwt|session|not authenticated|auth required/i.test(message)) {
+      return 'Your session expired. Sign in again and retry.';
+    }
+    return 'Could not delete your account. Try again.';
+  }
+
+  async function deleteAccount() {
+    var user = getCurrentUser();
+    if (!user) return { ok: false, error: 'Sign in first.' };
+    if (isLocalUser(user)) {
+      purgeLocalAccount(user);
+      return { ok: true };
+    }
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+    var result;
+    try {
+      result = await auth.rpc('delete_own_account');
+    } catch (error) {
+      return { ok: false, error: deleteAccountError(error) };
+    }
+    if (result.error) return { ok: false, error: deleteAccountError(result.error) };
+    purgeLocalAccount(user);
+    return { ok: true };
+  }
+
   function isAccountKey(key) {
     return ACCOUNT_KEYS.indexOf(String(key || '')) !== -1;
   }
@@ -1224,6 +1282,7 @@
     signIn: signIn,
     isLocalAccount: isLocalUser,
     signOut: signOut,
+    deleteAccount: deleteAccount,
     saveGuestPreferences: saveGuestPreferences,
     applyPreferences: applyPreferences,
     applyGuestPreferences: applyGuestPreferences,

@@ -45,7 +45,7 @@
 <link href="css/style.css?v=8" rel="stylesheet">
 <link href="css/refresh.css?v=11" rel="stylesheet">
 <link href="css/browser.css?v=1" rel="stylesheet">
-<link href="css/account.css?v=5" rel="stylesheet">
+<link href="css/account.css?v=6" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/ads.css?v=2" rel="stylesheet">
@@ -886,6 +886,13 @@
               <div class="account-card-head"><div><h4>Preferences</h4><p>Theme, background, cursor, logo, tab title, and favorites are saved to this account.</p></div><button class="account-secondary" id="savePreferences" type="button">Save current</button></div>
               <p class="account-inline-message" id="preferencesSummary"></p>
             </section>
+            <section class="account-card account-card-wide account-delete-card">
+              <div class="account-card-head">
+                <div><h4>Delete account</h4><p>This removes your login, profile, history, saved sites, app handles, preferences, and game progress. Chat messages already posted in shared rooms may remain. This cannot be undone.</p></div>
+                <button class="account-delete-button" id="accountDelete" type="button">Delete account</button>
+              </div>
+              <div class="account-error" id="accountDeleteError" role="alert" hidden></div>
+            </section>
           </div>
         </div>
       </div>
@@ -894,12 +901,12 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=3"></script>
-  <script src="js/account-store.js?v=14"></script>
+  <script src="js/account-store.js?v=15"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=18"></script>
   <script src="js/main.js?v=32"></script>
-  <script src="js/updates.js?v=26"></script>
-  <script src="js/account.js?v=10"></script>
+  <script src="js/updates.js?v=27"></script>
+  <script src="js/account.js?v=11"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=5"></script>
   <script src="js/emulators.js?v=1"></script>
