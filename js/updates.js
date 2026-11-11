@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'More display settings',
+            items: [
+                'Settings now includes a game-grid column picker, a featured-carousel autoplay control, and a reduced-motion option.',
+                'Reduced motion stops the featured carousel and most interface animations without changing games or their content.',
+                'Display ads remain required and always on. Only the optional sponsored popup offer can be turned off.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Friends and direct messages',
             items: [
                 'Chat now has a friends panel. Add online members, accept or decline requests, and see which friends are online.',

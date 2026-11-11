@@ -91,7 +91,8 @@ builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scra
 The site uses labeled Adsterra placements: a desktop leaderboard, a banner below the hero, a 300x250 and
 160x300 above the game library, a sticky 160x600 desktop rail, a native unit after the first five rows of games,
 and a dismissible 320x50 banner on mobile. Display ads are always on. Settings has one ad control, **Popup ads**,
-which hides the sponsored popup offer only; it never turns off the display units. Each display unit is rendered in
+which hides the sponsored popup offer only; it never turns off the display units. Other Settings controls cover
+game-grid columns, featured-carousel autoplay, and reduced motion, and none of them affect display ads. Each display unit is rendered in
 a sandboxed iframe without popup or top-navigation permission, and the popup offer is checked against known adult
 destinations before it can open. Update the unit keys in `js/ads.js` when changing campaigns.
 

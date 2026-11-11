@@ -799,6 +799,18 @@ header {
   margin: 0;
 }
 
+.lessons-grid[data-columns="3"] {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.lessons-grid[data-columns="4"] {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.lessons-grid[data-columns="5"] {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
 #allLessonsGrid .lesson-card {
   position: relative;
   height: auto !important;
@@ -1081,6 +1093,46 @@ header {
   font-size: 0.68rem;
   font-weight: 600;
   letter-spacing: 0.07em;
+}
+
+#settings-section .modal-body .setting-experience {
+  grid-column: 5 / span 4;
+  grid-row: 4;
+  min-height: 210px;
+}
+
+#settings-section .settings-field {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--ui-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+
+#settings-section .settings-field .text-input {
+  width: 100%;
+  min-height: 36px;
+}
+
+#settings-section .setting-experience .settings-toggle {
+  margin-top: 10px;
+}
+
+#settings-section .settings-control-note {
+  margin: 8px 0 0;
+  color: var(--ui-muted);
+  font-size: 0.66rem;
+  line-height: 1.45;
+}
+
+@media (max-width: 980px) {
+  #settings-section .modal-body .setting-experience {
+    grid-column: 1 / -1;
+    grid-row: auto;
+    min-height: 0;
+  }
 }
 
 /* -------------------------------------------------------------- back to top */
@@ -1594,4 +1646,28 @@ header {
   align-items: center;
   justify-content: center;
   text-decoration: none;
+}
+
+/* User-selected reduced motion: this only affects interface effects, not games. */
+body.reduce-motion *,
+body.reduce-motion *::before,
+body.reduce-motion *::after {
+  animation-duration: 0.001ms !important;
+  animation-iteration-count: 1 !important;
+  transition-duration: 0.001ms !important;
+  scroll-behavior: auto !important;
+}
+
+body.reduce-motion .home-carousel-track {
+  animation: none !important;
+}
+
+body.reduce-motion .home-logo-shine,
+body.reduce-motion #custom-scrollbar {
+  display: none !important;
+}
+
+body.reduce-motion #custom-cursor,
+body.reduce-motion #allLessonsGrid .lesson-card {
+  transition: none !important;
 }

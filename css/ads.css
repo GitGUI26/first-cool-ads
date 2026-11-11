@@ -159,6 +159,55 @@
   line-height: 1.45;
 }
 
+.settings-ad-required {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-top: 14px;
+  padding: 8px 10px;
+  border: 1px solid rgba(70, 220, 145, 0.24);
+  border-radius: 10px;
+  background: rgba(70, 220, 145, 0.06);
+}
+
+.settings-ad-required-icon {
+  display: grid;
+  flex: 0 0 26px;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid rgba(70, 220, 145, 0.28);
+  border-radius: 8px;
+  color: #8cf0b8;
+}
+
+.settings-ad-required-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-ad-required-copy strong {
+  color: var(--ui-text);
+  font-size: 0.72rem;
+}
+
+.settings-ad-required-copy small {
+  color: var(--ui-muted);
+  font-size: 0.62rem;
+}
+
+.settings-ad-required-badge {
+  flex: 0 0 auto;
+  color: #8cf0b8;
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 @media (max-width: 819px) {
   .ad-slot-hero {
     margin-bottom: 12px;

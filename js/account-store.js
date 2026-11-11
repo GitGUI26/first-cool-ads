@@ -46,7 +46,10 @@
     'flashEnabled',
     'popupAdsDisabled',
     'lastSearchTerm',
-    'sortMethod'
+    'sortMethod',
+    'carouselAutoplay',
+    'reduceMotion',
+    'gameGridColumns'
   ];
 
   var DEFAULT_PREFS = {
@@ -60,7 +63,10 @@
     flashEnabled: 'true',
     popupAdsDisabled: 'false',
     lastSearchTerm: '',
-    sortMethod: 'default'
+    sortMethod: 'default',
+    carouselAutoplay: 'true',
+    reduceMotion: 'false',
+    gameGridColumns: 'auto'
   };
 
   var APP_IDS = ['discord', 'tiktok', 'youtube'];

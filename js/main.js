@@ -622,7 +622,8 @@ function startHomeCarouselAutoplay(carousel) {
     if (!carousel)
         return;
     const track = carousel.querySelector('.home-carousel-track');
-    if (!track || prefersReducedMotion)
+    if (!track || prefersReducedMotion || document.body.classList.contains('reduce-motion') ||
+        localStorage.getItem('carouselAutoplay') === 'false')
         return;
     const cardCount = Math.max(1, Math.floor(track.querySelectorAll('.home-carousel-card').length / 2));
     const duration = Math.max(18, cardCount * 3.2);
@@ -2290,6 +2291,7 @@ function openSettings() {
         customColorInput.style.display = 'none';
     }
     updateBackgroundSelectionUI();
+    syncDisplaySettingsUI();
 }
 function setPopupAdsPreference(enabled) {
     try {
@@ -2307,6 +2309,97 @@ function setPopupAdsPreference(enabled) {
     window.dispatchEvent(new CustomEvent('cuh-popup-ads-change', { detail: { enabled: !!enabled } }));
 }
 window.setPopupAdsPreference = setPopupAdsPreference;
+function persistPreferenceChange() {
+    if (window.CoolAccountStore && typeof window.CoolAccountStore.capturePreferences === 'function') {
+        window.CoolAccountStore.capturePreferences();
+    }
+}
+function syncDisplaySettingsUI() {
+    const reduceMotionToggle = document.getElementById('reduceMotionToggle');
+    if (reduceMotionToggle) {
+        reduceMotionToggle.checked = localStorage.getItem('reduceMotion') === 'true';
+    }
+    const carouselToggle = document.getElementById('carouselAutoplayToggle');
+    if (carouselToggle) {
+        carouselToggle.checked = localStorage.getItem('carouselAutoplay') !== 'false';
+    }
+    const gridSelect = document.getElementById('gameGridSelect');
+    if (gridSelect) {
+        const storedGrid = localStorage.getItem('gameGridColumns');
+        gridSelect.value = ['3', '4', '5'].includes(storedGrid) ? storedGrid : 'auto';
+    }
+}
+function updateCarouselAutoplayState() {
+    const carousel = document.getElementById('homePopularCarousel');
+    if (!carousel)
+        return;
+    const track = carousel.querySelector('.home-carousel-track');
+    if (!track)
+        return;
+    const enabled = localStorage.getItem('carouselAutoplay') !== 'false' &&
+        !document.body.classList.contains('reduce-motion');
+    if (!enabled) {
+        track.style.animation = 'none';
+        track.style.transform = 'translateX(0)';
+        return;
+    }
+    startHomeCarouselAutoplay(carousel);
+}
+function applyReduceMotionPreference() {
+    document.body.classList.toggle('reduce-motion', localStorage.getItem('reduceMotion') === 'true');
+    syncDisplaySettingsUI();
+}
+function setReduceMotionPreference(enabled) {
+    try {
+        localStorage.setItem('reduceMotion', enabled ? 'true' : 'false');
+    }
+    catch (error) {
+    }
+    applyReduceMotionPreference();
+    updateCarouselAutoplayState();
+    persistPreferenceChange();
+}
+function applyCarouselAutoplayPreference() {
+    const toggle = document.getElementById('carouselAutoplayToggle');
+    if (toggle) {
+        toggle.checked = localStorage.getItem('carouselAutoplay') !== 'false';
+    }
+    updateCarouselAutoplayState();
+}
+function setCarouselAutoplayPreference(enabled) {
+    try {
+        localStorage.setItem('carouselAutoplay', enabled ? 'true' : 'false');
+    }
+    catch (error) {
+    }
+    applyCarouselAutoplayPreference();
+    persistPreferenceChange();
+}
+function getGameGridPreference() {
+    const value = localStorage.getItem('gameGridColumns');
+    return value === '3' || value === '4' || value === '5' ? value : 'auto';
+}
+function applyGameGridPreference(value) {
+    const preference = value === '3' || value === '4' || value === '5' ? value : getGameGridPreference();
+    const select = document.getElementById('gameGridSelect');
+    if (select) {
+        select.value = preference;
+    }
+    applyGridColumns(preference);
+}
+function setGameGridPreference(value) {
+    const preference = value === '3' || value === '4' || value === '5' ? value : 'auto';
+    try {
+        localStorage.setItem('gameGridColumns', preference);
+    }
+    catch (error) {
+    }
+    applyGameGridPreference(preference);
+    if (typeof placeInFeedAd === 'function') {
+        placeInFeedAd();
+    }
+    persistPreferenceChange();
+}
 function applySavedTheme(themeName) {
     const body = document.body;
     body.classList.remove('theme-rainbow', 'theme-cyber-green', 'theme-ice-blue', 'theme-solarized', 'theme-purple-haze');
@@ -2778,6 +2871,9 @@ function initializeSettings() {
     if (window.CUHAds && typeof window.CUHAds.refreshPopupAd === 'function') {
         window.CUHAds.refreshPopupAd();
     }
+    applyReduceMotionPreference();
+    applyCarouselAutoplayPreference();
+    applyGameGridPreference();
     updateBackgroundSelectionUI();
 }
 function setDefaultSettings() {
@@ -2798,6 +2894,15 @@ function setDefaultSettings() {
     }
     if (!localStorage.getItem('inactiveTabFavicon')) {
         localStorage.setItem('inactiveTabFavicon', 'cuh.png');
+    }
+    if (!localStorage.getItem('carouselAutoplay')) {
+        localStorage.setItem('carouselAutoplay', 'true');
+    }
+    if (!localStorage.getItem('reduceMotion')) {
+        localStorage.setItem('reduceMotion', 'false');
+    }
+    if (!localStorage.getItem('gameGridColumns')) {
+        localStorage.setItem('gameGridColumns', 'auto');
     }
 }
 const ACTIVE_GAME_ID = 'active-game-session';
@@ -3680,8 +3785,12 @@ function getAllSettings() {
             inactiveTabFavicon: localData.inactiveTabFavicon || 'cuh.png',
             customLogo: localData.customLogo || null,
             flashEnabled: localData.flashEnabled || 'true',
+            popupAdsDisabled: localData.popupAdsDisabled || 'false',
             lastSearchTerm: localData.lastSearchTerm || '',
-            sortMethod: localData.sortMethod || 'default'
+            sortMethod: localData.sortMethod || 'default',
+            carouselAutoplay: localData.carouselAutoplay || 'true',
+            reduceMotion: localData.reduceMotion || 'false',
+            gameGridColumns: localData.gameGridColumns || 'auto'
         }
     };
 }
@@ -3825,8 +3934,12 @@ function applyImportedSettings(importedSettings) {
             inactiveTabFavicon: localStorage.getItem('inactiveTabFavicon') || 'cuh.png',
             customLogo: localStorage.getItem('customLogo') || null,
             flashEnabled: localStorage.getItem('flashEnabled') || 'true',
+            popupAdsDisabled: localStorage.getItem('popupAdsDisabled') || 'false',
             lastSearchTerm: localStorage.getItem('lastSearchTerm') || '',
-            sortMethod: localStorage.getItem('sortMethod') || 'default'
+            sortMethod: localStorage.getItem('sortMethod') || 'default',
+            carouselAutoplay: localStorage.getItem('carouselAutoplay') || 'true',
+            reduceMotion: localStorage.getItem('reduceMotion') || 'false',
+            gameGridColumns: localStorage.getItem('gameGridColumns') || 'auto'
         };
     Object.keys(settings).forEach(key => {
         if (settings[key] !== null && settings[key] !== undefined) {
@@ -3906,6 +4019,21 @@ function applyImportedSettings(importedSettings) {
     }
     updateCursorColors();
     refreshActiveBackground();
+    try {
+        localStorage.removeItem('adsDisabled');
+    }
+    catch (error) {
+    }
+    applyReduceMotionPreference();
+    applyCarouselAutoplayPreference();
+    applyGameGridPreference();
+    const popupAdsToggle = document.getElementById('popupAdsToggle');
+    if (popupAdsToggle) {
+        popupAdsToggle.checked = localStorage.getItem('popupAdsDisabled') !== 'true';
+    }
+    if (window.CUHAds && typeof window.CUHAds.refreshPopupAd === 'function') {
+        window.CUHAds.refreshPopupAd();
+    }
 }
 function showImportStatus(message, type) {
     const statusDiv = document.getElementById('settingsImportStatus');
@@ -4134,15 +4262,23 @@ function placeInFeedAd() {
         grid.appendChild(inFeedAd);
     }
 }
-function applyGridColumns(columns = LESSON_GRID_COLUMNS) {
+function applyGridColumns(columns) {
+    const preference = columns === '3' || columns === '4' || columns === '5' ? columns : getGameGridPreference();
+    const value = preference === 'auto' ? '' : preference;
     const lessonsGrid = document.getElementById('allLessonsGrid');
     if (lessonsGrid) {
-        lessonsGrid.setAttribute('data-columns', columns);
+        if (value)
+            lessonsGrid.setAttribute('data-columns', value);
+        else
+            lessonsGrid.removeAttribute('data-columns');
     }
     const anyGrids = document.querySelectorAll('.lessons-grid');
     anyGrids.forEach(grid => {
         if (grid.id !== 'homeCarouselGrid') {
-            grid.setAttribute('data-columns', columns);
+            if (value)
+                grid.setAttribute('data-columns', value);
+            else
+                grid.removeAttribute('data-columns');
         }
     });
 }

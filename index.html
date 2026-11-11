@@ -43,12 +43,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=8" rel="stylesheet">
-<link href="css/refresh.css?v=10" rel="stylesheet">
+<link href="css/refresh.css?v=11" rel="stylesheet">
 <link href="css/browser.css?v=1" rel="stylesheet">
 <link href="css/account.css?v=5" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
-<link href="css/ads.css?v=1" rel="stylesheet">
+<link href="css/ads.css?v=2" rel="stylesheet">
 <link href="css/chat.css?v=5" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=1" rel="stylesheet">
@@ -636,15 +636,48 @@
             </div><button class="apply-btn" onclick="revertLogo(this)" style="margin-top: 10px; width: 100%;"><i
                 class="fas fa-undo"></i> Revert to Default Logo</button>
           </div>
+          <div class="setting-item setting-experience">
+            <div class="setting-label">
+              <i class="fas fa-sliders"></i> Display &amp; Motion
+            </div>
+            <div class="setting-description">
+              Tune the game library and interface motion.
+            </div>
+            <label class="settings-field" for="gameGridSelect">
+              <span>Game grid</span>
+              <select class="text-input" id="gameGridSelect" onchange="setGameGridPreference(this.value)">
+                <option value="auto">Automatic</option>
+                <option value="3">3 columns</option>
+                <option value="4">4 columns</option>
+                <option value="5">5 columns</option>
+              </select>
+            </label>
+            <label class="settings-toggle">
+              <input id="carouselAutoplayToggle" type="checkbox" checked onchange="setCarouselAutoplayPreference(this.checked)">
+              <span class="settings-toggle-track" aria-hidden="true"></span>
+              <span>Autoplay featured games</span>
+            </label>
+            <label class="settings-toggle">
+              <input id="reduceMotionToggle" type="checkbox" onchange="setReduceMotionPreference(this.checked)">
+              <span class="settings-toggle-track" aria-hidden="true"></span>
+              <span>Reduce interface motion</span>
+            </label>
+            <p class="settings-control-note">Reduced motion stops the featured carousel and most interface animations.</p>
+          </div>
           <div class="setting-item setting-ads">
-            <div class="setting-label"><i class="fas fa-rectangle-ad"></i> Popup ads</div>
-            <div class="setting-description">Control the sponsored popup offer. Standard display ads always stay on.</div>
+            <div class="setting-label"><i class="fas fa-rectangle-ad"></i> Ads</div>
+            <div class="setting-description">Display ads keep the site free. They are always on.</div>
+            <div class="settings-ad-required">
+              <span class="settings-ad-required-icon"><i class="fas fa-lock" aria-hidden="true"></i></span>
+              <span class="settings-ad-required-copy"><strong>Display ads</strong><small>Required and always on.</small></span>
+              <span class="settings-ad-required-badge">Locked</span>
+            </div>
             <label class="settings-toggle">
               <input id="popupAdsToggle" type="checkbox" checked onchange="setPopupAdsPreference(this.checked)">
               <span class="settings-toggle-track" aria-hidden="true"></span>
               <span>Allow popup ads</span>
             </label>
-            <p class="settings-ad-note">Turning this off hides the popup offer only. Display ads cannot be disabled.</p>
+            <p class="settings-ad-note">Only the popup offer is optional. Display ads cannot be disabled.</p>
           </div>
           <div class="setting-item setting-import">
             <div class="setting-label">
@@ -904,11 +937,11 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=2"></script>
-  <script src="js/account-store.js?v=10"></script>
+  <script src="js/account-store.js?v=11"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=12"></script>
-  <script src="js/main.js?v=29"></script>
-  <script src="js/updates.js?v=13"></script>
+  <script src="js/main.js?v=30"></script>
+  <script src="js/updates.js?v=14"></script>
   <script src="js/account.js?v=9"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=4"></script>
