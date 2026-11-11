@@ -1,6 +1,7 @@
 const games = [
   { title: "Roblox", desc: "Open Roblox in the site's private browser and play through the same proxy as the BROWSER tab.", url: "https://www.roblox.com/", image: "images/g_roblox.svg", tag: "NEW", browser: true },
   { title: "Sally Face", desc: "A psychological horror adventure following Sal Fisher through the strange halls of Nockfell High.", url: "games/sally-face.html", image: "images/g_sally-face.jpg", tag: "NEW" },
+  { title: "Class of '09", desc: "An anti-visual novel where you navigate the toxic social landscape of high school with dark humor", url: "games/class-of-09.html", image: "images/g_class-of-09.webp", tag: "NEW" },
   { title: "Lumen Loom", desc: "Rotate light tiles to reconnect a broken grid in this calm, brainy routing puzzle.", url: "games/originals/lumen-loom.html", image: "images/g_lumen-loom.svg", tag: "NEW" },
   { title: "Echo Maze", desc: "Feel your way through a pitch-black labyrinth with a lantern, three keys and a way out.", url: "games/originals/echo-maze.html", image: "images/g_echo-maze.svg", tag: "NEW" },
   { title: "Fuse Break", desc: "Talk yourself through a bomb disposal manual and cut the right wire before the timer hits zero.", url: "games/originals/fuse-break.html", image: "images/g_fuse-break.svg", tag: "NEW" },
@@ -284,7 +285,6 @@ const games = [
   { title: "Untitled Goose Game", desc: "A game where you are a goose let loose on an unsuspecting village terroizing EVERYONE", url: "games/341.html", image: "images/thumbs/342.webp" },
   { title: "Earthbound", desc: "An RPG where a young boy named Ness and his friends must save the world from an intergalactic threat", url: "games/339.html", image: "images/thumbs/340.webp" },
   { title: "Hamtaro: Ham-Ham Heartbreak", desc: "Help Hamtaro and Bijou reunite Ham-Hams and repair broken hearts in this charming adventure", url: "games/336.html", image: "images/thumbs/337.webp" },
-  { title: "Class of '09", desc: "An anti-visual novel where you navigate the toxic social landscape of high school with dark humor", url: "games/337.html", image: "images/thumbs/338.webp" },
   { title: "Antonblast", desc: "An explosive, high-speed action platformer where you must reclaim your prized spirit collection", url: "games/338.html", image: "images/thumbs/339.webp" },
   { title: "Super Monkey Ball", desc: "Roll your ball through challenging suspended courses, reach the goal and collect bannanas", url: "https://monkeyball-online.pages.dev/", image: "images/thumbs/336.webp" },
   { title: "Iron Lung", desc: "Pilot a cramped submarine through an ocean of blood on an alien moon in a claustrophobic space", url: "games/306.html", image: "images/thumbs/328.webp" },

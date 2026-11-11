@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: "Class of '09 gets a newer port",
+            items: [
+                "Class of '09 now uses a newer Ren'Py web loader with save import and export support.",
+                'The existing cover art is retained, and the card has moved into the newest additions.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Sally Face joins the library',
             items: [
                 'Added Sally Face to ALL GAMES with its official cover art.',
