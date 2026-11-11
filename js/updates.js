@@ -6,6 +6,16 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Friends and direct messages',
+            items: [
+                'Chat now has a friends panel. Add online members, accept or decline requests, and see which friends are online.',
+                'Friends can send private direct messages without posting them in the shared room. Messages are stored separately for each friendship and sync live.',
+                'Friend requests and direct messages are checked on the server. Offline members cannot be added, accepted, or messaged, and browser-only accounts cannot use chat or friends.',
+                'Usernames are unique case-insensitively, and the schema enforces that rule for new signups and username changes.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Chat reliability and account polish',
             items: [
                 'Chat now blocks slurs and hate speech on the server before a message reaches the room.',

@@ -46,8 +46,13 @@ CHAT is one shared room for the whole site. It uses a Cloudflare Durable Object 
 Supabase-authenticated online account; the Worker verifies the Supabase access token before opening the WebSocket.
 Browser-only accounts are prompted to add a verified email first. The room keeps the latest 100 messages, blocks
 slurs and hate speech on the server, shows member avatars, and has a short polling fallback so a missed WebSocket
-broadcast does not hide messages from other members. The binding and migration are in `wrangler.jsonc`; the health
-endpoint is `/api/chat/health`.
+broadcast does not hide messages from other members.
+
+Friends and direct messages live in the same Durable Object. Friend requests can target only members who are online
+at that moment, and direct messages are server-checked to be friends-only and to require an online recipient. Offline
+friends remain visible in the friend list but cannot be messaged. Usernames are unique case-insensitively; run
+`supabase/schema.sql` so the `profiles` and `auth.users` triggers enforce that rule for new accounts and name changes.
+The binding and migration are in `wrangler.jsonc`; the health endpoint is `/api/chat/health`.
 
 ### Emulators
 

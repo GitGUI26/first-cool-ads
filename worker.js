@@ -6,7 +6,12 @@ const MAX_MESSAGE_LENGTH = 500;
 const MAX_HISTORY = 100;
 const MAX_MEMBERS = 60;
 const MAX_AVATAR_LENGTH = 12000;
+const MAX_FRIENDS = 50;
+const MAX_FRIEND_REQUESTS = 30;
+const MAX_DM_HISTORY = 100;
 const MESSAGE_COOLDOWN_MS = 2200;
+const DM_COOLDOWN_MS = 700;
+const FRIEND_REQUEST_COOLDOWN_MS = 1400;
 
 const SLUR_ROOTS = [
   'nigger', 'nigga', 'faggot', 'fagot', 'fag', 'kike', 'spic', 'chink',
@@ -89,6 +94,75 @@ function cleanAvatar(value) {
 function cleanClientId(value) {
   const id = String(value == null ? '' : value).trim();
   return /^[A-Za-z0-9_-]{8,80}$/.test(id) ? id : '';
+}
+
+function cleanId(value) {
+  const id = String(value == null ? '' : value).trim();
+  return id.length <= 80 && /^[A-Za-z0-9_-]+$/.test(id) ? id : '';
+}
+
+function nameKey(value) {
+  return String(value == null ? '' : value).trim().normalize('NFKC').toLowerCase();
+}
+
+function profileOf(user) {
+  return {
+    id: String((user && user.id) || ''),
+    name: cleanName(user && user.name),
+    avatar: cleanAvatar(user && user.avatar)
+  };
+}
+
+function friendEntry(value) {
+  const id = cleanId(value && value.id);
+  if (!id) return null;
+  return {
+    id,
+    name: cleanName(value && value.name),
+    avatar: cleanAvatar(value && value.avatar),
+    at: Number(value && value.at) || 0
+  };
+}
+
+function socialState(value) {
+  const social = { friendships: {}, requests: {} };
+  if (!value || typeof value !== 'object') return social;
+  const friendships = value.friendships && typeof value.friendships === 'object' ? value.friendships : {};
+  Object.keys(friendships).forEach(rawOwnerId => {
+    const ownerId = cleanId(rawOwnerId);
+    if (!ownerId) return;
+    const list = Array.isArray(friendships[rawOwnerId]) ? friendships[rawOwnerId] : [];
+    social.friendships[ownerId] = list.map(friendEntry).filter(Boolean).slice(0, MAX_FRIENDS);
+  });
+  const requests = value.requests && typeof value.requests === 'object' ? value.requests : {};
+  Object.keys(requests).forEach(rawOwnerId => {
+    const ownerId = cleanId(rawOwnerId);
+    if (!ownerId) return;
+    const list = Array.isArray(requests[rawOwnerId]) ? requests[rawOwnerId] : [];
+    social.requests[ownerId] = list.map(item => {
+      const from = friendEntry(item && item.from);
+      return from ? { from, at: Number(item && item.at) || from.at || 0 } : null;
+    }).filter(Boolean).slice(0, MAX_FRIEND_REQUESTS);
+  });
+  return social;
+}
+
+function addFriend(social, ownerId, person) {
+  const owner = cleanId(ownerId);
+  const friend = friendEntry(person);
+  if (!owner || !friend) return;
+  const list = Array.isArray(social.friendships[owner]) ? social.friendships[owner] : [];
+  if (list.some(item => item.id === friend.id)) return;
+  social.friendships[owner] = [friend, ...list].slice(0, MAX_FRIENDS);
+}
+
+function isFriend(social, userId, friendId) {
+  const list = social.friendships[userId];
+  return Array.isArray(list) && list.some(item => item.id === friendId);
+}
+
+function dmKey(a, b) {
+  return 'dm:' + [String(a), String(b)].sort().join(':');
 }
 
 function sameOrigin(request) {
@@ -179,6 +253,280 @@ export class ChatRoom {
     return { history, members };
   }
 
+  async readSocial() {
+    let social = null;
+    try { social = await this.ctx.storage.get('social'); } catch (error) {}
+    return socialState(social);
+  }
+
+  async readDm(a, b) {
+    let messages = [];
+    try { messages = (await this.ctx.storage.get(dmKey(a, b))) || []; } catch (error) {}
+    if (!Array.isArray(messages)) return [];
+    return messages.filter(item => item && item.id && item.from && item.from.id && item.to).slice(-MAX_DM_HISTORY);
+  }
+
+  onlineUsers() {
+    const online = new Map();
+    for (const socket of this.ctx.getWebSockets()) {
+      try {
+        const attachment = socket.deserializeAttachment() || {};
+        const user = attachment.user;
+        if (user && user.id) online.set(String(user.id), profileOf(user));
+      } catch (error) {}
+    }
+    return online;
+  }
+
+  socialFor(userId, social, online) {
+    const id = String(userId || '');
+    const friends = (social.friendships[id] || []).map(item => ({
+      id: item.id,
+      name: item.name,
+      avatar: item.avatar,
+      at: item.at,
+      online: online.has(item.id)
+    })).sort((a, b) => (Number(b.online) - Number(a.online)) || a.name.localeCompare(b.name));
+    const requests = (social.requests[id] || []).map(item => ({
+      id: item.from.id,
+      name: item.from.name,
+      avatar: item.from.avatar,
+      at: item.at,
+      online: online.has(item.from.id)
+    })).sort((a, b) => (Number(b.online) - Number(a.online)) || (b.at - a.at));
+    return { friends, requests };
+  }
+
+  sendSocket(ws, payload) {
+    try { ws.send(JSON.stringify(payload)); } catch (error) {}
+  }
+
+  sendToUser(userId, payload) {
+    const id = String(userId || '');
+    if (!id) return;
+    const message = JSON.stringify(payload);
+    for (const socket of this.ctx.getWebSockets()) {
+      try {
+        const attachment = socket.deserializeAttachment() || {};
+        if (attachment.user && String(attachment.user.id) === id) socket.send(message);
+      } catch (error) {}
+    }
+  }
+
+  sendToUsers(userIds, payload) {
+    const ids = new Set((userIds || []).map(id => String(id)));
+    if (!ids.size) return;
+    const message = JSON.stringify(payload);
+    for (const socket of this.ctx.getWebSockets()) {
+      try {
+        const attachment = socket.deserializeAttachment() || {};
+        if (attachment.user && ids.has(String(attachment.user.id))) socket.send(message);
+      } catch (error) {}
+    }
+  }
+
+  refreshFriendProfiles(social, user) {
+    const profile = profileOf(user);
+    Object.keys(social.friendships).forEach(ownerId => {
+      social.friendships[ownerId] = social.friendships[ownerId].map(item => {
+        if (item.id !== profile.id) return item;
+        if (item.name === profile.name && item.avatar === profile.avatar) return item;
+        return { ...item, name: profile.name, avatar: profile.avatar };
+      });
+    });
+    Object.keys(social.requests).forEach(ownerId => {
+      social.requests[ownerId] = social.requests[ownerId].map(item => {
+        if (item.from.id !== profile.id) return item;
+        if (item.from.name === profile.name && item.from.avatar === profile.avatar) return item;
+        return {
+          ...item,
+          from: { ...item.from, name: profile.name, avatar: profile.avatar }
+        };
+      });
+    });
+    return social;
+  }
+
+  async friendRequest(ws, user, attachment, data) {
+    const now = Date.now();
+    if (now - Number(attachment.lastFriendAt || 0) < FRIEND_REQUEST_COOLDOWN_MS) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'Please wait a moment before sending another friend request.' });
+      return;
+    }
+    const online = this.onlineUsers();
+    const requestedId = cleanId(data.targetId);
+    let target = requestedId ? online.get(requestedId) || null : null;
+    if (!target && data.targetName) {
+      const key = nameKey(String(data.targetName).replace(/^@+/, ''));
+      if (key) {
+        const matches = Array.from(online.values()).filter(item => item.id !== user.id && nameKey(item.name) === key);
+        if (matches.length > 1) {
+          this.sendSocket(ws, { type: 'friend-error', message: 'That username is not unique. Ask them to use a unique name before adding them.' });
+          return;
+        }
+        target = matches[0] || null;
+      }
+    }
+    if (!target) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'That member is offline. Only online members can be added.' });
+      return;
+    }
+    if (target.id === user.id) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'You cannot add yourself as a friend.' });
+      return;
+    }
+    if (nameKey(target.name) === nameKey(user.name)) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'Usernames must be unique. One of you needs to choose a different name first.' });
+      return;
+    }
+    if (Array.from(online.values()).some(item => item.id !== target.id && nameKey(item.name) === nameKey(target.name))) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'That username is not unique. Ask them to choose a unique name before adding them.' });
+      return;
+    }
+    const social = await this.readSocial();
+    if (isFriend(social, user.id, target.id)) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'You are already friends with ' + target.name + '.' });
+      return;
+    }
+    if ((social.requests[user.id] || []).some(item => item.from.id === target.id)) {
+      this.sendSocket(ws, { type: 'friend-error', message: target.name + ' already sent you a friend request. Accept it from your requests.' });
+      return;
+    }
+    if ((social.requests[target.id] || []).some(item => item.from.id === user.id)) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'You already sent ' + target.name + ' a friend request.' });
+      return;
+    }
+    if ((social.friendships[user.id] || []).length >= MAX_FRIENDS || (social.friendships[target.id] || []).length >= MAX_FRIENDS) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'That friend list is full. Remove someone before adding another friend.' });
+      return;
+    }
+    const incoming = social.requests[target.id] || [];
+    if (incoming.length >= MAX_FRIEND_REQUESTS) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'That member has too many pending requests right now.' });
+      return;
+    }
+    social.requests[target.id] = [{ from: profileOf(user), at: now }, ...incoming];
+    try { await this.ctx.storage.put('social', social); } catch (error) {}
+    attachment.lastFriendAt = now;
+    ws.serializeAttachment(attachment);
+    const targetSocial = this.socialFor(target.id, social, online);
+    this.sendToUser(target.id, {
+      type: 'friend-request',
+      request: profileOf(user),
+      friends: targetSocial.friends,
+      requests: targetSocial.requests
+    });
+    this.sendSocket(ws, { type: 'friend-request-sent', target: profileOf(target) });
+  }
+
+  async acceptFriend(ws, user, data) {
+    const requesterId = cleanId(data.requesterId);
+    if (!requesterId || requesterId === user.id) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'That friend request is not available.' });
+      return;
+    }
+    const social = await this.readSocial();
+    const incoming = social.requests[user.id] || [];
+    const request = incoming.find(item => item.from.id === requesterId);
+    if (!request) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'That friend request is no longer available.' });
+      return;
+    }
+    if ((social.friendships[user.id] || []).length >= MAX_FRIENDS || (social.friendships[requesterId] || []).length >= MAX_FRIENDS) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'One of these friend lists is full. Remove someone before accepting.' });
+      return;
+    }
+    const online = this.onlineUsers();
+    if (!online.has(requesterId)) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'That member is offline. Friend requests can be accepted only while both of you are online.' });
+      return;
+    }
+    const requester = online.get(requesterId);
+    social.requests[user.id] = incoming.filter(item => item.from.id !== requesterId);
+    addFriend(social, user.id, requester);
+    addFriend(social, requesterId, profileOf(user));
+    try { await this.ctx.storage.put('social', social); } catch (error) {}
+    const mine = this.socialFor(user.id, social, online);
+    const theirs = this.socialFor(requesterId, social, online);
+    this.sendToUser(user.id, { type: 'social', friends: mine.friends, requests: mine.requests });
+    this.sendToUser(requesterId, { type: 'social', friends: theirs.friends, requests: theirs.requests });
+    this.sendToUser(requesterId, { type: 'friend-accepted', friend: profileOf(user) });
+  }
+
+  async declineFriend(ws, user, data) {
+    const requesterId = cleanId(data.requesterId);
+    const social = await this.readSocial();
+    const incoming = social.requests[user.id] || [];
+    if (!requesterId || !incoming.some(item => item.from.id === requesterId)) {
+      this.sendSocket(ws, { type: 'friend-error', message: 'That friend request is no longer available.' });
+      return;
+    }
+    social.requests[user.id] = incoming.filter(item => item.from.id !== requesterId);
+    try { await this.ctx.storage.put('social', social); } catch (error) {}
+    const mine = this.socialFor(user.id, social, this.onlineUsers());
+    this.sendSocket(ws, { type: 'social', friends: mine.friends, requests: mine.requests });
+    this.sendToUser(requesterId, { type: 'friend-declined', friend: profileOf(user) });
+  }
+
+  async directMessage(ws, user, attachment, data) {
+    const to = cleanId(data.to);
+    if (!to || to === user.id) {
+      this.sendSocket(ws, { type: 'dm-error', clientId: cleanClientId(data.clientId), message: 'Choose a friend to message.' });
+      return;
+    }
+    const social = await this.readSocial();
+    if (!isFriend(social, user.id, to)) {
+      this.sendSocket(ws, { type: 'dm-error', clientId: cleanClientId(data.clientId), message: 'You can only message friends.' });
+      return;
+    }
+    const online = this.onlineUsers();
+    if (!online.has(to)) {
+      this.sendSocket(ws, { type: 'dm-error', clientId: cleanClientId(data.clientId), message: 'That friend is offline. You can message friends only while they are online.' });
+      return;
+    }
+    const now = Date.now();
+    if (now - Number(attachment.lastDmAt || 0) < DM_COOLDOWN_MS) {
+      this.sendSocket(ws, { type: 'dm-error', clientId: cleanClientId(data.clientId), message: 'Please wait a moment before sending another message.' });
+      return;
+    }
+    const text = String(data.text == null ? '' : data.text)
+      .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f]/g, '')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, MAX_MESSAGE_LENGTH);
+    if (!text) return;
+    const clientId = cleanClientId(data.clientId);
+    if (hasBlockedLanguage(text)) {
+      this.sendSocket(ws, { type: 'dm-error', clientId, message: 'That message contains language that is not allowed here.' });
+      return;
+    }
+    attachment.lastDmAt = now;
+    ws.serializeAttachment(attachment);
+    const messages = await this.readDm(user.id, to);
+    const entry = {
+      id: crypto.randomUUID(),
+      from: { id: String(user.id), name: cleanName(user.name) },
+      to,
+      text,
+      at: now
+    };
+    if (clientId) entry.clientId = clientId;
+    messages.push(entry);
+    try { await this.ctx.storage.put(dmKey(user.id, to), messages.slice(-MAX_DM_HISTORY)); } catch (error) {}
+    this.sendToUsers([user.id, to], { type: 'dm', message: entry });
+  }
+
+  async directHistory(ws, user, data) {
+    const friendId = cleanId(data.friendId);
+    const social = await this.readSocial();
+    if (!friendId || !isFriend(social, user.id, friendId)) {
+      this.sendSocket(ws, { type: 'dm-error', message: 'You can only read conversations with friends.' });
+      return;
+    }
+    const messages = await this.readDm(user.id, friendId);
+    this.sendSocket(ws, { type: 'dm-history', friendId, messages });
+  }
+
   async fetch(request) {
     let user = null;
     try {
@@ -194,9 +542,17 @@ export class ChatRoom {
         return new Response('Expected a WebSocket upgrade.', { status: 426 });
       }
       const state = await this.readState();
+      const social = await this.readSocial();
+      const dmFriend = cleanId(request.headers.get('x-chat-dm') || '');
+      if (dmFriend) {
+        if (!isFriend(social, user.id, dmFriend)) return json({ error: 'You can only read conversations with friends.' }, 403);
+        return json({ friendId: dmFriend, messages: await this.readDm(user.id, dmFriend) });
+      }
+      const online = this.onlineUsers();
       return json({
         messages: state.history,
-        members: state.members
+        members: state.members,
+        ...this.socialFor(user.id, social, online)
       });
     }
 
@@ -207,13 +563,18 @@ export class ChatRoom {
     server.serializeAttachment({ user, lastSentAt: 0 });
 
     const state = await this.readState();
+    let social = await this.readSocial();
+    social = this.refreshFriendProfiles(social, user);
     let members = rememberMember(state.members, user, Date.now());
     try { await this.ctx.storage.put('members', members); } catch (error) {}
+    try { await this.ctx.storage.put('social', social); } catch (error) {}
+    const online = this.onlineUsers();
     try {
       server.send(JSON.stringify({
         type: 'history',
         messages: state.history,
-        members: members
+        members: members,
+        ...this.socialFor(user.id, social, online)
       }));
     } catch (error) {}
     this.broadcastPresence();
@@ -250,8 +611,36 @@ export class ChatRoom {
       const state = await this.readState();
       const members = rememberMember(state.members, attachment.user, now);
       try { await this.ctx.storage.put('members', members); } catch (error) {}
+      let social = await this.readSocial();
+      social = this.refreshFriendProfiles(social, attachment.user);
+      try { await this.ctx.storage.put('social', social); } catch (error) {}
       this.broadcast({ type: 'member', member: attachment.user });
       this.broadcastPresence();
+      return;
+    }
+
+    if (data.type === 'friend-request') {
+      await this.friendRequest(ws, user, attachment, data);
+      return;
+    }
+
+    if (data.type === 'friend-accept') {
+      await this.acceptFriend(ws, user, data);
+      return;
+    }
+
+    if (data.type === 'friend-decline') {
+      await this.declineFriend(ws, user, data);
+      return;
+    }
+
+    if (data.type === 'dm') {
+      await this.directMessage(ws, user, attachment, data);
+      return;
+    }
+
+    if (data.type === 'dm-history') {
+      await this.directHistory(ws, user, data);
       return;
     }
 
@@ -360,6 +749,23 @@ export default {
       const headers = new Headers(request.headers);
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       headers.set('x-chat-read', '1');
+      return room.fetch(new Request(request, { headers }));
+    }
+
+    if (pathname === '/api/chat/dm-history') {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'GET') return json({ error: 'Method not allowed.' }, 405);
+      if (!env.CHAT_ROOM) return json({ error: 'Chat is not available.' }, 503);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
+      const friend = cleanId(new URL(request.url).searchParams.get('friend'));
+      if (!friend) return json({ error: 'Choose a friend.' }, 400);
+      const id = env.CHAT_ROOM.idFromName('global');
+      const room = env.CHAT_ROOM.get(id);
+      const headers = new Headers(request.headers);
+      headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
+      headers.set('x-chat-read', '1');
+      headers.set('x-chat-dm', friend);
       return room.fetch(new Request(request, { headers }));
     }
 

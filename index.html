@@ -49,7 +49,7 @@
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/ads.css?v=1" rel="stylesheet">
-<link href="css/chat.css?v=4" rel="stylesheet">
+<link href="css/chat.css?v=5" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=1" rel="stylesheet">
   <script type="application/ld+json">
@@ -416,29 +416,70 @@
             <button class="chat-head-account" type="button" onclick="openAccount()"><i class="fas fa-user-gear" aria-hidden="true"></i><span>Account</span></button>
           </div>
         </header>
+        <button class="chat-social-backdrop" id="chatSocialBackdrop" type="button" aria-label="Close friends" hidden></button>
         <div class="chat-layout">
-          <aside class="chat-sidebar">
-            <div class="chat-room-mark"><span><i class="fas fa-comments" aria-hidden="true"></i></span><div><strong>The Lounge</strong><small>One room · everyone welcome</small></div></div>
+          <aside class="chat-sidebar" id="chatSidebar" aria-label="People and friends">
+            <div class="chat-social-head">
+              <div class="chat-room-mark"><span><i class="fas fa-comments" aria-hidden="true"></i></span><div><strong>The Lounge</strong><small>One room · everyone welcome</small></div></div>
+              <button class="chat-social-close" id="chatSocialClose" type="button" aria-label="Close friends"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+            </div>
             <div class="chat-presence"><i aria-hidden="true"></i><b id="chatOnline">0</b> online</div>
             <div class="chat-people" id="chatOnlineFaces" aria-label="People online"></div>
             <p>This is the one shared chat room for the whole site. Messages are visible to every signed-in member.</p>
+            <section class="chat-social" aria-label="Friends">
+              <div class="chat-social-label"><span>Online now</span><span id="chatOnlineCountLabel">0</span></div>
+              <div class="chat-person-list" id="chatOnlineList"></div>
+              <div class="chat-social-label"><span>Friends</span><span class="chat-social-count" id="chatFriendCount">0</span></div>
+              <div class="chat-request-block" id="chatRequestBlock" hidden>
+                <div class="chat-social-label"><span>Requests</span></div>
+                <div class="chat-request-list" id="chatRequests"></div>
+              </div>
+              <div class="chat-friend-list" id="chatFriends"></div>
+              <form class="chat-friend-form" id="chatFriendForm">
+                <label class="visually-hidden" for="chatFriendName">Add an online friend</label>
+                <input id="chatFriendName" type="text" maxlength="24" placeholder="Add by username" autocomplete="off" spellcheck="false">
+                <button type="submit" aria-label="Send friend request"><i class="fas fa-user-plus" aria-hidden="true"></i></button>
+              </form>
+              <p class="chat-social-note">Only online members can be added or messaged. Usernames are unique.</p>
+            </section>
             <ul class="chat-rules"><li>Be friendly and keep it school-safe.</li><li>No spam, personal info, or links.</li><li>Slurs and hate speech are blocked automatically.</li></ul>
             <a class="chat-account-link" href="#" onclick="openAccount(); return false;"><i class="fas fa-user-gear" aria-hidden="true"></i> Manage account</a>
           </aside>
           <div class="chat-card">
             <div class="chat-toolbar">
               <div class="chat-toolbar-status"><span class="chat-connection" id="chatConnection" data-state="offline">Disconnected</span><span class="chat-toolbar-note">Messages sync live</span></div>
-              <div class="chat-toolbar-presence"><div class="chat-face-stack" id="chatOnlineFacesCompact" aria-hidden="true"></div><span><b id="chatOnlineCompact">0</b> online</span></div>
+              <div class="chat-toolbar-actions">
+                <button class="chat-people-toggle" id="chatPeopleToggle" type="button" aria-controls="chatSidebar" aria-expanded="false"><i class="fas fa-user-group" aria-hidden="true"></i><span>Friends</span><b class="chat-request-badge" id="chatRequestBadge" hidden>0</b></button>
+                <div class="chat-toolbar-presence"><div class="chat-face-stack" id="chatOnlineFacesCompact" aria-hidden="true"></div><span><b id="chatOnlineCompact">0</b> online</span></div>
+              </div>
             </div>
-            <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
-            <div class="chat-composer">
-              <div class="chat-notice" id="chatNotice" role="status" aria-live="polite" hidden></div>
-              <form class="chat-form" id="chatForm">
-                <label class="visually-hidden" for="chatInput">Message</label>
-                <textarea id="chatInput" rows="1" maxlength="500" placeholder="Message the room..." disabled></textarea>
-                <button class="chat-send" id="chatSend" type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
-              </form>
-              <p class="chat-hint"><span>Enter to send · Shift+Enter for a new line</span><span id="chatCharCount">0 / 500</span></p>
+            <div class="chat-room-view" id="chatRoomView">
+              <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
+              <div class="chat-composer">
+                <div class="chat-notice" id="chatNotice" role="status" aria-live="polite" hidden></div>
+                <form class="chat-form" id="chatForm">
+                  <label class="visually-hidden" for="chatInput">Message</label>
+                  <textarea id="chatInput" rows="1" maxlength="500" placeholder="Message the room..." disabled></textarea>
+                  <button class="chat-send" id="chatSend" type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
+                </form>
+                <p class="chat-hint"><span>Enter to send · Shift+Enter for a new line</span><span id="chatCharCount">0 / 500</span></p>
+              </div>
+            </div>
+            <div class="chat-dm-view" id="chatDmView" hidden>
+              <div class="chat-dm-head">
+                <button class="chat-dm-back" id="chatDmBack" type="button"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Room</span></button>
+                <div class="chat-dm-person"><div class="chat-dm-avatar" id="chatDmAvatar"></div><div><strong id="chatDmName">Friend</strong><span id="chatDmStatus">Offline</span></div></div>
+              </div>
+              <div class="chat-messages chat-dm-messages" id="chatDmMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
+              <div class="chat-composer">
+                <div class="chat-notice" id="chatDmNotice" role="status" aria-live="polite" hidden></div>
+                <form class="chat-form" id="chatDmForm">
+                  <label class="visually-hidden" for="chatDmInput">Message friend</label>
+                  <textarea id="chatDmInput" rows="1" maxlength="500" placeholder="Message your friend..." disabled></textarea>
+                  <button class="chat-send" id="chatDmSend" type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
+                </form>
+                <p class="chat-hint"><span>Friends only · messages sync live</span><span id="chatDmCharCount">0 / 500</span></p>
+              </div>
             </div>
           </div>
         </div>
@@ -736,8 +777,8 @@
             <p class="account-local-note" data-online-copy="Online accounts sign in with their email. Accounts without an email sign in with their username." data-local-copy="Online sign-in is not connected, so this account stays in this browser.">Online accounts sign in with their email. Accounts without an email sign in with their username.</p>
           </form>
           <form class="account-form" id="signupForm" hidden>
-            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. This is your display name.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
-            <label>Email (optional)<span>Add it now or later. We send a confirmation link and, when enabled, a 6-digit code. Leave blank to keep this account in this browser.</span><input id="signupEmail" type="email" autocomplete="email"></label>
+            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. Usernames are unique and case-insensitive. Chat and friends require an online account.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
+            <label>Email (optional)<span>Add it now or later. We send a confirmation link and, when enabled, a 6-digit code. Leave blank for a browser-only account; it cannot use chat or friends.</span><input id="signupEmail" type="email" autocomplete="email"></label>
             <label>Password<span>At least 6 characters.</span><input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required></label>
             <div class="account-error" id="signupError" role="alert" hidden></div>
             <div class="account-error is-success" id="signupSuccess" role="status" hidden></div>
@@ -867,10 +908,10 @@
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=12"></script>
   <script src="js/main.js?v=29"></script>
-  <script src="js/updates.js?v=11"></script>
+  <script src="js/updates.js?v=12"></script>
   <script src="js/account.js?v=9"></script>
   <script src="js/music.js?v=2"></script>
-  <script src="js/chat.js?v=3"></script>
+  <script src="js/chat.js?v=4"></script>
   <script src="js/emulators.js?v=1"></script>
   <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
