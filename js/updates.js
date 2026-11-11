@@ -11,7 +11,8 @@
                 'Chat now has a friends panel. Add online members, accept or decline requests, and see which friends are online.',
                 'Friends can send private direct messages without posting them in the shared room. Messages are stored separately for each friendship and sync live.',
                 'Friend requests and direct messages are checked on the server. Offline members cannot be added, accepted, or messaged, and browser-only accounts cannot use chat or friends.',
-                'Usernames are unique case-insensitively, and the schema enforces that rule for new signups and username changes.'
+                'Usernames are unique case-insensitively, and the schema enforces that rule for new signups and username changes.',
+                'The full-screen chat header now stays visible, with an Exit button that returns to the game library from the room or a direct message.'
             ]
         },
         {

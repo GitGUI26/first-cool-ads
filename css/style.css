@@ -5745,7 +5745,7 @@ body.chat-active #background-root {
     visibility: hidden !important;
   }
 
-body.chat-active header {
+body.chat-active #main-container > header {
   display: none !important;
 }
 
