@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Sally Face joins the library',
+            items: [
+                'Added Sally Face to ALL GAMES with its official cover art.',
+                'The Unity WebGL port loads its game build from a CDN, so the first launch can take a while on slower connections.',
+                'The library now has 654 public games.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'Roblox in the library',
             items: [
                 'Added Roblox to ALL GAMES. It launches in the site\'s private browser instead of a direct iframe.',

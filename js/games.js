@@ -1,5 +1,6 @@
 const games = [
   { title: "Roblox", desc: "Open Roblox in the site's private browser and play through the same proxy as the BROWSER tab.", url: "https://www.roblox.com/", image: "images/g_roblox.svg", tag: "NEW", browser: true },
+  { title: "Sally Face", desc: "A psychological horror adventure following Sal Fisher through the strange halls of Nockfell High.", url: "games/sally-face.html", image: "images/g_sally-face.jpg", tag: "NEW" },
   { title: "Lumen Loom", desc: "Rotate light tiles to reconnect a broken grid in this calm, brainy routing puzzle.", url: "games/originals/lumen-loom.html", image: "images/g_lumen-loom.svg", tag: "NEW" },
   { title: "Echo Maze", desc: "Feel your way through a pitch-black labyrinth with a lantern, three keys and a way out.", url: "games/originals/echo-maze.html", image: "images/g_echo-maze.svg", tag: "NEW" },
   { title: "Fuse Break", desc: "Talk yourself through a bomb disposal manual and cut the right wire before the timer hits zero.", url: "games/originals/fuse-break.html", image: "images/g_fuse-break.svg", tag: "NEW" },
