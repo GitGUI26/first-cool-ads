@@ -421,6 +421,32 @@ function findGameBySlug(slug) {
         return null;
     return getGameSlugIndex().bySlug.get(slug) || null;
 }
+function gameHashSlug() {
+    const raw = String(location.hash || '').replace(/^#/, '');
+    if (!raw.startsWith('game='))
+        return '';
+    try {
+        return decodeURIComponent(raw.slice(5));
+    }
+    catch (error) {
+        return '';
+    }
+}
+function gameHistorySlug() {
+    const state = history.state;
+    return state && typeof state === 'object' && typeof state.game === 'string'
+        ? state.game
+        : '';
+}
+function hasLegacyGameLocation() {
+    return new URLSearchParams(location.search).has('game') || /^#game=/.test(location.hash);
+}
+function gameUrlWithoutTarget() {
+    const next = new URL(location.href);
+    next.searchParams.delete('game');
+    next.hash = '';
+    return next;
+}
 function syncGameUrl(title, options = {}) {
     if (options.syncUrl === false)
         return;
@@ -430,25 +456,25 @@ function syncGameUrl(title, options = {}) {
     const slug = gameSlug(title);
     if (!slug)
         return;
-    const next = new URL(location.href);
-    if (next.searchParams.get('game') === slug)
+    if (gameHistorySlug() === slug && !hasLegacyGameLocation())
         return;
-    next.searchParams.set('game', slug);
-    next.hash = '';
+    const next = gameUrlWithoutTarget();
+    const state = Object.assign({}, history.state);
+    state.game = slug;
     try {
-        history[options.replaceUrl ? 'replaceState' : 'pushState']({ game: slug }, '', next);
+        history[options.replaceUrl ? 'replaceState' : 'pushState'](state, '', next);
     }
     catch (error) {
     }
 }
-function clearGameUrl() {
-    const next = new URL(location.href);
-    if (!next.searchParams.has('game'))
+function clearGameUrl(mode = 'push') {
+    if (!gameHistorySlug() && !hasLegacyGameLocation())
         return;
-    next.searchParams.delete('game');
-    next.hash = '';
+    const next = gameUrlWithoutTarget();
+    const state = Object.assign({}, history.state);
+    delete state.game;
     try {
-        history.pushState({}, '', next);
+        history[mode === 'replace' ? 'replaceState' : 'pushState'](state, '', next);
     }
     catch (error) {
     }
@@ -555,7 +581,7 @@ function setSiteLogos(src) {
 function gameCardMarkup(game, isRandom = false) {
     const displayTitle = isRandom ? 'Random' : game.title;
     const innerTag = isRandom ? 'div' : 'a';
-    const linkAttributes = isRandom ? '' : ` href="${escapeHtml('?game=' + encodeURIComponent(gameSlug(game.title)))}" aria-label="Play ${escapeHtml(game.title)}"`;
+    const linkAttributes = isRandom ? '' : ` href="${escapeHtml('#game=' + encodeURIComponent(gameSlug(game.title)))}" aria-label="Play ${escapeHtml(game.title)}"`;
     const isFavorite = !isRandom && favorites.indexOf(game.title) !== -1;
     const favoriteLabel = (isFavorite ? 'Remove ' : 'Add ') + game.title + (isFavorite ? ' from' : ' to') + ' favorites';
     const cardTitle = isRandom ? 'Let fate pick your next game' : game.title + (game.desc ? ' — ' + game.desc : '');
@@ -1835,11 +1861,16 @@ document.addEventListener('DOMContentLoaded', function () {
         performSearch(initialQuery);
     }
     switchTab('lessons');
-    const deepLinkSlug = new URLSearchParams(location.search).get('game');
+    const deepLinkSlug = gameHashSlug() || new URLSearchParams(location.search).get('game');
     if (deepLinkSlug) {
         const deepLinkGame = findGameBySlug(deepLinkSlug);
         if (deepLinkGame)
             openLesson(deepLinkGame.title, deepLinkGame.url, { replaceUrl: true });
+        else
+            clearGameUrl('replace');
+    }
+    else if (hasLegacyGameLocation()) {
+        clearGameUrl('replace');
     }
     if (typeof window.__hideStartupLoader === 'function')
         window.__hideStartupLoader();
@@ -3676,8 +3707,8 @@ function copyGameLink() {
     if (!slug)
         return;
     const next = new URL(location.href);
-    next.searchParams.set('game', slug);
-    next.hash = '';
+    next.searchParams.delete('game');
+    next.hash = 'game=' + encodeURIComponent(slug);
     const link = next.href;
     const button = document.querySelector('[data-copy-game-link]');
     const showCopied = function () {
@@ -3705,16 +3736,33 @@ function copyGameLink() {
 }
 window.copyGameLink = copyGameLink;
 window.addEventListener('popstate', function () {
-    const slug = new URLSearchParams(location.search).get('game');
+    const slug = gameHistorySlug() || gameHashSlug() || new URLSearchParams(location.search).get('game');
     const active = getActiveGameTab();
     if (slug) {
         const game = findGameBySlug(slug);
-        if (game && (!active || active.title !== game.title))
-            openLesson(game.title, game.url, { syncUrl: false });
+        if (game) {
+            if (!active || active.title !== game.title)
+                openLesson(game.title, game.url, { replaceUrl: true });
+            else if (hasLegacyGameLocation())
+                syncGameUrl(game.title, { replaceUrl: true });
+        }
+        else if (hasLegacyGameLocation()) {
+            clearGameUrl('replace');
+        }
     }
     else if (active) {
         exitGameBrowser({ skipUrl: true });
     }
+});
+window.addEventListener('hashchange', function () {
+    const slug = gameHashSlug();
+    if (!slug)
+        return;
+    const game = findGameBySlug(slug);
+    if (game)
+        openLesson(game.title, game.url, { replaceUrl: true });
+    else
+        clearGameUrl('replace');
 });
 document.addEventListener('visibilitychange', () => {
     const activeTab = getActiveGameTab();

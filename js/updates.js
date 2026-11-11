@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Games stay on the home URL',
+            items: [
+                'Opening a game no longer changes the address bar to a game query URL.',
+                'Back and forward still close and reopen games, and copied game links use a root hash link that cleans itself back to the home URL.',
+                'Older ?game= links still open, then remove the query from the address bar automatically.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: 'More display settings',
             items: [
                 'Settings now includes a game-grid column picker, a featured-carousel autoplay control, and a reduced-motion option.',
