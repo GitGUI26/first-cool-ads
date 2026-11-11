@@ -49,7 +49,7 @@
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/ads.css?v=1" rel="stylesheet">
-<link href="css/chat.css?v=3" rel="stylesheet">
+<link href="css/chat.css?v=4" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=1" rel="stylesheet">
   <script type="application/ld+json">
@@ -407,8 +407,14 @@
     <section id="chat-section" class="chat-page" hidden aria-hidden="true" aria-labelledby="chatTitle">
       <div class="chat-shell">
         <header class="chat-page-head">
-          <div><span class="section-kicker">Community</span><h2 id="chatTitle">CHAT</h2></div>
-          <p>One room for everyone. Sign in with an online account to join the conversation.</p>
+          <div class="chat-page-title">
+            <button class="chat-back" type="button" onclick="switchTab('lessons')" aria-label="Leave chat and return to games"><i class="fas fa-arrow-left" aria-hidden="true"></i><span>Library</span></button>
+            <div><span class="section-kicker">Community</span><h2 id="chatTitle">CHAT</h2></div>
+          </div>
+          <div class="chat-page-actions">
+            <p>One room for everyone. Sign in with an online account to join the conversation.</p>
+            <button class="chat-head-account" type="button" onclick="openAccount()"><i class="fas fa-user-gear" aria-hidden="true"></i><span>Account</span></button>
+          </div>
         </header>
         <div class="chat-layout">
           <aside class="chat-sidebar">
