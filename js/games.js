@@ -547,7 +547,7 @@ const games = [
   { title: "Friday Night Funkin", desc: "Rhythm music battles", url: "games/195.html", image: "images/thumbs/151.webp" },
   { title: "COD Nazi Zombies", desc: "A browser demake of Call of Duty: Zombies. Fight endless rounds of the undead in first person, solo or co-op, powered by WebGL.", url: "https://nzp.gay/", image: "images/thumbs/152.webp" },
   { title: "Adventure Capitalist", desc: "Business idle clicker", url: "games/193.html", image: "images/thumbs/153.webp" },
-  { title: "1v1.lol", desc: "Building and shooting battles", url: "games/313.html", image: "images/thumbs/154.webp" },
+  { title: "1v1.lol", desc: "Building and shooting battles", url: "games/1v1lol.html", image: "images/thumbs/154.webp" },
   { title: "Ragdoll Archers", desc: "Physics archery combat", url: "games/192.html", image: "images/thumbs/155.webp" },
   { title: "Retro Bowl", desc: "Football management game", url: "games/191.html", image: "images/thumbs/158.webp" },
   { title: "Half Life", desc: "Sci-fi FPS adventure", url: "games/190.html", image: "images/thumbs/159.webp" },
