@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-11',
+            title: 'Hotline Miami gets a newer script',
+            items: [
+                'Hotline Miami now loads its game script from the newer jsDelivr-hosted web port.',
+                'The game card, cover art, and catalog count are unchanged.'
+            ]
+        },
+        {
+            date: '2026-11-11',
             title: "Class of '09 gets a newer port",
             items: [
                 "Class of '09 now uses a newer Ren'Py web loader with save import and export support.",
