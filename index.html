@@ -45,11 +45,11 @@
 <link href="css/style.css?v=9" rel="stylesheet">
 <link href="css/refresh.css?v=11" rel="stylesheet">
 <link href="css/browser.css?v=1" rel="stylesheet">
-<link href="css/account.css?v=6" rel="stylesheet">
+<link href="css/account.css?v=7" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/ads.css?v=2" rel="stylesheet">
-<link href="css/chat.css?v=8" rel="stylesheet">
+<link href="css/chat.css?v=9" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=1" rel="stylesheet">
   <script type="application/ld+json">
@@ -832,12 +832,12 @@
             <button class="account-primary" type="submit">Sign in</button>
           </form>
           <form class="account-form" id="signupForm" hidden>
-            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. Usernames are unique, case-insensitive, and permanent.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
+            <label>Username<span>1–24 letters, numbers, periods, dashes, or underscores. Usernames are unique and case-insensitive. Regular accounts can change once every 7 days.</span><input id="signupUsername" type="text" autocomplete="username" required></label>
             <label>Password<span>At least 6 characters.</span><input id="signupPassword" type="password" autocomplete="new-password" minlength="6" required></label>
             <div class="account-error" id="signupError" role="alert" hidden></div>
             <div class="account-error is-success" id="signupSuccess" role="status" hidden></div>
             <button class="account-primary" type="submit">Create account</button>
-            <p class="account-local-note">Your username is your login. Choose carefully; it cannot be changed later.</p>
+            <p class="account-local-note">Your username is your login. You can change it later; regular accounts can change once every 7 days.</p>
           </form>
         </div>
         <div id="accountDashboard" hidden>
@@ -851,14 +851,35 @@
               <div class="account-card-head">
                 <div>
                   <h4>Account settings</h4>
-                  <p>Your username is permanent. Manage sync for your profile.</p>
+                  <p>Change your username or manage sync. Regular accounts can change their username once every 7 days.</p>
                 </div>
                 <span class="account-sync-pill" id="accountSyncPill" role="status">Checking sync…</span>
               </div>
+              <form class="account-inline-form account-username-form" id="accountUsernameForm">
+                <input id="accountUsernameInput" type="text" maxlength="24" autocomplete="username" aria-label="New username" placeholder="new username" required>
+                <button class="account-primary" type="submit">Change username</button>
+              </form>
+              <p class="account-username-help" id="accountUsernameHelp">Once every 7 days. The owner account can change at any time.</p>
+              <div class="account-error" id="accountUsernameError" role="alert" hidden></div>
               <div class="account-card-actions">
                 <button class="account-secondary" id="accountSyncNow" type="button">Sync now</button>
               </div>
               <p class="account-sync-message" id="accountSyncMessage" role="status"></p>
+            </section>
+            <section class="account-card account-card-wide account-owner-card" id="accountOwnerCard" hidden>
+              <div class="account-card-head">
+                <div>
+                  <h4>Owner tools</h4>
+                  <p>Delete messages and accounts, or change any account's username.</p>
+                </div>
+                <span class="account-sync-pill is-synced">Owner</span>
+              </div>
+              <div class="account-card-actions">
+                <button class="account-secondary" id="accountOwnerRefresh" type="button">Refresh accounts</button>
+              </div>
+              <div class="account-owner-list" id="accountOwnerList"></div>
+              <p class="account-inline-message" id="accountOwnerMessage" role="status"></p>
+              <p class="account-owner-note">Passwords are stored by Supabase as one-way hashes. They cannot be viewed or recovered from the database.</p>
             </section>
             <section class="account-card">
               <div class="account-card-head"><div><h4>Profile picture</h4><p>Choose a square image. It is cropped and resized to 256 × 256 and saved with your account.</p></div></div>
@@ -923,14 +944,14 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=3"></script>
-  <script src="js/account-store.js?v=16"></script>
+  <script src="js/account-store.js?v=17"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=18"></script>
   <script src="js/main.js?v=32"></script>
-  <script src="js/updates.js?v=32"></script>
-  <script src="js/account.js?v=12"></script>
+  <script src="js/updates.js?v=33"></script>
+  <script src="js/account.js?v=13"></script>
   <script src="js/music.js?v=2"></script>
-  <script src="js/chat.js?v=7"></script>
+  <script src="js/chat.js?v=8"></script>
   <script src="js/emulators.js?v=1"></script>
   <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">

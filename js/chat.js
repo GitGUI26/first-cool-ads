@@ -41,6 +41,8 @@
   var notificationsOpen = false;
   var notificationBusy = false;
   var notificationTimer = 0;
+  var siteOwner = false;
+  var ownerStatusBusy = false;
 
   function currentUser() {
     return Store.getCurrentUser();
@@ -509,6 +511,96 @@
     list.scrollTop = list.scrollHeight;
   }
 
+  function addAdminDeleteControl(item, messageId, peerId) {
+    if (!siteOwner || !item || !messageId) return;
+    var actions = item.querySelector('.chat-message-actions');
+    if (!actions || actions.querySelector('[data-admin-delete]')) return;
+    var button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'chat-admin-delete';
+    button.textContent = 'Delete';
+    button.setAttribute('data-admin-delete', messageId);
+    if (peerId) button.setAttribute('data-admin-peer', peerId);
+    actions.appendChild(button);
+  }
+
+  function applyAdminDeleteControls() {
+    document.querySelectorAll('#chatMessages .chat-message, #chatDmMessages .chat-message').forEach(function (item) {
+      var id = item.getAttribute('data-message-id');
+      var peer = item.getAttribute('data-chat-peer') || '';
+      if (siteOwner && id) addAdminDeleteControl(item, id, peer);
+      if (!siteOwner) {
+        var button = item.querySelector('[data-admin-delete]');
+        if (button) button.remove();
+      }
+    });
+  }
+
+  function removeRoomMessage(messageId) {
+    var id = String(messageId || '');
+    if (!id) return;
+    messages = messages.filter(function (message) { return String(message.id) !== id; });
+    delete seen[id];
+    document.querySelectorAll('#chatMessages .chat-message[data-message-id="' + id + '"]').forEach(function (node) {
+      node.remove();
+    });
+    var list = $('chatMessages');
+    if (list && !list.querySelector('.chat-message') && !list.querySelector('.chat-empty')) renderEmpty('No messages yet');
+  }
+
+  function removeDmMessage(messageId) {
+    var id = String(messageId || '');
+    if (!id) return;
+    Object.keys(dmMessages).forEach(function (peer) {
+      dmMessages[peer] = (dmMessages[peer] || []).filter(function (message) {
+        return String(message.id) !== id;
+      });
+    });
+    Object.keys(dmSeen).forEach(function (peer) {
+      if (dmSeen[peer]) delete dmSeen[peer][id];
+    });
+    renderDmMessages();
+  }
+
+  async function deleteAdminMessageFromButton(button) {
+    if (!siteOwner || !button) return;
+    var messageId = button.getAttribute('data-admin-delete');
+    var peer = button.getAttribute('data-admin-peer') || '';
+    if (!messageId) return;
+    var confirmed = window.confirm('Delete this message for everyone?');
+    if (!confirmed) return;
+    button.disabled = true;
+    var result = await Store.adminDeleteMessage(messageId, peer);
+    if (!result.ok) {
+      button.disabled = false;
+      showNotice(result.error);
+      if (peer) showDmNotice(result.error);
+      return;
+    }
+    if (peer) removeDmMessage(messageId);
+    else removeRoomMessage(messageId);
+  }
+
+  function refreshSiteOwner() {
+    var user = currentUser();
+    if (!user || isLocal(user)) {
+      siteOwner = false;
+      applyAdminDeleteControls();
+      return;
+    }
+    if (ownerStatusBusy) return;
+    ownerStatusBusy = true;
+    Store.adminStatus().then(function (result) {
+      siteOwner = !!(result && result.ok && result.owner);
+      applyAdminDeleteControls();
+    }).catch(function () {
+      siteOwner = false;
+      applyAdminDeleteControls();
+    }).finally(function () {
+      ownerStatusBusy = false;
+    });
+  }
+
   function addMessage(message, animate) {
     if (!message || !message.id || seen[message.id]) return;
     if (message.clientId) removePending(message.clientId);
@@ -556,6 +648,7 @@
 
     item.appendChild(body);
     list.appendChild(item);
+    addAdminDeleteControl(item, message.id, '');
     if (animate) item.classList.add('is-new');
     list.scrollTop = list.scrollHeight;
   }
@@ -971,6 +1064,7 @@
     var item = document.createElement('article');
     item.className = 'chat-message' + (own ? ' is-own' : '');
     if (message.id) item.setAttribute('data-message-id', message.id);
+    item.setAttribute('data-chat-peer', dmPeerId);
     item.setAttribute('data-author-id', String(from.id || ''));
     item.appendChild(makeAvatar(own && me ? me : source, 'chat-avatar'));
     var body = document.createElement('div');
@@ -1001,6 +1095,7 @@
     body.appendChild(actions);
     item.appendChild(body);
     list.appendChild(item);
+    addAdminDeleteControl(item, message.id, dmPeerId);
     if (animate) item.classList.add('is-new');
     list.scrollTop = list.scrollHeight;
   }
@@ -1288,6 +1383,7 @@
 
     Store.getAccessToken().then(function (token) {
       accessToken = token || '';
+      refreshSiteOwner();
       if (!accessToken) {
         setStatus('Sign in again to use chat.', 'offline');
         setPending(true);
@@ -1324,6 +1420,8 @@
           renderNotifications();
         } else if (data.type === 'message') {
           addMessage(data.message, true);
+        } else if (data.type === 'message-deleted') {
+          removeRoomMessage(data.messageId);
         } else if (data.type === 'message-error') {
           handleMessageError(data);
         } else if (data.type === 'presence') {
@@ -1358,6 +1456,8 @@
           if (dmPeerId) showDmNotice(data.message || 'Could not send that friend request.');
         } else if (data.type === 'dm') {
           addDmMessage(data.message, true);
+        } else if (data.type === 'dm-message-deleted') {
+          if (String(data.peerId || '') === String(dmPeerId)) removeDmMessage(data.messageId);
         } else if (data.type === 'dm-history') {
           mergeDmHistory(data.friendId, data.messages);
         } else if (data.type === 'dm-error') {
@@ -1504,6 +1604,12 @@
       });
     }
     document.addEventListener('click', function (event) {
+      var adminDelete = event.target && event.target.closest ? event.target.closest('[data-admin-delete]') : null;
+      if (adminDelete) {
+        event.preventDefault();
+        deleteAdminMessageFromButton(adminDelete);
+        return;
+      }
       if (!notificationsOpen) return;
       if (event.target && event.target.closest && event.target.closest('.notification-nav')) return;
       setNotificationsOpen(false);
@@ -1590,6 +1696,8 @@
     var user = currentUser();
     if (!user) {
       notifications = [];
+      siteOwner = false;
+      applyAdminDeleteControls();
       setNotificationsOpen(false);
       renderNotifications();
       closeDm();
@@ -1604,6 +1712,7 @@
       return;
     }
     renderNotifications();
+    refreshSiteOwner();
     registerChatProfile();
     syncNotifications();
     if (socket && socket.readyState === WebSocket.OPEN) sendProfile(false);
@@ -1638,6 +1747,7 @@
     setOnline(0, []);
     positionNotificationNav(document.body.classList.contains('chat-active') ? 'chat' : '');
     renderNotifications();
+    refreshSiteOwner();
     registerChatProfile();
     syncNotifications();
     notificationTimer = window.setInterval(function () {

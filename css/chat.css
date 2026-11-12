@@ -1554,6 +1554,7 @@ body.chat-active .chat-card {
   right: 6px;
   z-index: 1;
   display: flex;
+  gap: 4px;
   margin: 0;
   opacity: 0;
   pointer-events: none;
@@ -1586,6 +1587,29 @@ body.chat-active .chat-card {
 
 .chat-reply-button:hover {
   color: var(--accent);
+}
+
+.chat-admin-delete {
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 92, 92, 0.32);
+  border-radius: 999px;
+  background: rgba(8, 13, 22, 0.9);
+  color: #ffb3b3;
+  font: inherit;
+  font-size: 0.62rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chat-admin-delete:hover,
+.chat-admin-delete:focus-visible {
+  border-color: rgba(255, 92, 92, 0.8);
+  color: #ffd6d6;
+}
+
+.chat-admin-delete:disabled {
+  opacity: 0.55;
+  cursor: wait;
 }
 
 .chat-mention {

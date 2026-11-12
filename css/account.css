@@ -792,6 +792,116 @@ body.account-open textarea {
   font-size: 0.74rem;
 }
 
+.account-username-form {
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-top: 12px;
+}
+
+.account-username-help {
+  margin: 2px 0 0;
+  color: var(--gray-text);
+  font-size: 0.68rem;
+  line-height: 1.45;
+}
+
+.account-owner-card {
+  border-color: rgba(68, 215, 182, 0.24);
+  background: rgba(68, 215, 182, 0.035);
+}
+
+.account-owner-list {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+  max-height: 320px;
+  overflow: auto;
+}
+
+.account-owner-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 10px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.12);
+  border-radius: 10px;
+  background: rgba(2, 6, 14, 0.28);
+}
+
+.account-owner-details {
+  display: grid;
+  min-width: 0;
+  flex: 1 1 160px;
+  gap: 2px;
+}
+
+.account-owner-details b {
+  overflow: hidden;
+  color: var(--light-text);
+  font-size: 0.78rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-owner-details span {
+  color: var(--gray-text);
+  font-size: 0.66rem;
+}
+
+.account-owner-button {
+  min-height: 30px !important;
+  padding: 0 10px;
+  font-size: 0.68rem !important;
+}
+
+.account-danger {
+  border: 1px solid rgba(255, 92, 92, 0.45);
+  border-radius: 10px;
+  background: rgba(255, 92, 92, 0.1);
+  color: #ffb3b3;
+}
+
+.account-danger:hover {
+  border-color: #ff5c5c;
+  background: rgba(255, 92, 92, 0.18);
+  color: #ffd6d6;
+}
+
+.account-owner-you {
+  color: #44d7b6;
+  font-size: 0.68rem;
+  font-weight: bold;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.account-owner-empty {
+  margin: 0;
+  color: var(--gray-text);
+  font-size: 0.72rem;
+}
+
+.account-owner-note {
+  margin: 10px 0 0;
+  color: var(--gray-text);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+@media (max-width: 620px) {
+  .account-username-form {
+    grid-template-columns: 1fr;
+  }
+
+  .account-owner-row {
+    align-items: stretch;
+  }
+
+  .account-owner-details {
+    flex-basis: 100%;
+  }
+}
+
 .account-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;

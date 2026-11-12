@@ -26,17 +26,17 @@ Free instances sleep after ~15 min idle, so the first load can take about a minu
 
 Accounts are stored by Supabase Auth and use a username and password. There is no email field, email verification, email sign-in link, or email password recovery in the site.
 
-Because Supabase's password endpoint expects an email-shaped identifier, new accounts receive a hidden login address derived from the normalized username, using a plus-addressed alias on the site's contact mailbox. It is never shown, and the site never sends account email to it. Supabase rejects reserved and non-resolving test domains, so the alias must stay on a real mail domain. Existing accounts created before this update can still enter their previous email in the username box to sign in for compatibility.
+Because Supabase's password endpoint expects an email-shaped identifier, accounts receive a hidden, random login address using a plus-addressed alias on the site's contact mailbox. Older accounts may instead have an address derived from their original username. The address stays fixed when the username changes; sign-in resolves the current username to that address through a database function. It is never shown, and the site never sends account email to it. Supabase rejects reserved and non-resolving test domains, so the alias must stay on a real mail domain. Existing accounts created before this update can still enter their previous email in the username box to sign in for compatibility.
 
 If `js/auth-config.js` is left empty, online accounts are disabled and new browser-only accounts are not created. Add the Supabase URL and anon key to enable username accounts.
 
 1. Create a project at https://supabase.com/dashboard.
 2. Open Project Settings -> API and copy the Project URL and the `anon` / publishable key into `js/auth-config.js`.
 3. In Authentication -> Providers -> Email, keep Email enabled and turn **off** "Confirm email". This is required: new usernames use an internal address that cannot receive a confirmation message.
-4. In the SQL editor, run `supabase/schema.sql`. It creates the `profiles` table, repairs any older duplicate usernames with a numeric suffix, and adds case-insensitive unique indexes plus triggers. Re-running it is safe.
+4. In the SQL editor, run `supabase/schema.sql`. It creates the `profiles` table, repairs any older duplicate usernames with a numeric suffix, and adds case-insensitive unique indexes plus triggers. This update also adds `site_admins`, username-change limits, the login resolver, and owner functions. Re-running it is safe for these objects.
 5. SMTP, email templates, and Auth URL Configuration are not needed for username accounts because the site never sends account email.
 
-Signed-in users get an Account settings panel for their profile picture, avatar reset, sync status, history, saved sites, app handles, and preferences. Usernames are permanent and are also the login. Passwords cannot be recovered without an email address, so choose them carefully. Profile pictures are cropped and resized to 256 × 256 in the browser, then stored in the account profile so they follow the account across domains and devices.
+Signed-in users get an Account settings panel for their username, profile picture, avatar reset, sync status, history, saved sites, app handles, and preferences. Regular accounts can change their username once every 7 days; the account that held the username `.` when the schema was applied is seeded into `site_admins` and can change it without that cooldown. Usernames remain case-insensitively unique and are also the login. The owner account can use Owner tools to rename or delete other accounts and delete room or direct messages. Passwords are stored by Supabase as one-way hashes and cannot be viewed; there is no email password recovery, so choose them carefully. Profile pictures are cropped and resized to 256 × 256 in the browser, then stored in the account profile so they follow the account across domains and devices.
 
 Signed-in users can permanently delete their account from Account settings. Deletion removes the Supabase auth user, synced profile, posted room and direct chat messages, notifications, friendships, friend requests, the chat directory entry, saved history, sites, app handles, game progress, and the local session. The Worker purges the user's chat data before the auth deletion; if that purge fails, the account is not deleted. There is no undo.
 
@@ -57,7 +57,10 @@ enforce that rule for new accounts. The binding and migration are in `wrangler.j
 `/api/chat/health`, notifications use `/api/chat/notifications` and `/api/chat/notifications/read`, and directory
 registration uses `/api/chat/register`. Account deletion calls the authenticated `/api/chat/purge` endpoint first,
 which removes that user's messages, notifications, friendships, requests, directory entry, and member entry from the
-Durable Object before the Supabase auth user is deleted.
+Durable Object before the Supabase auth user is deleted. Owner account deletion uses the authenticated
+`/api/chat/admin/purge-user` endpoint first, then the `site_admin_delete_account` database function. Owner message
+deletion uses `/api/chat/admin/delete-message`; `/api/admin/status` tells the account and chat pages whether to show
+owner controls. Owner checks use the stable `site_admins` table, never the current username.
 
 ### Emulators
 

@@ -134,9 +134,10 @@
   }
 
   // Supabase's email/password endpoint needs an email-shaped identifier even
-  // though the site no longer has an email system. New accounts get a stable,
-  // hidden address derived from their unique username; it is never displayed
-  // or used by the site to send messages.
+  // though the site no longer has an email system. Older accounts have a hidden
+  // address derived from their original username. New accounts get a random
+  // hidden address so a username can be reused after its owner renames without
+  // colliding with the old account. Neither form is displayed or mailed.
   function loginEmailForUsername(value) {
     var key = normalizeUsername(value);
     var hex = '';
@@ -146,11 +147,52 @@
     return LOGIN_EMAIL_LOCAL_PREFIX + hex + '@' + LOGIN_EMAIL_DOMAIN;
   }
 
-  function loginEmailForIdentifier(value) {
+  function loginEmailForNewAccount() {
+    var hex = '';
+    var bytes = new Uint8Array(8);
+    try {
+      window.crypto.getRandomValues(bytes);
+      for (var i = 0; i < bytes.length; i++) hex += ('0' + bytes[i].toString(16)).slice(-2);
+    } catch (error) {
+      hex = String(Date.now().toString(16)) + Math.random().toString(16).slice(2, 10);
+    }
+    return LOGIN_EMAIL_LOCAL_PREFIX + hex.slice(0, 24) + '@' + LOGIN_EMAIL_DOMAIN;
+  }
+
+  function missingRpcError(error) {
+    var message = String((error && (error.message || error.error_description)) || '');
+    var code = String((error && error.code) || '');
+    return code === 'PGRST202' || /could not find the function|function .* does not exist|schema cache/i.test(message);
+  }
+
+  async function loginEmailForIdentifier(value) {
     var raw = String(value == null ? '' : value).trim();
-    if (raw.indexOf('@') !== -1) return cleanEmail(raw);
+    if (raw.indexOf('@') !== -1) {
+      var directEmail = cleanEmail(raw);
+      return directEmail
+        ? { ok: true, email: directEmail }
+        : { ok: false, error: 'Enter a valid username.' };
+    }
     var check = validateUsername(raw);
-    return check.ok ? loginEmailForUsername(check.key) : '';
+    if (!check.ok) return { ok: false, error: 'Enter a valid username.' };
+    var auth = authClient();
+    if (!auth) return { ok: true, email: loginEmailForUsername(check.key) };
+
+    var result;
+    try {
+      result = await auth.rpc('login_email_for_username', { candidate: check.username });
+    } catch (error) {
+      if (missingRpcError(error)) return { ok: true, email: loginEmailForUsername(check.key) };
+      return { ok: false, error: 'Could not reach the account server. Check your connection and try again.' };
+    }
+    if (!result.error) {
+      var resolved = cleanEmail(result.data);
+      return resolved
+        ? { ok: true, email: resolved }
+        : { ok: false, error: 'Username or password is incorrect.' };
+    }
+    if (missingRpcError(result.error)) return { ok: true, email: loginEmailForUsername(check.key) };
+    return { ok: false, error: friendlyAuthError(result.error) };
   }
 
   function normalizeAvatar(value) {
@@ -681,39 +723,60 @@
     }
   }
 
+  function usernameChangeError(error) {
+    var message = String((error && (error.message || error.error_description)) || '');
+    var code = String((error && error.code) || '');
+    if (missingRpcError(error)) {
+      return 'Username changes are not available yet. The site owner needs to apply the latest database schema.';
+    }
+    if (code === 'P0001' || /username_change_rate_limited/i.test(message)) {
+      return 'You can change your username once every 7 days.';
+    }
+    if (code === '23505' || /username_taken|duplicate key.*username/i.test(message)) {
+      return 'That username is already taken. Pick another one.';
+    }
+    if (code === '22023' || /invalid_username/i.test(message)) {
+      return 'Use 1–24 letters, numbers, periods, dashes, or underscores.';
+    }
+    if (code === '42501' || /jwt|session|not authenticated|auth required/i.test(message)) {
+      return 'Your session expired. Sign in again and retry.';
+    }
+    return message || 'Could not change your username. Try again.';
+  }
+
   async function setUsername(value) {
     var user = getCurrentUser();
     if (!user) return { ok: false, error: 'Sign in first.' };
     var check = validateUsername(value);
     if (!check.ok) return check;
     var local = isLocalUser(user);
-    if (!local && normalizeEmail(user.email) === loginEmailForUsername(user.username) &&
-      normalizeUsername(user.username) !== check.key) {
-      return { ok: false, error: 'Usernames cannot be changed after the account is created.' };
-    }
     if (usernameTakenLocally(check.username, user.id)) {
       return { ok: false, error: 'That username is already taken. Pick another one.' };
     }
-    if (normalizeUsername(user.username) !== check.key) {
-      try {
-        var available = await usernameAvailableOnline(check.username);
-        if (!available) return { ok: false, error: 'That username is already taken. Pick another one.' };
-      } catch (error) {
-        if (!local) {
+
+    var serverName = check.username;
+    if (!local) {
+      var auth = authClient();
+      if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+      if (normalizeUsername(user.username) !== check.key) {
+        try {
+          var available = await usernameAvailableOnline(check.username);
+          if (!available) return { ok: false, error: 'That username is already taken. Pick another one.' };
+        } catch (error) {
           return { ok: false, error: 'Could not check whether that username is available. Check your connection and try again.' };
         }
       }
-    }
-    var auth = authClient();
-    if (!local && auth) {
       try {
-        var result = await auth.auth.updateUser({ data: { username: check.username } });
-        if (result.error) return { ok: false, error: friendlyAuthError(result.error) };
+        var result = await auth.rpc('change_username', { candidate: check.username });
+        if (result.error) return { ok: false, error: usernameChangeError(result.error) };
+        var returned = String(result.data == null ? '' : result.data).trim();
+        if (returned) serverName = cleanText(returned, 24);
       } catch (error) {
-        return { ok: false, error: friendlyAuthError(error) };
+        return { ok: false, error: usernameChangeError(error) };
       }
     }
-    user.username = check.username;
+
+    user.username = serverName;
     if (!saveUser(user)) {
       return { ok: false, error: 'This browser is out of storage.' };
     }
@@ -721,13 +784,33 @@
     var keys = Object.keys(registry.users);
     for (var i = 0; i < keys.length; i++) {
       var record = registry.users[keys[i]];
-      if (record && String(record.id) === String(user.id) && record.username !== check.username) {
-        record.username = check.username;
+      if (record && String(record.id) === String(user.id) && record.username !== serverName) {
+        record.username = serverName;
         writeLocalAuth(registry);
         break;
       }
     }
-    return { ok: true, username: check.username };
+
+    // Refresh the Supabase session so its stored user metadata matches the
+    // database. Without this, reloading could restore the old username from
+    // the locally persisted auth session.
+    if (!local) {
+      try {
+        var authClientNow = authClient();
+        var refreshed = authClientNow ? await authClientNow.auth.refreshSession() : null;
+        var refreshedUser = refreshed && refreshed.data && refreshed.data.session
+          ? refreshed.data.session.user
+          : null;
+        if (refreshedUser) {
+          var refreshedName = cleanText(identityFromAuthUser(refreshedUser).username, 24);
+          if (refreshedName && normalizeUsername(refreshedName) === normalizeUsername(serverName)) {
+            user.username = refreshedName;
+            saveUser(user);
+          }
+        }
+      } catch (error) {}
+    }
+    return { ok: true, username: user.username };
   }
 
   async function syncNow() {
@@ -738,6 +821,161 @@
     if (!synced) return { ok: false, error: 'Could not sync your account. Check the connection and try again.' };
     cloudReady = true;
     emitChange('profile');
+    return { ok: true };
+  }
+
+  function adminError(error) {
+    var message = String((error && (error.message || error.error_description)) || '');
+    var code = String((error && error.code) || '');
+    if (missingRpcError(error)) {
+      return 'Owner tools are not available yet. Apply the latest database schema first.';
+    }
+    if (code === '42501' || /not_authorized|owner access required/i.test(message)) {
+      return 'Owner access required.';
+    }
+    if (code === '23505' || /username_taken|duplicate key.*username/i.test(message)) {
+      return 'That username is already taken. Pick another one.';
+    }
+    if (code === '22023' || /invalid_username|account_not_found|cannot_delete_self/i.test(message)) {
+      return /cannot_delete_self/i.test(message)
+        ? 'You cannot delete your own owner account here.'
+        : 'That account or username is not valid.';
+    }
+    if (code === 'PGRST301' || /jwt|session expired|not authenticated/i.test(message)) {
+      return 'Your session expired. Sign in again and retry.';
+    }
+    return message || 'The owner action could not be completed.';
+  }
+
+  async function adminFetch(path, options) {
+    var token = await getAccessToken();
+    if (!token) return { ok: false, error: 'Your session expired. Sign in again and retry.' };
+    var response;
+    try {
+      response = await fetch(path, Object.assign({}, options || {}, {
+        headers: Object.assign({
+          Authorization: 'Bearer ' + token,
+          'content-type': 'application/json'
+        }, options && options.headers ? options.headers : {}),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      }));
+    } catch (error) {
+      return { ok: false, error: 'Could not reach the account server. Check your connection and try again.' };
+    }
+    var data = null;
+    try { data = await response.json(); } catch (error) {}
+    if (response.status === 401) return { ok: false, error: 'Your session expired. Sign in again and retry.' };
+    if (response.status === 403) return { ok: false, error: 'Owner access required.' };
+    if (!response.ok) {
+      return { ok: false, error: (data && data.error) || 'The owner action could not be completed.' };
+    }
+    return { ok: true, data: data || {} };
+  }
+
+  async function adminStatus() {
+    var result = await adminFetch('/api/admin/status', { method: 'GET' });
+    if (!result.ok) return { ok: false, owner: false, error: result.error };
+    return { ok: true, owner: result.data.owner === true };
+  }
+
+  async function adminListAccounts() {
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+    var result;
+    try {
+      result = await auth.rpc('site_admin_list_accounts');
+    } catch (error) {
+      return { ok: false, error: adminError(error) };
+    }
+    if (result.error) return { ok: false, error: adminError(result.error) };
+    var rows = Array.isArray(result.data) ? result.data : [];
+    return {
+      ok: true,
+      accounts: rows.map(function (row) {
+        return {
+          id: String(row && row.id || ''),
+          username: cleanText(row && row.username, 24),
+          createdAt: row && row.created_at || '',
+          lastSignInAt: row && row.last_sign_in_at || '',
+          isAdmin: !!(row && row.is_admin)
+        };
+      }).filter(function (row) { return !!row.id; })
+    };
+  }
+
+  function removeCachedAccount(userId) {
+    var id = String(userId || '');
+    if (!id) return;
+    var profiles = readProfiles();
+    if (profiles.users && profiles.users[id]) {
+      delete profiles.users[id];
+      writeProfiles(profiles);
+    }
+    var registry = readLocalAuth();
+    var changed = false;
+    Object.keys(registry.users || {}).forEach(function (key) {
+      var record = registry.users[key];
+      if (record && String(record.id) === id) {
+        delete registry.users[key];
+        changed = true;
+      }
+    });
+    if (changed) writeLocalAuth(registry);
+  }
+
+  async function adminChangeUsername(targetId, value) {
+    var check = validateUsername(value);
+    if (!check.ok) return check;
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+    var target = String(targetId || '').trim();
+    if (!target) return { ok: false, error: 'Choose an account.' };
+    var result;
+    try {
+      result = await auth.rpc('site_admin_change_username', { target: target, candidate: check.username });
+    } catch (error) {
+      return { ok: false, error: adminError(error) };
+    }
+    if (result.error) return { ok: false, error: adminError(result.error) };
+    var serverName = cleanText(result.data, 24) || check.username;
+    var profiles = readProfiles();
+    if (profiles.users && profiles.users[target]) {
+      profiles.users[target].username = serverName;
+      writeProfiles(profiles);
+    }
+    return { ok: true, username: serverName };
+  }
+
+  async function adminDeleteMessage(messageId, peerId) {
+    var id = String(messageId || '').trim();
+    if (!id) return { ok: false, error: 'Message not found.' };
+    var result = await adminFetch('/api/chat/admin/delete-message', {
+      method: 'POST',
+      body: JSON.stringify({ messageId: id, peer: String(peerId || '') })
+    });
+    if (!result.ok) return result;
+    return { ok: true };
+  }
+
+  async function adminDeleteAccount(targetId) {
+    var target = String(targetId || '').trim();
+    if (!target) return { ok: false, error: 'Choose an account.' };
+    var purge = await adminFetch('/api/chat/admin/purge-user', {
+      method: 'POST',
+      body: JSON.stringify({ userId: target })
+    });
+    if (!purge.ok) return purge;
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+    var result;
+    try {
+      result = await auth.rpc('site_admin_delete_account', { target: target });
+    } catch (error) {
+      return { ok: false, error: adminError(error) + ' Chat data was already removed.' };
+    }
+    if (result.error) return { ok: false, error: adminError(result.error) + ' Chat data was already removed.' };
+    removeCachedAccount(target);
     return { ok: true };
   }
 
@@ -905,9 +1143,13 @@
 
   function mergeRemoteProfile(local, remote, identity) {
     var data = remote && remote.data && typeof remote.data === 'object' ? remote.data : {};
+    var remoteUsername = cleanText(remote && remote.username, 24);
+    if (!remoteUsername || !/^[A-Za-z0-9_.-]+$/.test(remoteUsername)) {
+      remoteUsername = identity.username;
+    }
     return normalizeProfile({
       id: identity.id,
-      username: identity.username,
+      username: remoteUsername,
       email: identity.email,
       createdAt: identity.createdAt,
       updatedAt: remote.updated_at || new Date().toISOString(),
@@ -945,8 +1187,17 @@
     if (remote) {
       var next = readProfiles();
       var local = next.users[identity.id] || profile;
-      next.users[identity.id] = mergeRemoteProfile(local, remote, identity);
+      var merged = mergeRemoteProfile(local, remote, identity);
+      next.users[identity.id] = merged;
       writeProfiles(next);
+      if (merged.username && merged.username !== identity.username) {
+        writeSession({
+          id: identity.id,
+          username: merged.username,
+          email: identity.email,
+          createdAt: identity.createdAt
+        });
+      }
       cloudReady = true;
       emitChange('profile');
     } else if (fresh) {
@@ -1127,7 +1378,7 @@
     var result;
     try {
       result = await auth.auth.signUp({
-        email: loginEmailForUsername(check.key),
+        email: loginEmailForNewAccount(),
         password: password,
         options: { data: { username: check.username } }
       });
@@ -1149,8 +1400,9 @@
     var raw = String(identifier == null ? '' : identifier).trim();
     if (!raw) return { ok: false, error: 'Enter your username.' };
     if (!password) return { ok: false, error: 'Enter your password.' };
-    var email = loginEmailForIdentifier(raw);
-    if (!email) return { ok: false, error: 'Enter a valid username.' };
+    var resolved = await loginEmailForIdentifier(raw);
+    if (!resolved.ok) return resolved;
+    var email = resolved.email;
     var auth = authClient();
     if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
 
@@ -1318,6 +1570,11 @@
     setApps: setApps,
     setAvatar: setAvatar,
     setUsername: setUsername,
+    adminStatus: adminStatus,
+    adminListAccounts: adminListAccounts,
+    adminChangeUsername: adminChangeUsername,
+    adminDeleteAccount: adminDeleteAccount,
+    adminDeleteMessage: adminDeleteMessage,
     isCloudConfigured: isCloudConfigured,
     getAccessToken: getAccessToken,
     syncNow: syncNow,

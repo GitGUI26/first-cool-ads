@@ -168,6 +168,15 @@ function dmKey(a, b) {
   return 'dm:' + [String(a), String(b)].sort().join(':');
 }
 
+function chatHeaders(request) {
+  const headers = new Headers(request.headers);
+  // These operation headers are set only by authenticated routes after an
+  // owner check; never let a caller smuggle them through a normal chat route.
+  headers.delete('x-chat-admin-delete');
+  headers.delete('x-chat-admin-purge');
+  return headers;
+}
+
 function sameOrigin(request) {
   const origin = request.headers.get('Origin');
   if (!origin) return true;
@@ -216,6 +225,38 @@ async function verifySupabaseUser(request, env) {
     name: cleanName(meta.username || meta.display_name || fallback),
     avatar: cleanAvatar(meta.avatar_thumb || meta.avatar)
   };
+}
+
+async function supabaseRpc(request, env, fn, body) {
+  const token = new URL(request.url).searchParams.get('token') || bearerToken(request) || '';
+  if (!token || token.length < 20 || token.length > 5000) return { data: null, error: 'not_authenticated' };
+  const supabaseUrl = String(env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/+$/, '');
+  const anonKey = String(env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY);
+  let response;
+  try {
+    response = await fetch(supabaseUrl + '/rest/v1/rpc/' + encodeURIComponent(fn), {
+      method: 'POST',
+      headers: {
+        apikey: anonKey,
+        authorization: 'Bearer ' + token,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(body || {})
+    });
+  } catch (error) {
+    return { data: null, error: 'network_error' };
+  }
+  let data = null;
+  try { data = await response.json(); } catch (error) {}
+  if (!response.ok) {
+    return { data: null, error: (data && (data.message || data.hint || data.code)) || 'request_failed' };
+  }
+  return { data, error: null };
+}
+
+async function isSiteAdmin(request, env) {
+  const result = await supabaseRpc(request, env, 'site_admin_status', {});
+  return !result.error && result.data === true;
 }
 
 function memberList(value) {
@@ -378,6 +419,32 @@ export class ChatRoom {
       this.sendToUser(id, { type: 'notifications-read' });
     }
     return next;
+  }
+
+  async adminDeleteMessage(adminId, messageId, peerId) {
+    const id = cleanId(messageId);
+    if (!id) return { ok: false, error: 'Message not found.' };
+    const admin = cleanId(adminId);
+    const peer = cleanId(peerId);
+
+    if (peer) {
+      const messages = await this.readDm(admin, peer);
+      const next = messages.filter(item => item.id !== id);
+      if (next.length === messages.length) return { ok: false, error: 'Message not found.' };
+      const key = dmKey(admin, peer);
+      if (next.length) await this.ctx.storage.put(key, next);
+      else await this.ctx.storage.delete(key);
+      this.sendToUser(admin, { type: 'dm-message-deleted', messageId: id, peerId: peer });
+      this.sendToUser(peer, { type: 'dm-message-deleted', messageId: id, peerId: admin });
+      return { ok: true };
+    }
+
+    const state = await this.readState();
+    const next = state.history.filter(item => item.id !== id);
+    if (next.length === state.history.length) return { ok: false, error: 'Message not found.' };
+    await this.ctx.storage.put('history', next);
+    this.broadcast({ type: 'message-deleted', messageId: id });
+    return { ok: true };
   }
 
   async purgeUser(userId) {
@@ -727,6 +794,31 @@ export class ChatRoom {
     }
     user = { id: String(user.id), name: cleanName(user.name), avatar: cleanAvatar(user.avatar) };
 
+    if (request.headers.get('x-chat-admin-delete') === '1') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      let body = {};
+      try { body = await request.json(); } catch (error) {}
+      try {
+        const result = await this.adminDeleteMessage(user.id, body.messageId, body.peer);
+        return json(result, result.ok ? 200 : 404);
+      } catch (error) {
+        return json({ error: 'Could not delete that message.' }, 500);
+      }
+    }
+
+    if (request.headers.get('x-chat-admin-purge') === '1') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      let body = {};
+      try { body = await request.json(); } catch (error) {}
+      const target = cleanId(body.userId);
+      if (!target || target === user.id) return json({ error: 'Choose another account.' }, 400);
+      try {
+        return json(await this.purgeUser(target));
+      } catch (error) {
+        return json({ error: 'Could not remove that account\u2019s chat data.' }, 500);
+      }
+    }
+
     if (request.headers.get('x-chat-purge') === '1') {
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
       try {
@@ -1000,6 +1092,51 @@ export default {
       return json({ ok: true, service: 'global-chat' });
     }
 
+    if (pathname === '/api/admin/status') {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'GET') return json({ error: 'Method not allowed.' }, 405);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account.' }, 401);
+      return json({ owner: await isSiteAdmin(request, env) });
+    }
+
+    if (pathname === '/api/chat/admin/delete-message') {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      if (!env.CHAT_ROOM) return json({ error: 'Chat is not available.' }, 503);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account.' }, 401);
+      if (!(await isSiteAdmin(request, env))) return json({ error: 'Owner access required.' }, 403);
+      let body = {};
+      try { body = await request.clone().json(); } catch (error) {}
+      if (!cleanId(body.messageId)) return json({ error: 'Message not found.' }, 400);
+      const id = env.CHAT_ROOM.idFromName('global');
+      const room = env.CHAT_ROOM.get(id);
+      const headers = chatHeaders(request);
+      headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
+      headers.set('x-chat-admin-delete', '1');
+      return room.fetch(new Request(request, { headers }));
+    }
+
+    if (pathname === '/api/chat/admin/purge-user') {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      if (!env.CHAT_ROOM) return json({ error: 'Chat is not available.' }, 503);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account.' }, 401);
+      if (!(await isSiteAdmin(request, env))) return json({ error: 'Owner access required.' }, 403);
+      let body = {};
+      try { body = await request.clone().json(); } catch (error) {}
+      const target = cleanId(body.userId);
+      if (!target || target === user.id) return json({ error: 'Choose another account.' }, 400);
+      const id = env.CHAT_ROOM.idFromName('global');
+      const room = env.CHAT_ROOM.get(id);
+      const headers = chatHeaders(request);
+      headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
+      headers.set('x-chat-admin-purge', '1');
+      return room.fetch(new Request(request, { headers }));
+    }
+
     if (pathname === '/api/chat/history') {
       if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
       if (request.method !== 'GET') return json({ error: 'Method not allowed.' }, 405);
@@ -1008,7 +1145,7 @@ export default {
       if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
       const id = env.CHAT_ROOM.idFromName('global');
       const room = env.CHAT_ROOM.get(id);
-      const headers = new Headers(request.headers);
+      const headers = chatHeaders(request);
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       headers.set('x-chat-read', '1');
       return room.fetch(new Request(request, { headers }));
@@ -1024,7 +1161,7 @@ export default {
       if (!friend) return json({ error: 'Choose a friend.' }, 400);
       const id = env.CHAT_ROOM.idFromName('global');
       const room = env.CHAT_ROOM.get(id);
-      const headers = new Headers(request.headers);
+      const headers = chatHeaders(request);
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       headers.set('x-chat-read', '1');
       headers.set('x-chat-dm', friend);
@@ -1039,7 +1176,7 @@ export default {
       if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
       const id = env.CHAT_ROOM.idFromName('global');
       const room = env.CHAT_ROOM.get(id);
-      const headers = new Headers(request.headers);
+      const headers = chatHeaders(request);
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       headers.set('x-chat-register', '1');
       try {
@@ -1057,7 +1194,7 @@ export default {
       if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
       const id = env.CHAT_ROOM.idFromName('global');
       const room = env.CHAT_ROOM.get(id);
-      const headers = new Headers(request.headers);
+      const headers = chatHeaders(request);
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       headers.set('x-chat-notifications', '1');
       return room.fetch(new Request(request, { headers }));
@@ -1071,7 +1208,7 @@ export default {
       if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
       const id = env.CHAT_ROOM.idFromName('global');
       const room = env.CHAT_ROOM.get(id);
-      const headers = new Headers(request.headers);
+      const headers = chatHeaders(request);
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       headers.set('x-chat-notifications-read', '1');
       return room.fetch(new Request(request, { headers }));
@@ -1085,7 +1222,7 @@ export default {
       if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
       const id = env.CHAT_ROOM.idFromName('global');
       const room = env.CHAT_ROOM.get(id);
-      const headers = new Headers(request.headers);
+      const headers = chatHeaders(request);
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       headers.set('x-chat-purge', '1');
       try {
@@ -1107,7 +1244,7 @@ export default {
 
       const id = env.CHAT_ROOM.idFromName('global');
       const room = env.CHAT_ROOM.get(id);
-      const headers = new Headers(request.headers);
+      const headers = chatHeaders(request);
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       return room.fetch(new Request(request, { headers }));
     }

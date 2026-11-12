@@ -6,6 +6,16 @@
     var updates = [
         {
             date: '2026-11-12',
+            title: 'Usernames can change, and the owner gets account tools',
+            items: [
+                'Regular accounts can change their username once every 7 days. The current owner account can change as often as they like.',
+                'Usernames stay unique, and sign-in follows the new username while the hidden login address stays stable.',
+                'The owner can rename or delete other accounts and delete room or direct messages from chat.',
+                'Passwords are stored as one-way hashes by Supabase and cannot be viewed.'
+            ]
+        },
+        {
+            date: '2026-11-12',
             title: 'Selected cursor stays visible over buttons',
             items: [
                 'Buttons and links no longer bring back the native pointer when a custom cursor is selected.',

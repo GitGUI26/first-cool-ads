@@ -15,6 +15,7 @@
   var prefTimer = 0;
   var initialized = false;
   var activeAuthMode = 'signin';
+  var ownerState = { userId: '', status: 'idle', isOwner: false, loading: false, accounts: [] };
 
   function isLocalUser(user) {
     return !!user && String(user.id || '').indexOf('local-') === 0;
@@ -285,6 +286,10 @@
     var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
     var local = isLocalUser(user);
     setAvatarImages(user);
+    var usernameInput = $('accountUsernameInput');
+    if (usernameInput && document.activeElement !== usernameInput) {
+      usernameInput.value = user.username;
+    }
     $('accountUsername').textContent = '@' + user.username;
     $('accountJoined').textContent = 'Member since ' + formatDate(user.createdAt) +
       (local || !configured ? ' · saved in this browser' : ' · online account');
@@ -304,6 +309,141 @@
     renderWebsites(user);
     renderAppCards();
     renderNav();
+    refreshOwnerTools(false);
+  }
+
+  function renderOwnerTools() {
+    var card = $('accountOwnerCard');
+    var user = currentUser();
+    var canShow = !!user && !isLocalUser(user) && ownerState.isOwner;
+    setHidden(card, !canShow);
+    var help = $('accountUsernameHelp');
+    if (help) {
+      help.textContent = ownerState.isOwner
+        ? 'Owner account: you can change your username as often as you like.'
+        : 'Regular accounts can change their username once every 7 days.';
+    }
+    if (!canShow) return;
+    var list = $('accountOwnerList');
+    if (!list) return;
+    list.textContent = '';
+    if (ownerState.loading) {
+      list.appendChild(item('p', 'account-owner-empty', 'Loading accounts…'));
+      return;
+    }
+    if (!ownerState.accounts.length) {
+      list.appendChild(item('p', 'account-owner-empty', 'No accounts found.'));
+      return;
+    }
+    ownerState.accounts.forEach(function (account) {
+      var row = item('div', 'account-owner-row');
+      var details = item('div', 'account-owner-details');
+      details.appendChild(item('b', '', '@' + account.username));
+      var meta = account.isAdmin ? 'Owner' : (account.lastSignInAt ? 'Last seen ' + formatDate(account.lastSignInAt) : 'Has not signed in yet');
+      details.appendChild(item('span', '', meta));
+      row.appendChild(details);
+      if (String(account.id) === String(user.id)) {
+        row.appendChild(item('span', 'account-owner-you', 'You'));
+      } else {
+        var rename = item('button', 'account-secondary account-owner-button', 'Rename');
+        rename.type = 'button';
+        rename.setAttribute('data-owner-rename', account.id);
+        rename.setAttribute('data-owner-name', account.username);
+        var remove = item('button', 'account-danger account-owner-button', 'Delete');
+        remove.type = 'button';
+        remove.setAttribute('data-owner-delete', account.id);
+        remove.setAttribute('data-owner-name', account.username);
+        row.appendChild(rename);
+        row.appendChild(remove);
+      }
+      list.appendChild(row);
+    });
+  }
+
+  async function refreshOwnerAccounts() {
+    var user = currentUser();
+    if (!user || isLocalUser(user) || !ownerState.isOwner) return;
+    ownerState.loading = true;
+    renderOwnerTools();
+    var result = await Store.adminListAccounts();
+    ownerState.loading = false;
+    if (!result.ok) {
+      ownerState.accounts = [];
+      showError('accountOwnerMessage', result.error);
+      renderOwnerTools();
+      return;
+    }
+    ownerState.accounts = result.accounts;
+    showSuccess('accountOwnerMessage', result.accounts.length + ' account' + (result.accounts.length === 1 ? '' : 's') + ' loaded.');
+    renderOwnerTools();
+  }
+
+  async function refreshOwnerTools(force) {
+    var user = currentUser();
+    if (!user || isLocalUser(user)) {
+      ownerState = { userId: '', status: 'idle', isOwner: false, loading: false, accounts: [] };
+      renderOwnerTools();
+      return;
+    }
+    if (!force && ownerState.userId === user.id && ownerState.status !== 'idle' && ownerState.status !== 'error') {
+      renderOwnerTools();
+      return;
+    }
+    ownerState.userId = user.id;
+    ownerState.status = 'loading';
+    ownerState.isOwner = false;
+    ownerState.accounts = [];
+    renderOwnerTools();
+    var status = await Store.adminStatus();
+    if (!currentUser() || currentUser().id !== user.id) return;
+    ownerState.status = status.ok ? 'ready' : 'error';
+    ownerState.isOwner = !!(status.ok && status.owner);
+    renderOwnerTools();
+    if (ownerState.isOwner) refreshOwnerAccounts();
+  }
+
+  async function renameOwnerAccount(id, currentName) {
+    var next = window.prompt('New username for @' + currentName + ':', currentName);
+    if (next === null) return;
+    var result = await Store.adminChangeUsername(id, next);
+    if (!result.ok) {
+      showError('accountOwnerMessage', result.error);
+      return;
+    }
+    showSuccess('accountOwnerMessage', 'Renamed to @' + result.username + '.');
+    refreshOwnerAccounts();
+    render();
+  }
+
+  async function deleteOwnerAccount(id, username) {
+    var confirmed = window.confirm('Permanently delete @' + username + ' and remove their chat data? This cannot be undone.');
+    if (!confirmed) return;
+    var result = await Store.adminDeleteAccount(id);
+    if (!result.ok) {
+      showError('accountOwnerMessage', result.error);
+      return;
+    }
+    showSuccess('accountOwnerMessage', 'Account @' + username + ' deleted.');
+    refreshOwnerAccounts();
+  }
+
+  async function submitUsernameChange() {
+    var form = $('accountUsernameForm');
+    var input = $('accountUsernameInput');
+    if (!form || !input) return;
+    showError('accountUsernameError', '');
+    setBusy(form, true, 'Changing…');
+    var result = await Store.setUsername(input.value);
+    setBusy(form, false);
+    if (!result.ok) {
+      showError('accountUsernameError', result.error);
+      return;
+    }
+    input.value = result.username;
+    showSuccess('accountUsernameError', 'Username changed to @' + result.username + '.');
+    renderDashboard(currentUser());
+    refreshOwnerTools(true);
+    showToast('Username changed to @' + result.username + '.');
   }
 
   function render() {
@@ -633,6 +773,24 @@
     if ($('avatarUpload')) $('avatarUpload').addEventListener('change', handleAvatarUpload);
     if ($('avatarReset')) $('avatarReset').addEventListener('click', resetAvatar);
     if ($('accountSyncNow')) $('accountSyncNow').addEventListener('click', syncAccount);
+    if ($('accountUsernameForm')) {
+      $('accountUsernameForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+        submitUsernameChange();
+      });
+    }
+    if ($('accountOwnerRefresh')) $('accountOwnerRefresh').addEventListener('click', refreshOwnerAccounts);
+    if ($('accountOwnerList')) {
+      $('accountOwnerList').addEventListener('click', function (event) {
+        var rename = event.target.closest('[data-owner-rename]');
+        if (rename) {
+          renameOwnerAccount(rename.getAttribute('data-owner-rename'), rename.getAttribute('data-owner-name'));
+          return;
+        }
+        var remove = event.target.closest('[data-owner-delete]');
+        if (remove) deleteOwnerAccount(remove.getAttribute('data-owner-delete'), remove.getAttribute('data-owner-name'));
+      });
+    }
     if ($('websiteList')) {
       $('websiteList').addEventListener('click', function (event) {
         var button = event.target.closest('[data-remove-website]');
