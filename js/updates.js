@@ -5,11 +5,20 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-12',
+            title: 'Deleted accounts now clear chat messages',
+            items: [
+                'Deleting an account now removes that user\'s posted room messages and direct messages from chat.',
+                'If the chat cleanup fails, the account is not deleted, so a successful deletion does not leave messages behind.',
+                'The delete confirmation and Account settings now include chat messages in the list of removed data.'
+            ]
+        },
+        {
             date: '2026-11-11',
             title: 'Delete your account',
             items: [
                 'Signed-in users can now permanently delete their account from Account settings.',
-                'Deletion removes the login, profile, saved data, game progress, and local session; shared chat messages that were already posted may remain.'
+                'Deletion removes the login, profile, saved data, game progress, and local session.'
             ]
         },
         {

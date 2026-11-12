@@ -348,6 +348,42 @@
     list.scrollTop = list.scrollHeight;
   }
 
+  function removeUserContent(userId) {
+    var id = String(userId || '');
+    if (!id) return;
+    messages = messages.filter(function (message) {
+      var removed = String(message && message.user && message.user.id) === id;
+      if (removed) delete seen[message.id];
+      return !removed;
+    });
+    document.querySelectorAll('#chatMessages .chat-message, #chatDmMessages .chat-message').forEach(function (item) {
+      if (String(item.getAttribute('data-author-id') || '') === id) item.remove();
+    });
+    Object.keys(dmMessages).forEach(function (peer) {
+      dmMessages[peer] = dmMessages[peer].filter(function (message) {
+        var removed = String(message && message.from && message.from.id) === id;
+        if (removed) delete dmSeen[message.id];
+        return !removed;
+      });
+    });
+    delete members[id];
+    onlineMembers = onlineMembers.filter(function (member) { return String(member && member.id) !== id; });
+    friends = friends.filter(function (friend) { return String(friend && friend.id) !== id; });
+    friendRequests = friendRequests.filter(function (request) { return String(request && request.id) !== id; });
+    delete outgoingRequests[id];
+    if (dmPeerId === id) {
+      closeDm();
+      showNotice('That member deleted their account.');
+    }
+    renderPresence();
+    renderFriends();
+    if (!messages.length) renderEmpty('No messages yet');
+    if (dmPeerId) {
+      if ((dmMessages[dmPeerId] || []).length) renderDmMessages();
+      else renderDmEmpty('No messages yet');
+    }
+  }
+
   function mergeMembers(list) {
     if (!Array.isArray(list)) return;
     list.forEach(function (member) {
@@ -1017,6 +1053,8 @@
           mergeDmHistory(data.friendId, data.messages);
         } else if (data.type === 'dm-error') {
           handleDmError(data);
+        } else if (data.type === 'purge-user') {
+          removeUserContent(data.userId);
         } else if (data.type === 'error') {
           showNotice(data.message || 'Message not sent.');
         }

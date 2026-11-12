@@ -585,7 +585,7 @@
   async function deleteCurrentAccount() {
     var user = currentUser();
     if (!user) return;
-    var confirmed = window.confirm('Permanently delete @' + user.username + '? This removes your login, profile, history, saved sites, app handles, preferences, and game progress. This cannot be undone.');
+    var confirmed = window.confirm('Permanently delete @' + user.username + '? This removes your login, profile, chat messages, history, saved sites, app handles, preferences, and game progress. This cannot be undone.');
     if (!confirmed) return;
     var button = $('accountDelete');
     var label = button ? button.textContent : '';

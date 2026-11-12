@@ -266,6 +266,64 @@ export class ChatRoom {
     return messages.filter(item => item && item.id && item.from && item.from.id && item.to).slice(-MAX_DM_HISTORY);
   }
 
+  async purgeUser(userId) {
+    const id = String(userId || '');
+    if (!id) throw new Error('Missing user.');
+
+    const state = await this.readState();
+    const history = state.history.filter(item => String(item && item.user && item.user.id) !== id);
+    const members = state.members.filter(item => String(item && item.id) !== id);
+    await this.ctx.storage.put('history', history);
+    await this.ctx.storage.put('members', members);
+
+    const social = await this.readSocial();
+    let friendshipsRemoved = 0;
+    let requestsRemoved = 0;
+    Object.keys(social.friendships).forEach(ownerId => {
+      if (ownerId === id) {
+        friendshipsRemoved += social.friendships[ownerId].length;
+        delete social.friendships[ownerId];
+        return;
+      }
+      const before = social.friendships[ownerId].length;
+      social.friendships[ownerId] = social.friendships[ownerId].filter(item => item.id !== id);
+      friendshipsRemoved += before - social.friendships[ownerId].length;
+    });
+    Object.keys(social.requests).forEach(ownerId => {
+      if (ownerId === id) {
+        requestsRemoved += social.requests[ownerId].length;
+        delete social.requests[ownerId];
+        return;
+      }
+      const before = social.requests[ownerId].length;
+      social.requests[ownerId] = social.requests[ownerId].filter(item => item.from.id !== id);
+      requestsRemoved += before - social.requests[ownerId].length;
+    });
+    await this.ctx.storage.put('social', social);
+
+    let directMessagesRemoved = 0;
+    const conversations = await this.ctx.storage.list({ prefix: 'dm:' });
+    for (const [key, value] of conversations) {
+      const pair = String(key).slice(3).split(':');
+      if (pair.indexOf(id) === -1) continue;
+      const entries = Array.isArray(value) ? value : [];
+      const next = entries.filter(item => String(item && item.from && item.from.id) !== id);
+      if (next.length === entries.length) continue;
+      directMessagesRemoved += entries.length - next.length;
+      if (next.length) await this.ctx.storage.put(key, next);
+      else await this.ctx.storage.delete(key);
+    }
+
+    const removed = {
+      roomMessages: state.history.length - history.length,
+      directMessages: directMessagesRemoved,
+      friendships: friendshipsRemoved,
+      requests: requestsRemoved
+    };
+    this.broadcast({ type: 'purge-user', userId: id, removed });
+    return { ok: true, removed };
+  }
+
   onlineUsers() {
     const online = new Map();
     for (const socket of this.ctx.getWebSockets()) {
@@ -537,6 +595,15 @@ export class ChatRoom {
     }
     user = { id: String(user.id), name: cleanName(user.name), avatar: cleanAvatar(user.avatar) };
 
+    if (request.headers.get('x-chat-purge') === '1') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      try {
+        return json(await this.purgeUser(user.id));
+      } catch (error) {
+        return json({ error: 'Could not remove chat messages.' }, 500);
+      }
+    }
+
     if (!isWebSocketUpgrade(request)) {
       if (request.method !== 'GET' || request.headers.get('x-chat-read') !== '1') {
         return new Response('Expected a WebSocket upgrade.', { status: 426 });
@@ -767,6 +834,24 @@ export default {
       headers.set('x-chat-read', '1');
       headers.set('x-chat-dm', friend);
       return room.fetch(new Request(request, { headers }));
+    }
+
+    if (pathname === '/api/chat/purge') {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      if (!env.CHAT_ROOM) return json({ error: 'Chat is not available.' }, 503);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
+      const id = env.CHAT_ROOM.idFromName('global');
+      const room = env.CHAT_ROOM.get(id);
+      const headers = new Headers(request.headers);
+      headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
+      headers.set('x-chat-purge', '1');
+      try {
+        return await room.fetch(new Request(request, { headers }));
+      } catch (error) {
+        return json({ error: 'Could not remove chat messages.' }, 500);
+      }
     }
 
     if (pathname === '/api/chat') {

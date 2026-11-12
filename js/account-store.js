@@ -1222,6 +1222,29 @@
     return 'Could not delete your account. Try again.';
   }
 
+  async function purgeChatMessages() {
+    var token = await getAccessToken();
+    if (!token) return { ok: false, error: 'Your session expired. Sign in again and retry.' };
+    var response;
+    try {
+      response = await fetch('/api/chat/purge', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+    } catch (error) {
+      return { ok: false, error: 'Could not reach chat to remove your messages. Check your connection and try again.' };
+    }
+    if (response.status === 401) {
+      return { ok: false, error: 'Your session expired. Sign in again and retry.' };
+    }
+    if (!response.ok) {
+      return { ok: false, error: 'Could not remove your chat messages. Try again.' };
+    }
+    return { ok: true };
+  }
+
   async function deleteAccount() {
     var user = getCurrentUser();
     if (!user) return { ok: false, error: 'Sign in first.' };
@@ -1231,13 +1254,17 @@
     }
     var auth = authClient();
     if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+    var chatPurge = await purgeChatMessages();
+    if (!chatPurge.ok) return chatPurge;
     var result;
     try {
       result = await auth.rpc('delete_own_account');
     } catch (error) {
       return { ok: false, error: deleteAccountError(error) };
     }
-    if (result.error) return { ok: false, error: deleteAccountError(result.error) };
+    if (result.error) {
+      return { ok: false, error: deleteAccountError(result.error) + ' Your chat messages were removed.' };
+    }
     purgeLocalAccount(user);
     return { ok: true };
   }
