@@ -44,7 +44,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=9" rel="stylesheet">
 <link href="css/refresh.css?v=11" rel="stylesheet">
-<link href="css/browser.css?v=1" rel="stylesheet">
+<link href="css/browser.css?v=3" rel="stylesheet">
 <link href="css/account.css?v=7" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
@@ -792,13 +792,24 @@
             <h2 class="browser-window-title" id="browserOverlayTitle">Browser</h2>
           </div>
         </div>
+        <div class="browser-nav-controls" aria-label="Page navigation">
+          <button class="browser-nav-button" id="browserOverlayBack" type="button" title="Back" aria-label="Back">
+            <i class="fas fa-arrow-left" aria-hidden="true"></i>
+          </button>
+          <button class="browser-nav-button" id="browserOverlayForward" type="button" title="Forward" aria-label="Forward">
+            <i class="fas fa-arrow-right" aria-hidden="true"></i>
+          </button>
+          <button class="browser-nav-button" id="browserOverlayReload" type="button" title="Reload" aria-label="Reload">
+            <i class="fas fa-rotate-right" aria-hidden="true"></i>
+          </button>
+        </div>
         <div class="browser-window-actions">
           <button class="browser-window-action" id="browserOverlayFullscreen" type="button"
             aria-label="Enter fullscreen" aria-pressed="false">
             <i class="fas fa-expand" aria-hidden="true"></i><span>Fullscreen</span>
           </button>
           <button class="browser-window-action browser-window-action-close" id="browserOverlayClose" type="button"
-            aria-label="Close browser"><i class="fas fa-xmark" aria-hidden="true"></i><span>Close</span></button>
+            aria-label="Exit browser"><i class="fas fa-xmark" aria-hidden="true"></i><span>Exit</span></button>
         </div>
       </div>
       <div class="browser-window-stage">
@@ -948,7 +959,7 @@
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=18"></script>
   <script src="js/main.js?v=32"></script>
-  <script src="js/updates.js?v=33"></script>
+  <script src="js/updates.js?v=34"></script>
   <script src="js/account.js?v=13"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=8"></script>
@@ -967,8 +978,12 @@
       const frame = document.getElementById('browserOverlayFrame');
       const closeButton = document.getElementById('browserOverlayClose');
       const fullscreenButton = document.getElementById('browserOverlayFullscreen');
+      const backButton = document.getElementById('browserOverlayBack');
+      const forwardButton = document.getElementById('browserOverlayForward');
+      const reloadButton = document.getElementById('browserOverlayReload');
       const browserTab = document.getElementById('browserTab');
-      if (!overlay || !windowEl || !frame || !closeButton || !fullscreenButton) return;
+      if (!overlay || !windowEl || !frame || !closeButton || !fullscreenButton ||
+        !backButton || !forwardButton || !reloadButton) return;
       let loaded = false;
       let browserFrameReady = false;
       let pendingBrowserUrl = '';
@@ -1041,6 +1056,14 @@
         } catch (error) {}
       }
 
+      function sendBrowserCommand(command) {
+        try {
+          if (frame.contentWindow) {
+            frame.contentWindow.postMessage({ type: 'browser-command', command: command }, '*');
+          }
+        } catch (error) {}
+      }
+
       frame.addEventListener('load', function () {
         browserFrameReady = true;
         if (!pendingBrowserUrl) return;
@@ -1052,7 +1075,7 @@
       function openBrowserOverlay(url) {
         if (url) pendingBrowserUrl = url;
         if (!loaded) {
-          frame.src = 'browser/index.html?v=9';
+          frame.src = 'browser/index.html?v=10';
           loaded = true;
         } else if (url && browserFrameReady) {
           pendingBrowserUrl = '';
@@ -1064,6 +1087,7 @@
         document.body.classList.add('browser-overlay-open');
         if (browserTab) browserTab.setAttribute('aria-expanded', 'true');
         renderFullscreenControl();
+        enterBrowserFullscreen();
         closeButton.focus();
       }
 
@@ -1083,6 +1107,9 @@
       window.closeBrowserOverlay = closeBrowserOverlay;
       closeButton.addEventListener('click', closeBrowserOverlay);
       fullscreenButton.addEventListener('click', toggleBrowserFullscreen);
+      backButton.addEventListener('click', function () { sendBrowserCommand('back'); });
+      forwardButton.addEventListener('click', function () { sendBrowserCommand('forward'); });
+      reloadButton.addEventListener('click', function () { sendBrowserCommand('reload'); });
       ['fullscreenchange', 'webkitfullscreenchange', 'msfullscreenchange'].forEach(function (name) {
         document.addEventListener(name, function () {
           if (!nativeFullscreenElement()) fallbackFullscreen = false;
@@ -1092,15 +1119,13 @@
       window.addEventListener('message', function (event) {
         if (frame.contentWindow && event.source === frame.contentWindow &&
           event.data && event.data.type === 'proxy-close') {
-          if (isBrowserFullscreen()) exitBrowserFullscreen();
-          else closeBrowserOverlay();
+          closeBrowserOverlay();
         }
       });
       document.addEventListener('keydown', function (event) {
         if (event.key !== 'Escape' || !overlay.classList.contains('active')) return;
         event.preventDefault();
-        if (isBrowserFullscreen()) exitBrowserFullscreen();
-        else closeBrowserOverlay();
+        closeBrowserOverlay();
       });
       renderFullscreenControl();
     })();

@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-12',
+            title: 'Private browser fills the screen and gets page controls',
+            items: [
+                'The private browser now opens across the whole viewport, with native fullscreen requested when the browser allows it.',
+                'The outer browser bar now has Back, Forward, and Reload buttons.',
+                'The top-right control is now an Exit button; Escape also closes the browser.'
+            ]
+        },
+        {
+            date: '2026-11-12',
             title: 'Usernames can change, and the owner gets account tools',
             items: [
                 'Regular accounts can change their username once every 7 days. The current owner account can change as often as they like.',

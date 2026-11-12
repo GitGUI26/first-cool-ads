@@ -54,6 +54,7 @@ button:focus-visible, input:focus-visible, a:focus-visible {
 #plus:hover { color: var(--fg); }
 #bar { display: flex; align-items: center; gap: 9px; flex: 0 0 auto; padding: 10px 12px; background: var(--bar); border-bottom: 1px solid var(--line); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
 .browser-controls { display: flex; gap: 4px; flex: 0 0 auto; }
+body.is-embedded .browser-controls { display: none; }
 #bar button { width: 34px; height: 34px; display: grid; place-items: center; padding: 0; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); color: var(--mut); font-size: 15px; transition: color 0.18s ease, border-color 0.18s ease, background 0.18s ease; }
 #bar button:hover { color: var(--fg); border-color: var(--line-strong); background: rgba(255, 255, 255, 0.08); }
 .address-wrap { position: relative; display: flex; align-items: center; flex: 1; min-width: 0; }
@@ -363,6 +364,19 @@ addEventListener('message', e => {
   }
 });
 addEventListener('message', e => {
+  if (!e.data || e.data.type !== 'browser-command') return;
+  if (window.parent !== window && e.source !== parent) return;
+  const command = e.data.command;
+  if (!cur) return;
+  if (command === 'back') {
+    try { cur.frame.contentWindow.history.back(); } catch (error) {}
+  } else if (command === 'forward') {
+    try { cur.frame.contentWindow.history.forward(); } catch (error) {}
+  } else if (command === 'reload' && cur.url) {
+    cur.frame.src = enc(cur.url);
+  }
+});
+addEventListener('message', e => {
   if (!e.data || e.data.type !== 'proxy-nav') return;
   const t = tabs.find(x => x.frame.contentWindow === e.source);
   if (!t) return;
@@ -432,6 +446,7 @@ async function boot() {
 }
 try {
   if (window.parent !== window) {
+    document.body.classList.add('is-embedded');
     const back = document.getElementById('back2site');
     if (back) back.style.display = 'none';
     addEventListener('keydown', e => {
