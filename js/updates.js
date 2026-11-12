@@ -6,6 +6,16 @@
     var updates = [
         {
             date: '2026-11-12',
+            title: 'Mentions, replies, notifications, and offline chat',
+            items: [
+                'Room messages and direct messages now support @username mentions and replies, with highlighted mentions and quoted reply context.',
+                'A notification bell beside the profile button shows unread mentions, replies, friend requests, and direct messages.',
+                'Friend requests and direct messages can be sent to offline members; offline members can accept requests too. They see everything when they return.',
+                'Fixed chat avatars so each member keeps their own profile picture instead of every message showing the signed-in user\'s picture.'
+            ]
+        },
+        {
+            date: '2026-11-12',
             title: 'Sent chat messages use the full bubble width',
             items: [
                 'Fixed a style conflict that squeezed your own chat messages into the avatar column, wrapping their text one letter per line.'

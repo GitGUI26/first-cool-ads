@@ -9,6 +9,9 @@ const MAX_AVATAR_LENGTH = 12000;
 const MAX_FRIENDS = 50;
 const MAX_FRIEND_REQUESTS = 30;
 const MAX_DM_HISTORY = 100;
+const MAX_NOTIFICATIONS = 40;
+const MAX_DIRECTORY = 5000;
+const MAX_MENTIONS = 5;
 const MESSAGE_COOLDOWN_MS = 2200;
 const DM_COOLDOWN_MS = 700;
 const FRIEND_REQUEST_COOLDOWN_MS = 1400;
@@ -266,6 +269,117 @@ export class ChatRoom {
     return messages.filter(item => item && item.id && item.from && item.from.id && item.to).slice(-MAX_DM_HISTORY);
   }
 
+  async readDirectory() {
+    let directory = [];
+    try { directory = (await this.ctx.storage.get('directory')) || []; } catch (error) {}
+    if (!Array.isArray(directory)) return [];
+    return directory.map(friendEntry).filter(Boolean).slice(0, MAX_DIRECTORY);
+  }
+
+  async rememberDirectoryUser(user) {
+    const profile = profileOf(user);
+    if (!profile.id) return null;
+    const directory = await this.readDirectory();
+    const key = nameKey(profile.name);
+    const next = directory.filter(item => item.id !== profile.id && nameKey(item.name) !== key);
+    next.unshift({ ...profile, at: Date.now() });
+    try { await this.ctx.storage.put('directory', next.slice(0, MAX_DIRECTORY)); } catch (error) {}
+    return profile;
+  }
+
+  async findDirectoryUser(value) {
+    const target = String(value == null ? '' : value).trim().replace(/^@+/, '');
+    if (!target) return null;
+    const directory = await this.readDirectory();
+    const key = nameKey(target);
+    return directory.find(item => item.id === target) ||
+      directory.find(item => nameKey(item.name) === key) || null;
+  }
+
+  async resolveMentions(text, sender) {
+    const source = String(text || '');
+    const directory = await this.readDirectory();
+    const byName = new Map(directory.map(item => [nameKey(item.name), item]));
+    const mentions = [];
+    const seen = new Set();
+    const pattern = /(?:^|[^\w@])@([A-Za-z0-9_.-]{1,24})/g;
+    let match;
+    while ((match = pattern.exec(source)) && mentions.length < MAX_MENTIONS) {
+      const key = nameKey(match[1]);
+      if (!key || seen.has(key)) continue;
+      seen.add(key);
+      const target = byName.get(key);
+      if (!target || String(target.id) === String(sender && sender.id)) continue;
+      mentions.push({ id: target.id, name: target.name });
+    }
+    return mentions;
+  }
+
+  async readNotifications(userId) {
+    const key = 'notifications:' + String(userId || '');
+    let list = [];
+    try { list = (await this.ctx.storage.get(key)) || []; } catch (error) {}
+    if (!Array.isArray(list)) return [];
+    return list.filter(item => item && item.id && item.type && item.actor && item.actor.id).slice(-MAX_NOTIFICATIONS);
+  }
+
+  async saveNotifications(userId, list) {
+    await this.ctx.storage.put('notifications:' + String(userId || ''), list.slice(-MAX_NOTIFICATIONS));
+  }
+
+  async addNotification(userId, notification) {
+    const id = String(userId || '');
+    if (!id || !notification || !notification.type) return null;
+    const actor = profileOf(notification.actor || {});
+    if (!actor.id) return null;
+    const list = await this.readNotifications(id);
+    const now = Number(notification.at) || Date.now();
+    if (notification.type === 'dm') {
+      const existing = list.find(item => item.type === 'dm' && !item.read && item.actor.id === actor.id);
+      if (existing) {
+        existing.at = now;
+        existing.text = String(notification.text || '').slice(0, 160);
+        if (notification.messageId) existing.messageId = String(notification.messageId);
+        existing.count = (Number(existing.count) || 0) + 1;
+        await this.saveNotifications(id, list);
+        this.sendToUser(id, { type: 'notification', notification: existing });
+        return existing;
+      }
+    }
+    const entry = {
+      id: crypto.randomUUID(),
+      type: String(notification.type),
+      actor,
+      text: String(notification.text || '').slice(0, 160),
+      at: now,
+      read: false
+    };
+    if (notification.messageId) entry.messageId = String(notification.messageId);
+    if (notification.friendId) entry.friendId = String(notification.friendId);
+    list.push(entry);
+    await this.saveNotifications(id, list);
+    this.sendToUser(id, { type: 'notification', notification: entry });
+    return entry;
+  }
+
+  async markNotificationsRead(userId) {
+    const id = String(userId || '');
+    const list = await this.readNotifications(id);
+    let changed = false;
+    const next = list.map(item => {
+      if (!item.read) {
+        changed = true;
+        return { ...item, read: true };
+      }
+      return item;
+    });
+    if (changed) {
+      await this.saveNotifications(id, next);
+      this.sendToUser(id, { type: 'notifications-read' });
+    }
+    return next;
+  }
+
   async purgeUser(userId) {
     const id = String(userId || '');
     if (!id) throw new Error('Missing user.');
@@ -300,6 +414,19 @@ export class ChatRoom {
       requestsRemoved += before - social.requests[ownerId].length;
     });
     await this.ctx.storage.put('social', social);
+
+    const directory = await this.readDirectory();
+    await this.ctx.storage.put('directory', directory.filter(item => String(item.id) !== id));
+    const notificationKeys = await this.ctx.storage.list({ prefix: 'notifications:' });
+    for (const [key, value] of notificationKeys) {
+      if (key === 'notifications:' + id) {
+        await this.ctx.storage.delete(key);
+        continue;
+      }
+      const entries = Array.isArray(value) ? value : [];
+      const next = entries.filter(item => String(item && item.actor && item.actor.id) !== id);
+      if (next.length !== entries.length) await this.ctx.storage.put(key, next);
+    }
 
     let directMessagesRemoved = 0;
     const conversations = await this.ctx.storage.list({ prefix: 'dm:' });
@@ -413,20 +540,13 @@ export class ChatRoom {
     }
     const online = this.onlineUsers();
     const requestedId = cleanId(data.targetId);
-    let target = requestedId ? online.get(requestedId) || null : null;
-    if (!target && data.targetName) {
-      const key = nameKey(String(data.targetName).replace(/^@+/, ''));
-      if (key) {
-        const matches = Array.from(online.values()).filter(item => item.id !== user.id && nameKey(item.name) === key);
-        if (matches.length > 1) {
-          this.sendSocket(ws, { type: 'friend-error', message: 'That username is not unique. Ask them to use a unique name before adding them.' });
-          return;
-        }
-        target = matches[0] || null;
-      }
-    }
+    let target = requestedId ? online.get(requestedId) || await this.findDirectoryUser(requestedId) : null;
+    if (!target && data.targetName) target = await this.findDirectoryUser(data.targetName);
     if (!target) {
-      this.sendSocket(ws, { type: 'friend-error', message: 'That member is offline. Only online members can be added.' });
+      this.sendSocket(ws, {
+        type: 'friend-error',
+        message: 'That username is not in chat yet. Ask them to open chat once, then try again.'
+      });
       return;
     }
     if (target.id === user.id) {
@@ -435,10 +555,6 @@ export class ChatRoom {
     }
     if (nameKey(target.name) === nameKey(user.name)) {
       this.sendSocket(ws, { type: 'friend-error', message: 'Usernames must be unique. One of you needs to choose a different name first.' });
-      return;
-    }
-    if (Array.from(online.values()).some(item => item.id !== target.id && nameKey(item.name) === nameKey(target.name))) {
-      this.sendSocket(ws, { type: 'friend-error', message: 'That username is not unique. Ask them to choose a unique name before adding them.' });
       return;
     }
     const social = await this.readSocial();
@@ -474,6 +590,11 @@ export class ChatRoom {
       friends: targetSocial.friends,
       requests: targetSocial.requests
     });
+    await this.addNotification(target.id, {
+      type: 'friend-request',
+      actor: profileOf(user),
+      text: 'sent you a friend request.'
+    }).catch(() => {});
     this.sendSocket(ws, { type: 'friend-request-sent', target: profileOf(target) });
   }
 
@@ -495,11 +616,7 @@ export class ChatRoom {
       return;
     }
     const online = this.onlineUsers();
-    if (!online.has(requesterId)) {
-      this.sendSocket(ws, { type: 'friend-error', message: 'That member is offline. Friend requests can be accepted only while both of you are online.' });
-      return;
-    }
-    const requester = online.get(requesterId);
+    const requester = request.from;
     social.requests[user.id] = incoming.filter(item => item.from.id !== requesterId);
     addFriend(social, user.id, requester);
     addFriend(social, requesterId, profileOf(user));
@@ -537,11 +654,6 @@ export class ChatRoom {
       this.sendSocket(ws, { type: 'dm-error', clientId: cleanClientId(data.clientId), message: 'You can only message friends.' });
       return;
     }
-    const online = this.onlineUsers();
-    if (!online.has(to)) {
-      this.sendSocket(ws, { type: 'dm-error', clientId: cleanClientId(data.clientId), message: 'That friend is offline. You can message friends only while they are online.' });
-      return;
-    }
     const now = Date.now();
     if (now - Number(attachment.lastDmAt || 0) < DM_COOLDOWN_MS) {
       this.sendSocket(ws, { type: 'dm-error', clientId: cleanClientId(data.clientId), message: 'Please wait a moment before sending another message.' });
@@ -563,15 +675,35 @@ export class ChatRoom {
     const messages = await this.readDm(user.id, to);
     const entry = {
       id: crypto.randomUUID(),
-      from: { id: String(user.id), name: cleanName(user.name) },
+      from: {
+        id: String(user.id),
+        name: cleanName(user.name),
+        avatar: cleanAvatar(user.avatar)
+      },
       to,
       text,
       at: now
     };
+    const replyId = String(data.replyTo || '');
+    const original = replyId ? messages.find(item => item.id === replyId) : null;
+    if (original && original.from) {
+      entry.replyTo = {
+        id: original.id,
+        user: { id: original.from.id, name: original.from.name },
+        text: String(original.text || '').slice(0, 160)
+      };
+    }
     if (clientId) entry.clientId = clientId;
     messages.push(entry);
     try { await this.ctx.storage.put(dmKey(user.id, to), messages.slice(-MAX_DM_HISTORY)); } catch (error) {}
     this.sendToUsers([user.id, to], { type: 'dm', message: entry });
+    await this.addNotification(to, {
+      type: 'dm',
+      actor: profileOf(user),
+      text,
+      messageId: entry.id,
+      friendId: String(user.id)
+    }).catch(() => {});
   }
 
   async directHistory(ws, user, data) {
@@ -604,6 +736,26 @@ export class ChatRoom {
       }
     }
 
+    if (request.headers.get('x-chat-register') === '1') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      try {
+        const profile = await this.rememberDirectoryUser(user);
+        return json({ ok: true, profile });
+      } catch (error) {
+        return json({ error: 'Could not update the chat directory.' }, 500);
+      }
+    }
+
+    if (request.headers.get('x-chat-notifications') === '1') {
+      if (request.method !== 'GET') return json({ error: 'Method not allowed.' }, 405);
+      return json({ notifications: await this.readNotifications(user.id) });
+    }
+
+    if (request.headers.get('x-chat-notifications-read') === '1') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      return json({ notifications: await this.markNotificationsRead(user.id) });
+    }
+
     if (!isWebSocketUpgrade(request)) {
       if (request.method !== 'GET' || request.headers.get('x-chat-read') !== '1') {
         return new Response('Expected a WebSocket upgrade.', { status: 426 });
@@ -619,6 +771,7 @@ export class ChatRoom {
       return json({
         messages: state.history,
         members: state.members,
+        notifications: await this.readNotifications(user.id),
         ...this.socialFor(user.id, social, online)
       });
     }
@@ -629,9 +782,11 @@ export class ChatRoom {
     this.ctx.acceptWebSocket(server);
     server.serializeAttachment({ user, lastSentAt: 0 });
 
+    await this.rememberDirectoryUser(user);
     const state = await this.readState();
     let social = await this.readSocial();
     social = this.refreshFriendProfiles(social, user);
+    const notifications = await this.readNotifications(user.id);
     let members = rememberMember(state.members, user, Date.now());
     try { await this.ctx.storage.put('members', members); } catch (error) {}
     try { await this.ctx.storage.put('social', social); } catch (error) {}
@@ -641,6 +796,7 @@ export class ChatRoom {
         type: 'history',
         messages: state.history,
         members: members,
+        notifications: notifications,
         ...this.socialFor(user.id, social, online)
       }));
     } catch (error) {}
@@ -675,6 +831,7 @@ export class ChatRoom {
       };
       attachment.lastProfileAt = now;
       ws.serializeAttachment(attachment);
+      await this.rememberDirectoryUser(attachment.user);
       const state = await this.readState();
       const members = rememberMember(state.members, attachment.user, now);
       try { await this.ctx.storage.put('members', members); } catch (error) {}
@@ -739,25 +896,63 @@ export class ChatRoom {
     ws.serializeAttachment(attachment);
 
     const state = await this.readState();
+    const authorMember = state.members.find(item => String(item.id) === String(attachment.user.id));
+    const authorAvatar = cleanAvatar(attachment.user.avatar) || cleanAvatar(authorMember && authorMember.avatar);
     const entry = {
       id: crypto.randomUUID(),
       user: {
         id: String(attachment.user.id),
-        name: cleanName(attachment.user.name)
+        name: cleanName(attachment.user.name),
+        avatar: authorAvatar
       },
       text,
       at: now
     };
+    const mentions = await this.resolveMentions(text, attachment.user);
+    if (mentions.length) entry.mentions = mentions;
+    const replyId = String(data.replyTo || '');
+    const original = replyId ? state.history.find(item => item.id === replyId) : null;
+    if (original && original.user) {
+      entry.replyTo = {
+        id: original.id,
+        user: { id: original.user.id, name: original.user.name },
+        text: String(original.text || '').slice(0, 160)
+      };
+    }
     if (clientId) entry.clientId = clientId;
     const history = state.history.concat(entry).slice(-MAX_HISTORY);
     const members = rememberMember(state.members, {
       id: entry.user.id,
       name: entry.user.name,
-      avatar: attachment.user.avatar
+      avatar: entry.user.avatar
     }, now);
     try { await this.ctx.storage.put('history', history); } catch (error) {}
     try { await this.ctx.storage.put('members', members); } catch (error) {}
     this.broadcast({ type: 'message', message: entry });
+
+    const notified = new Set();
+    if (entry.replyTo && entry.replyTo.user.id !== entry.user.id) {
+      try {
+        await this.addNotification(entry.replyTo.user.id, {
+          type: 'reply',
+          actor: profileOf(entry.user),
+          text: entry.text,
+          messageId: entry.id
+        });
+        notified.add(String(entry.replyTo.user.id));
+      } catch (error) {}
+    }
+    for (const mention of mentions) {
+      if (String(mention.id) === entry.user.id || notified.has(String(mention.id))) continue;
+      try {
+        await this.addNotification(mention.id, {
+          type: 'mention',
+          actor: profileOf(entry.user),
+          text: entry.text,
+          messageId: entry.id
+        });
+      } catch (error) {}
+    }
   }
 
   webSocketClose() {
@@ -833,6 +1028,52 @@ export default {
       headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
       headers.set('x-chat-read', '1');
       headers.set('x-chat-dm', friend);
+      return room.fetch(new Request(request, { headers }));
+    }
+
+    if (pathname === '/api/chat/register') {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      if (!env.CHAT_ROOM) return json({ error: 'Chat is not available.' }, 503);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
+      const id = env.CHAT_ROOM.idFromName('global');
+      const room = env.CHAT_ROOM.get(id);
+      const headers = new Headers(request.headers);
+      headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
+      headers.set('x-chat-register', '1');
+      try {
+        return await room.fetch(new Request(request, { headers }));
+      } catch (error) {
+        return json({ error: 'Could not update the chat directory.' }, 500);
+      }
+    }
+
+    if (pathname === '/api/chat/notifications') {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'GET') return json({ error: 'Method not allowed.' }, 405);
+      if (!env.CHAT_ROOM) return json({ error: 'Chat is not available.' }, 503);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
+      const id = env.CHAT_ROOM.idFromName('global');
+      const room = env.CHAT_ROOM.get(id);
+      const headers = new Headers(request.headers);
+      headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
+      headers.set('x-chat-notifications', '1');
+      return room.fetch(new Request(request, { headers }));
+    }
+
+    if (pathname === '/api/chat/notifications/read') {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      if (!env.CHAT_ROOM) return json({ error: 'Chat is not available.' }, 503);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account to use chat.' }, 401);
+      const id = env.CHAT_ROOM.idFromName('global');
+      const room = env.CHAT_ROOM.get(id);
+      const headers = new Headers(request.headers);
+      headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
+      headers.set('x-chat-notifications-read', '1');
       return room.fetch(new Request(request, { headers }));
     }
 

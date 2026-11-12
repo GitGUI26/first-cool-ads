@@ -38,7 +38,7 @@ If `js/auth-config.js` is left empty, online accounts are disabled and new brows
 
 Signed-in users get an Account settings panel for their profile picture, avatar reset, sync status, history, saved sites, app handles, and preferences. Usernames are permanent and are also the login. Passwords cannot be recovered without an email address, so choose them carefully. Profile pictures are cropped and resized to 256 × 256 in the browser, then stored in the account profile so they follow the account across domains and devices.
 
-Signed-in users can permanently delete their account from Account settings. Deletion removes the Supabase auth user, synced profile, posted room and direct chat messages, saved history, sites, app handles, game progress, and the local session. The Worker purges the user's chat data before the auth deletion; if that purge fails, the account is not deleted. There is no undo.
+Signed-in users can permanently delete their account from Account settings. Deletion removes the Supabase auth user, synced profile, posted room and direct chat messages, notifications, friendships, friend requests, the chat directory entry, saved history, sites, app handles, game progress, and the local session. The Worker purges the user's chat data before the auth deletion; if that purge fails, the account is not deleted. There is no undo.
 
 ### Chat
 
@@ -47,11 +47,17 @@ Supabase-authenticated username account; the Worker verifies the Supabase access
 The room keeps the latest 100 messages, blocks slurs and hate speech on the server, shows member avatars, and has a
 short polling fallback so a missed WebSocket broadcast does not hide messages from other members.
 
-Friends and direct messages live in the same Durable Object. Friend requests can target only members who are online
-at that moment, and direct messages are server-checked to be friends-only and to require an online recipient. Offline
-friends remain visible in the friend list but cannot be messaged. Usernames are unique case-insensitively; run
-`supabase/schema.sql` so the `profiles` and `auth.users` unique indexes and triggers enforce that rule for new accounts.
-The binding and migration are in `wrangler.jsonc`; the health endpoint is `/api/chat/health`. Account deletion calls the authenticated `/api/chat/purge` endpoint first, which removes that user's messages, friendships, requests, and member entry from the Durable Object before the Supabase auth user is deleted.
+Friends and direct messages live in the same Durable Object. Friend requests and direct messages can be sent while
+the other member is offline; they are stored and delivered when the member returns. Direct messages remain
+friends-only. Room messages support `@username` mentions and replies, with the reply target stored alongside the
+message. Mentions, replies, friend requests, and DMs create persistent notifications. Signed-in pages register a small
+directory entry so offline usernames can be resolved without exposing the private Supabase profile table. Usernames
+are unique case-insensitively; run `supabase/schema.sql` so the `profiles` and `auth.users` unique indexes and triggers
+enforce that rule for new accounts. The binding and migration are in `wrangler.jsonc`; the health endpoint is
+`/api/chat/health`, notifications use `/api/chat/notifications` and `/api/chat/notifications/read`, and directory
+registration uses `/api/chat/register`. Account deletion calls the authenticated `/api/chat/purge` endpoint first,
+which removes that user's messages, notifications, friendships, requests, directory entry, and member entry from the
+Durable Object before the Supabase auth user is deleted.
 
 ### Emulators
 

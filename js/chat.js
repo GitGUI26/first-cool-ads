@@ -35,6 +35,12 @@
   var dmPending = {};
   var dmPollingBusy = false;
   var dmNoticeTimer = 0;
+  var roomReply = null;
+  var dmReply = null;
+  var notifications = [];
+  var notificationsOpen = false;
+  var notificationBusy = false;
+  var notificationTimer = 0;
 
   function currentUser() {
     return Store.getCurrentUser();
@@ -49,6 +55,201 @@
     if (!node) return;
     node.textContent = text;
     node.dataset.state = state || '';
+  }
+
+  function notificationLabel(type) {
+    if (type === 'mention') return 'Mention';
+    if (type === 'reply') return 'Reply';
+    if (type === 'friend-request') return 'Friend request';
+    if (type === 'dm') return 'Direct message';
+    return 'Notification';
+  }
+
+  function notificationSummary(notification) {
+    var text = String(notification && notification.text || '');
+    if (notification.type === 'mention') return 'mentioned you: ' + text;
+    if (notification.type === 'reply') return 'replied to you: ' + text;
+    if (notification.type === 'friend-request') return text || 'sent you a friend request.';
+    return text || 'sent you a message.';
+  }
+
+  function unreadNotificationCount() {
+    return notifications.filter(function (notification) { return !notification.read; }).length;
+  }
+
+  function renderNotifications() {
+    var nav = $('notificationNav');
+    var user = currentUser();
+    var visible = !!user && !isLocal(user);
+    if (nav) nav.hidden = !visible;
+    if (!visible) {
+      if (notificationsOpen) setNotificationsOpen(false);
+      return;
+    }
+    var unread = unreadNotificationCount();
+    var badge = $('notificationBadge');
+    if (badge) {
+      badge.hidden = !unread;
+      badge.textContent = unread > 99 ? '99+' : String(unread);
+    }
+    var mark = $('notificationMarkRead');
+    if (mark) mark.hidden = !unread;
+    var list = $('notificationList');
+    var empty = $('notificationEmpty');
+    if (!list) return;
+    list.replaceChildren();
+    notifications.forEach(function (notification) {
+      if (!notification || !notification.actor) return;
+      var item = document.createElement('button');
+      item.type = 'button';
+      item.className = 'notification-item' + (notification.read ? '' : ' is-unread');
+      item.setAttribute('data-notification-id', notification.id || '');
+      item.appendChild(makeAvatar(notification.actor, 'notification-avatar'));
+      var copy = document.createElement('div');
+      copy.className = 'notification-copy';
+      var name = document.createElement('strong');
+      name.textContent = displayName(notification.actor);
+      var summary = document.createElement('span');
+      summary.textContent = notificationSummary(notification) + (Number(notification.count) > 1 ? ' (' + notification.count + ' messages)' : '');
+      var time = document.createElement('time');
+      time.dateTime = new Date(Number(notification.at) || Date.now()).toISOString();
+      time.textContent = notificationLabel(notification.type) + ' · ' + formatTime(notification.at);
+      copy.append(name, summary, time);
+      item.appendChild(copy);
+      item.addEventListener('click', function () { handleNotification(notification); });
+      list.appendChild(item);
+    });
+    if (empty) empty.hidden = notifications.length > 0;
+  }
+
+  function setNotificationsOpen(open) {
+    notificationsOpen = !!open;
+    var panel = $('notificationPanel');
+    var button = $('notificationButton');
+    if (panel) panel.hidden = !notificationsOpen;
+    if (button) button.setAttribute('aria-expanded', notificationsOpen ? 'true' : 'false');
+    if (notificationsOpen) renderNotifications();
+  }
+
+  function mergeNotifications(list) {
+    if (!Array.isArray(list)) return;
+    var byId = {};
+    notifications.forEach(function (notification) {
+      if (notification && notification.id) byId[notification.id] = notification;
+    });
+    list.forEach(function (notification) {
+      if (notification && notification.id) byId[notification.id] = notification;
+    });
+    notifications = Object.keys(byId).map(function (id) { return byId[id]; })
+      .sort(function (a, b) { return (Number(b.at) || 0) - (Number(a.at) || 0); })
+      .slice(0, 40);
+    renderNotifications();
+  }
+
+  function addNotification(notification) {
+    if (!notification || !notification.id) return;
+    var index = notifications.findIndex(function (item) { return item.id === notification.id; });
+    if (index !== -1) notifications.splice(index, 1);
+    notifications.unshift(notification);
+    notifications = notifications.slice(0, 40);
+    renderNotifications();
+  }
+
+  function syncNotifications() {
+    var user = currentUser();
+    if (!user || isLocal(user)) {
+      renderNotifications();
+      return;
+    }
+    if (notificationBusy) return;
+    notificationBusy = true;
+    Store.getAccessToken().then(function (token) {
+      if (!token) return null;
+      return fetch('/api/chat/notifications', {
+        method: 'GET',
+        headers: { Authorization: 'Bearer ' + token },
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+    }).then(function (response) {
+      if (!response || response.status === 401 || !response.ok) return null;
+      return response.json();
+    }).then(function (data) {
+      if (data && Array.isArray(data.notifications)) mergeNotifications(data.notifications);
+    }).catch(function () {
+      // The socket remains the live path; the next poll retries this request.
+    }).finally(function () {
+      notificationBusy = false;
+    });
+  }
+
+  function markAllNotificationsRead() {
+    if (!unreadNotificationCount()) return;
+    notifications = notifications.map(function (notification) {
+      return notification.read ? notification : Object.assign({}, notification, { read: true });
+    });
+    renderNotifications();
+    var user = currentUser();
+    if (!user || isLocal(user)) return;
+    Store.getAccessToken().then(function (token) {
+      if (!token) return null;
+      return fetch('/api/chat/notifications/read', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+    }).catch(function () {});
+  }
+
+  function focusChatMessage(messageId) {
+    var id = String(messageId || '');
+    if (!id) return;
+    var attempts = 0;
+    var timer = window.setInterval(function () {
+      var node = Array.prototype.slice.call(document.querySelectorAll('#chatMessages .chat-message')).find(function (item) {
+        return item.getAttribute('data-message-id') === id;
+      });
+      if (!node) {
+        if (++attempts > 30) window.clearInterval(timer);
+        return;
+      }
+      window.clearInterval(timer);
+      node.scrollIntoView({ block: 'center', behavior: 'smooth' });
+      node.classList.add('is-highlighted');
+      window.setTimeout(function () { node.classList.remove('is-highlighted'); }, 2600);
+    }, 200);
+  }
+
+  function handleNotification(notification) {
+    if (!notification) return;
+    setNotificationsOpen(false);
+    markAllNotificationsRead();
+    if (typeof window.openChat !== 'function') return;
+    window.openChat();
+    window.setTimeout(function () {
+      if (notification.type === 'friend-request') {
+        setSocialOpen(true);
+      } else if (notification.type === 'dm' && notification.actor && friendById(notification.actor.id)) {
+        openDm(notification.actor.id);
+      } else if ((notification.type === 'mention' || notification.type === 'reply') && notification.messageId) {
+        focusChatMessage(notification.messageId);
+      }
+    }, 350);
+  }
+
+  function registerChatProfile() {
+    var user = currentUser();
+    if (!user || isLocal(user)) return;
+    Store.getAccessToken().then(function (token) {
+      if (!token) return null;
+      return fetch('/api/chat/register', {
+        method: 'POST',
+        headers: { Authorization: 'Bearer ' + token },
+        cache: 'no-store',
+        credentials: 'same-origin'
+      });
+    }).catch(function () {});
   }
 
   function showNotice(message, reset) {
@@ -188,7 +389,7 @@
 
   function avatarFor(user) {
     var member = memberFor(user);
-    return (member && member.avatar) || (user && user.avatar) || DEFAULT_AVATAR;
+    return (user && user.avatar) || (member && member.avatar) || DEFAULT_AVATAR;
   }
 
   function makeAvatar(user, className) {
@@ -258,7 +459,7 @@
     members[id] = {
       id: id,
       name: displayName(member),
-      avatar: member.avatar || ''
+      avatar: member.avatar || (members[id] && members[id].avatar) || ''
     };
     var index = onlineMembers.findIndex(function (item) { return String(item.id) === id; });
     if (index !== -1) onlineMembers[index] = members[id];
@@ -337,15 +538,98 @@
     time.textContent = formatTime(message.at);
     meta.appendChild(name);
     meta.appendChild(time);
+    var quote = makeReplyQuote(message.replyTo);
     var text = document.createElement('p');
-    text.textContent = String(message.text || '');
+    appendMessageText(text, message);
     body.appendChild(meta);
+    if (quote) body.appendChild(quote);
     body.appendChild(text);
+    var actions = document.createElement('div');
+    actions.className = 'chat-message-actions';
+    var reply = document.createElement('button');
+    reply.type = 'button';
+    reply.className = 'chat-reply-button';
+    reply.textContent = 'Reply';
+    reply.addEventListener('click', function () { setRoomReply(message); });
+    actions.appendChild(reply);
+    body.appendChild(actions);
 
     item.appendChild(body);
     list.appendChild(item);
     if (animate) item.classList.add('is-new');
     list.scrollTop = list.scrollHeight;
+  }
+
+  function escapeRegExp(value) {
+    return String(value || '').replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  }
+
+  function appendMessageText(node, message) {
+    var text = String(message && message.text || '');
+    var names = (message && message.mentions || []).map(function (mention) {
+      return mention && mention.name ? String(mention.name) : '';
+    }).filter(Boolean);
+    var unique = names.filter(function (name, index) { return names.indexOf(name) === index; });
+    if (!unique.length) {
+      node.textContent = text;
+      return;
+    }
+    var pattern = new RegExp('@(?:' + unique.map(escapeRegExp).join('|') + ')(?![A-Za-z0-9_.-])', 'gi');
+    var last = 0;
+    var match;
+    while ((match = pattern.exec(text))) {
+      if (match.index > last) node.appendChild(document.createTextNode(text.slice(last, match.index)));
+      var span = document.createElement('span');
+      span.className = 'chat-mention';
+      span.textContent = match[0];
+      node.appendChild(span);
+      last = pattern.lastIndex;
+    }
+    if (last < text.length) node.appendChild(document.createTextNode(text.slice(last)));
+  }
+
+  function makeReplyQuote(reply) {
+    if (!reply || !reply.id) return null;
+    var quote = document.createElement('blockquote');
+    quote.className = 'chat-reply-quote';
+    var name = document.createElement('strong');
+    name.textContent = displayName(reply.user || {});
+    var text = document.createElement('span');
+    text.textContent = String(reply.text || '');
+    quote.append(name, text);
+    return quote;
+  }
+
+  function setRoomReply(message) {
+    if (!message || !message.id) return;
+    roomReply = { id: message.id, user: message.user, text: String(message.text || '').slice(0, 160) };
+    var preview = $('chatReplyPreview');
+    if (preview) preview.hidden = false;
+    if ($('chatReplyName')) $('chatReplyName').textContent = 'Replying to ' + displayName(message.user);
+    if ($('chatReplyText')) $('chatReplyText').textContent = roomReply.text;
+    if ($('chatInput')) $('chatInput').focus();
+  }
+
+  function clearRoomReply() {
+    roomReply = null;
+    if ($('chatReplyPreview')) $('chatReplyPreview').hidden = true;
+    if ($('chatReplyText')) $('chatReplyText').textContent = '';
+  }
+
+  function setDmReply(message) {
+    if (!message || !message.id) return;
+    dmReply = { id: message.id, user: message.from || {}, text: String(message.text || '').slice(0, 160) };
+    var preview = $('chatDmReplyPreview');
+    if (preview) preview.hidden = false;
+    if ($('chatDmReplyName')) $('chatDmReplyName').textContent = 'Replying to ' + displayName(message.from);
+    if ($('chatDmReplyText')) $('chatDmReplyText').textContent = dmReply.text;
+    if ($('chatDmInput')) $('chatDmInput').focus();
+  }
+
+  function clearDmReply() {
+    dmReply = null;
+    if ($('chatDmReplyPreview')) $('chatDmReplyPreview').hidden = true;
+    if ($('chatDmReplyText')) $('chatDmReplyText').textContent = '';
   }
 
   function removeUserContent(userId) {
@@ -498,14 +782,14 @@
       if (!ordered.length) {
         var noFriends = document.createElement('div');
         noFriends.className = 'chat-social-empty';
-        noFriends.textContent = 'No friends yet. Add an online member below.';
+        noFriends.textContent = 'No friends yet. Add someone below.';
         friendList.appendChild(noFriends);
       } else {
         ordered.forEach(function (friend) {
           var online = isOnlineUser(friend.id);
           var row = makePersonRow(memberFor(friend) || friend, online ? 'Online' : 'Offline');
           row.row.classList.toggle('is-offline', !online);
-          row.actions.appendChild(personButton(online ? 'Message' : 'Offline', online ? 'is-primary' : '', function () { openDm(friend.id); }, !online));
+          row.actions.appendChild(personButton('Message', 'is-primary', function () { openDm(friend.id); }));
           friendList.appendChild(row.row);
         });
       }
@@ -523,9 +807,9 @@
       if (requestBlock) requestBlock.hidden = !friendRequests.length;
       friendRequests.forEach(function (request) {
         var online = isOnlineUser(request.id);
-        var row = makePersonRow(request, online ? 'Wants to be friends' : 'Offline · unavailable');
+        var row = makePersonRow(request, online ? 'Wants to be friends' : 'Wants to be friends · offline');
         row.row.classList.toggle('is-offline', !online);
-        row.actions.appendChild(personButton('Accept', 'is-primary', function () { friendAction('friend-accept', request.id); }, !online));
+        row.actions.appendChild(personButton('Accept', 'is-primary', function () { friendAction('friend-accept', request.id); }));
         row.actions.appendChild(personButton('Decline', 'is-danger', function () { friendAction('friend-decline', request.id); }));
         requests.appendChild(row.row);
       });
@@ -615,22 +899,19 @@
     if (name) name.textContent = displayName(memberFor(friend) || friend);
     var status = $('chatDmStatus');
     if (status) {
-      status.textContent = online ? 'Online · messages sync live' : 'Offline · messaging unavailable';
+      status.textContent = online ? 'Online · messages sync live' : 'Offline · messages delivered when they return';
       status.dataset.state = online ? 'online' : 'offline';
     }
     var input = $('chatDmInput');
-    if (input) input.placeholder = online ? 'Message ' + displayName(friend) + '...' : displayName(friend) + ' is offline';
-    setDmComposer(online && !!socket && socket.readyState === WebSocket.OPEN);
+    if (input) input.placeholder = 'Message ' + displayName(friend) + (online ? '...' : ' (they are offline)...');
+    setDmComposer(!!socket && socket.readyState === WebSocket.OPEN);
   }
 
   function openDm(friendId) {
     var friend = friendById(friendId);
     if (!friend) return;
-    if (!isOnlineUser(friend.id)) {
-      showNotice(displayName(friend) + ' is offline. Messages can be sent only to online friends.');
-      return;
-    }
     dmPeerId = String(friend.id);
+    clearDmReply();
     var room = $('chatRoomView');
     var view = $('chatDmView');
     if (room) room.hidden = true;
@@ -648,6 +929,7 @@
 
   function closeDm() {
     dmPeerId = '';
+    clearDmReply();
     var room = $('chatRoomView');
     var view = $('chatDmView');
     if (room) room.hidden = false;
@@ -680,7 +962,12 @@
     var me = currentUser();
     var from = message.from || {};
     var own = !!me && String(from.id) === String(me.id);
-    var source = members[String(from.id)] || friendById(from.id) || from;
+    var cached = members[String(from.id)] || friendById(from.id) || {};
+    var source = {
+      id: from.id,
+      name: from.name || cached.name || 'player',
+      avatar: from.avatar || cached.avatar || ''
+    };
     var item = document.createElement('article');
     item.className = 'chat-message' + (own ? ' is-own' : '');
     if (message.id) item.setAttribute('data-message-id', message.id);
@@ -697,10 +984,21 @@
     time.textContent = formatTime(message.at);
     meta.appendChild(name);
     meta.appendChild(time);
+    var quote = makeReplyQuote(message.replyTo);
     var text = document.createElement('p');
-    text.textContent = String(message.text || '');
+    appendMessageText(text, message);
     body.appendChild(meta);
+    if (quote) body.appendChild(quote);
     body.appendChild(text);
+    var actions = document.createElement('div');
+    actions.className = 'chat-message-actions';
+    var reply = document.createElement('button');
+    reply.type = 'button';
+    reply.className = 'chat-reply-button';
+    reply.textContent = 'Reply';
+    reply.addEventListener('click', function () { setDmReply(message); });
+    actions.appendChild(reply);
+    body.appendChild(actions);
     item.appendChild(body);
     list.appendChild(item);
     if (animate) item.classList.add('is-new');
@@ -839,8 +1137,8 @@
     var input = $('chatDmInput');
     if (!input || !dmPeerId) return;
     var friend = friendById(dmPeerId);
-    if (!friend || !isOnlineUser(dmPeerId)) {
-      showDmNotice(displayName(friend) + ' is offline. Messages can be sent only to online friends.');
+    if (!friend) {
+      showDmNotice('That friendship is no longer available.');
       updateDmHeader();
       return;
     }
@@ -850,15 +1148,17 @@
       showDmNotice('Chat is not connected yet. Try again in a moment.');
       return;
     }
+    var replyTo = dmReply ? dmReply.id : '';
     var clientId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'dm_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     addDmPending(text, clientId);
-    if (!sendSocketPayload({ type: 'dm', to: dmPeerId, text: text, clientId: clientId }, true)) {
+    if (!sendSocketPayload({ type: 'dm', to: dmPeerId, text: text, clientId: clientId, replyTo: replyTo }, true)) {
       removeDmPending(clientId);
       return;
     }
     input.value = '';
     input.style.height = '';
     updateDmCharCount();
+    clearDmReply();
     input.focus();
   }
 
@@ -949,6 +1249,7 @@
       mergeMembers(data.members);
       mergeSocial(data);
       mergeHistory(data.messages);
+      mergeNotifications(data.notifications);
     }).catch(function () {
       // The live socket remains the primary path; polling is a safety net.
     }).finally(function () {
@@ -1013,6 +1314,14 @@
           mergeMembers(data.members);
           mergeSocial(data);
           mergeHistory(data.messages);
+          mergeNotifications(data.notifications);
+        } else if (data.type === 'notification') {
+          addNotification(data.notification);
+        } else if (data.type === 'notifications-read') {
+          notifications = notifications.map(function (notification) {
+            return Object.assign({}, notification, { read: true });
+          });
+          renderNotifications();
         } else if (data.type === 'message') {
           addMessage(data.message, true);
         } else if (data.type === 'message-error') {
@@ -1106,10 +1415,11 @@
       showNotice('Chat is not connected yet. Try again in a moment.');
       return;
     }
+    var replyTo = roomReply ? roomReply.id : '';
     var clientId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'msg_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
     addPending(text, clientId);
     try {
-      socket.send(JSON.stringify({ type: 'message', text: text, clientId: clientId }));
+      socket.send(JSON.stringify({ type: 'message', text: text, clientId: clientId, replyTo: replyTo }));
     } catch (error) {
       removePending(clientId);
       showNotice('Could not send that message. Try again.');
@@ -1118,6 +1428,7 @@
     input.value = '';
     input.style.height = '';
     updateCharCount();
+    clearRoomReply();
     input.focus();
   }
 
@@ -1178,6 +1489,28 @@
     var socialBackdrop = $('chatSocialBackdrop');
     if (socialBackdrop) socialBackdrop.addEventListener('click', closeSocial);
 
+    var notificationButton = $('notificationButton');
+    if (notificationButton) {
+      notificationButton.addEventListener('click', function (event) {
+        event.stopPropagation();
+        setNotificationsOpen(!notificationsOpen);
+      });
+    }
+    var notificationMarkRead = $('notificationMarkRead');
+    if (notificationMarkRead) {
+      notificationMarkRead.addEventListener('click', function (event) {
+        event.stopPropagation();
+        markAllNotificationsRead();
+      });
+    }
+    document.addEventListener('click', function (event) {
+      if (!notificationsOpen) return;
+      if (event.target && event.target.closest && event.target.closest('.notification-nav')) return;
+      setNotificationsOpen(false);
+    });
+    if ($('chatReplyCancel')) $('chatReplyCancel').addEventListener('click', clearRoomReply);
+    if ($('chatDmReplyCancel')) $('chatDmReplyCancel').addEventListener('click', clearDmReply);
+
     var dmBack = $('chatDmBack');
     if (dmBack) dmBack.addEventListener('click', closeDm);
     var dmForm = $('chatDmForm');
@@ -1204,7 +1537,13 @@
 
     document.addEventListener('keydown', function (event) {
       if (event.key !== 'Escape') return;
-      if (socialOpen) {
+      if (notificationsOpen) {
+        setNotificationsOpen(false);
+      } else if (roomReply) {
+        clearRoomReply();
+      } else if (dmReply) {
+        clearDmReply();
+      } else if (socialOpen) {
         closeSocial();
       } else if (dmPeerId) {
         closeDm();
@@ -1212,15 +1551,34 @@
     });
 
     document.addEventListener('visibilitychange', function () {
-      if (document.hidden || !socket || socket.readyState !== WebSocket.OPEN) return;
+      if (document.hidden) return;
+      syncNotifications();
+      if (!socket || socket.readyState !== WebSocket.OPEN) return;
       syncHistory();
       syncDmHistory();
     });
   }
 
+  function positionNotificationNav(tab) {
+    var nav = $('notificationNav');
+    if (!nav) return;
+    if (tab === 'chat') {
+      var chatActions = document.querySelector('.chat-page-actions');
+      var chatAccount = document.querySelector('.chat-head-account');
+      if (chatActions && chatAccount && nav.parentNode !== chatActions) {
+        chatActions.insertBefore(nav, chatAccount);
+      }
+      return;
+    }
+    var actions = document.querySelector('.top-nav-actions');
+    var account = $('accountTab');
+    if (actions && account && nav.parentNode !== actions) actions.insertBefore(nav, account);
+  }
+
   function handleSwitch(event) {
     var tab = event.detail && event.detail.tab;
     document.body.classList.toggle('chat-active', tab === 'chat');
+    positionNotificationNav(tab);
     if (tab && tab !== 'chat') {
       closeSocial();
       closeDm();
@@ -1231,6 +1589,9 @@
   function handleAccountChange() {
     var user = currentUser();
     if (!user) {
+      notifications = [];
+      setNotificationsOpen(false);
+      renderNotifications();
       closeDm();
       closeSocial();
       setSocial([], []);
@@ -1242,6 +1603,9 @@
       }
       return;
     }
+    renderNotifications();
+    registerChatProfile();
+    syncNotifications();
     if (socket && socket.readyState === WebSocket.OPEN) sendProfile(false);
     if (hasPending() && !isLocal(user)) {
       setPending(false);
@@ -1272,6 +1636,13 @@
     updateDmCharCount();
     setSocialOpen(false);
     setOnline(0, []);
+    positionNotificationNav(document.body.classList.contains('chat-active') ? 'chat' : '');
+    renderNotifications();
+    registerChatProfile();
+    syncNotifications();
+    notificationTimer = window.setInterval(function () {
+      if (!document.hidden) syncNotifications();
+    }, 30000);
   }
 
   if (document.readyState === 'loading') {

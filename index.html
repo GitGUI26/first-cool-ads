@@ -49,7 +49,7 @@
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/ads.css?v=2" rel="stylesheet">
-<link href="css/chat.css?v=6" rel="stylesheet">
+<link href="css/chat.css?v=7" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=1" rel="stylesheet">
   <script type="application/ld+json">
@@ -278,6 +278,20 @@
             <i class="fas fa-shuffle"></i><span>Random</span>
           </button>
           <span class="account-nav-separator" aria-hidden="true"></span>
+          <div class="notification-nav" id="notificationNav" hidden>
+            <button class="notification-button" id="notificationButton" type="button" aria-label="Notifications" aria-haspopup="dialog" aria-expanded="false" title="Notifications">
+              <i class="fas fa-bell" aria-hidden="true"></i>
+              <span class="notification-badge" id="notificationBadge" hidden>0</span>
+            </button>
+            <div class="notification-panel" id="notificationPanel" role="dialog" aria-label="Notifications" hidden>
+              <div class="notification-panel-head">
+                <strong>Notifications</strong>
+                <button class="notification-mark-read" id="notificationMarkRead" type="button">Mark all read</button>
+              </div>
+              <div class="notification-list" id="notificationList"></div>
+              <p class="notification-empty" id="notificationEmpty">No notifications yet.</p>
+            </div>
+          </div>
           <button class="account-nav-button" id="accountTab" type="button" onclick="openAccount()" aria-label="Open account settings" aria-haspopup="dialog" title="Account settings">
             <img class="account-nav-avatar" id="accountNavAvatar" src="images/default-avatar.svg" alt="">
           </button>
@@ -437,11 +451,11 @@
               </div>
               <div class="chat-friend-list" id="chatFriends"></div>
               <form class="chat-friend-form" id="chatFriendForm">
-                <label class="visually-hidden" for="chatFriendName">Add an online friend</label>
+                <label class="visually-hidden" for="chatFriendName">Add a friend by username</label>
                 <input id="chatFriendName" type="text" maxlength="24" placeholder="Add by username" autocomplete="off" spellcheck="false">
                 <button type="submit" aria-label="Send friend request"><i class="fas fa-user-plus" aria-hidden="true"></i></button>
               </form>
-              <p class="chat-social-note">Only online members can be added or messaged. Usernames are unique.</p>
+              <p class="chat-social-note">Add or message members even while they are offline. They will see it when they return. Usernames are unique.</p>
             </section>
             <ul class="chat-rules"><li>Be friendly and keep it school-safe.</li><li>No spam, personal info, or links.</li><li>Slurs and hate speech are blocked automatically.</li></ul>
             <a class="chat-account-link" href="#" onclick="openAccount(); return false;"><i class="fas fa-user-gear" aria-hidden="true"></i> Manage account</a>
@@ -458,12 +472,16 @@
               <div class="chat-messages" id="chatMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
               <div class="chat-composer">
                 <div class="chat-notice" id="chatNotice" role="status" aria-live="polite" hidden></div>
+                <div class="chat-reply-preview" id="chatReplyPreview" hidden>
+                  <div class="chat-reply-preview-copy"><strong id="chatReplyName">Replying</strong><span id="chatReplyText"></span></div>
+                  <button class="chat-reply-cancel" id="chatReplyCancel" type="button" aria-label="Cancel reply"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+                </div>
                 <form class="chat-form" id="chatForm">
                   <label class="visually-hidden" for="chatInput">Message</label>
                   <textarea id="chatInput" rows="1" maxlength="500" placeholder="Message the room..." disabled></textarea>
                   <button class="chat-send" id="chatSend" type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
                 </form>
-                <p class="chat-hint"><span>Enter to send · Shift+Enter for a new line</span><span id="chatCharCount">0 / 500</span></p>
+                <p class="chat-hint"><span>Enter to send · @username to mention · Reply from any message</span><span id="chatCharCount">0 / 500</span></p>
               </div>
             </div>
             <div class="chat-dm-view" id="chatDmView" hidden>
@@ -474,12 +492,16 @@
               <div class="chat-messages chat-dm-messages" id="chatDmMessages" role="log" aria-live="polite" aria-relevant="additions"></div>
               <div class="chat-composer">
                 <div class="chat-notice" id="chatDmNotice" role="status" aria-live="polite" hidden></div>
+                <div class="chat-reply-preview" id="chatDmReplyPreview" hidden>
+                  <div class="chat-reply-preview-copy"><strong id="chatDmReplyName">Replying</strong><span id="chatDmReplyText"></span></div>
+                  <button class="chat-reply-cancel" id="chatDmReplyCancel" type="button" aria-label="Cancel reply"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+                </div>
                 <form class="chat-form" id="chatDmForm">
                   <label class="visually-hidden" for="chatDmInput">Message friend</label>
                   <textarea id="chatDmInput" rows="1" maxlength="500" placeholder="Message your friend..." disabled></textarea>
                   <button class="chat-send" id="chatDmSend" type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
                 </form>
-                <p class="chat-hint"><span>Friends only · messages sync live</span><span id="chatDmCharCount">0 / 500</span></p>
+                <p class="chat-hint"><span>Friends only · offline friends get messages when they return</span><span id="chatDmCharCount">0 / 500</span></p>
               </div>
             </div>
           </div>
@@ -905,10 +927,10 @@
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=18"></script>
   <script src="js/main.js?v=32"></script>
-  <script src="js/updates.js?v=29"></script>
+  <script src="js/updates.js?v=30"></script>
   <script src="js/account.js?v=12"></script>
   <script src="js/music.js?v=2"></script>
-  <script src="js/chat.js?v=6"></script>
+  <script src="js/chat.js?v=7"></script>
   <script src="js/emulators.js?v=1"></script>
   <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
