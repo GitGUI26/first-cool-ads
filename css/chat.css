@@ -878,6 +878,19 @@ body.chat-active .chat-card {
   flex-direction: row-reverse;
 }
 
+/* The legacy chat styles in style.css still target #chat-section .chat-message
+   with a grid. Keep this newer flex layout authoritative for the current markup. */
+#chat-section .chat-message {
+  display: flex;
+  grid-template-columns: none;
+  gap: 11px;
+  max-width: min(82%, 620px);
+}
+
+#chat-section .chat-message.is-own {
+  flex-direction: row-reverse;
+}
+
 .chat-avatar {
   display: grid;
   flex: 0 0 36px;

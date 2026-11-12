@@ -6,6 +6,13 @@
     var updates = [
         {
             date: '2026-11-12',
+            title: 'Sent chat messages use the full bubble width',
+            items: [
+                'Fixed a style conflict that squeezed your own chat messages into the avatar column, wrapping their text one letter per line.'
+            ]
+        },
+        {
+            date: '2026-11-12',
             title: 'Deleted accounts now clear chat messages',
             items: [
                 'Deleting an account now removes that user\'s posted room messages and direct messages from chat.',
