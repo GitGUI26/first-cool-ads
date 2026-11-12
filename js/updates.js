@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-12',
+            title: 'Reply controls stay out of the message layout',
+            items: [
+                'Reply now slides in as a small floating control when hovering over someone else\'s message.',
+                'Reply no longer adds a full line beneath messages, and your own messages no longer show a reply button.'
+            ]
+        },
+        {
+            date: '2026-11-12',
             title: 'Mentions, replies, notifications, and offline chat',
             items: [
                 'Room messages and direct messages now support @username mentions and replies, with highlighted mentions and quoted reply context.',

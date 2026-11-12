@@ -921,6 +921,7 @@ body.chat-active .chat-card {
 }
 
 .chat-message-body {
+  position: relative;
   min-width: 0;
   padding: 10px 13px;
   border: 1px solid rgba(255, 255, 255, 0.09);
@@ -940,6 +941,10 @@ body.chat-active .chat-card {
   align-items: baseline;
   gap: 8px;
   margin-bottom: 4px;
+}
+
+.chat-message:not(.is-own) .chat-message-meta {
+  padding-right: 48px;
 }
 
 .chat-message-meta strong {
@@ -1544,22 +1549,34 @@ body.chat-active .chat-card {
 }
 
 .chat-message-actions {
+  position: absolute;
+  top: 5px;
+  right: 6px;
+  z-index: 1;
   display: flex;
-  justify-content: flex-end;
-  margin-top: 5px;
+  margin: 0;
   opacity: 0;
-  transition: opacity 0.16s ease;
+  pointer-events: none;
+  transform: translateX(9px);
+  transition: opacity 0.16s ease, transform 0.16s ease;
 }
 
-.chat-message:hover .chat-message-actions,
-.chat-message:focus-within .chat-message-actions {
+.chat-message:not(.is-own):hover .chat-message-actions,
+.chat-message:not(.is-own):focus-within .chat-message-actions {
   opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.chat-message.is-own .chat-message-actions {
+  display: none;
 }
 
 .chat-reply-button {
-  padding: 2px 0;
-  border: 0;
-  background: transparent;
+  padding: 2px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px;
+  background: rgba(8, 13, 22, 0.9);
   color: var(--ui-muted);
   font: inherit;
   font-size: 0.62rem;
@@ -1587,9 +1604,13 @@ body.chat-active .chat-card {
     top: 68px;
     right: 12px;
   }
+}
 
-  .chat-message-actions {
+@media (hover: none) {
+  .chat-message:not(.is-own) .chat-message-actions {
     opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
   }
 }
 
