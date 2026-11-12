@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-12',
+            title: 'Selected cursor stays visible over buttons',
+            items: [
+                'Buttons and links no longer bring back the native pointer when a custom cursor is selected.',
+                'The selected cursor also stays active inside the account panel.'
+            ]
+        },
+        {
+            date: '2026-11-12',
             title: 'Reply controls stay out of the message layout',
             items: [
                 'Reply now slides in as a small floating control when hovering over someone else\'s message.',

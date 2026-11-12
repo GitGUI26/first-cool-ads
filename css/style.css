@@ -1815,6 +1815,14 @@
     display: none !important;
   }
 
+  body:not(.cursor-disabled):not(.proto-ui) * {
+    cursor: none !important;
+  }
+
+  body.account-open:not(.cursor-disabled) #custom-cursor {
+    display: block !important;
+  }
+
   .theme-rainbow #matrix-bg {
     filter: hue-rotate(300deg) saturate(2);
   }
