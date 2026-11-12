@@ -159,6 +159,16 @@
     return LOGIN_EMAIL_LOCAL_PREFIX + hex.slice(0, 24) + '@' + LOGIN_EMAIL_DOMAIN;
   }
 
+  async function loginResolverAvailable(auth) {
+    if (!auth) return false;
+    try {
+      var result = await auth.rpc('login_email_for_username', { candidate: '__schema_probe__' });
+      return !result.error || !missingRpcError(result.error);
+    } catch (error) {
+      return false;
+    }
+  }
+
   function missingRpcError(error) {
     var message = String((error && (error.message || error.error_description)) || '');
     var code = String((error && error.code) || '');
@@ -1375,10 +1385,12 @@
       return { ok: false, error: 'Could not check whether that username is available. Check your connection and try again.' };
     }
 
+    var signupEmail = loginEmailForUsername(check.key);
+    if (await loginResolverAvailable(auth)) signupEmail = loginEmailForNewAccount();
     var result;
     try {
       result = await auth.auth.signUp({
-        email: loginEmailForNewAccount(),
+        email: signupEmail,
         password: password,
         options: { data: { username: check.username } }
       });
