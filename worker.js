@@ -402,8 +402,7 @@ export class ChatRoom {
   }
 
   async readPointsState() {
-    let state = null;
-    try { state = await this.ctx.storage.get('points'); } catch (error) {}
+    let state = await this.ctx.storage.get('points');
     if (!state || typeof state !== 'object') state = {};
     if (!state.balances || typeof state.balances !== 'object') state.balances = {};
     if (!state.claims || typeof state.claims !== 'object') state.claims = {};

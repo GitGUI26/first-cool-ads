@@ -301,6 +301,11 @@
         : (pointsState.claimedToday ? 'Claimed today' : 'Claim ' + daily + ' points');
     }
     setHidden($('accountPointsAdmin'), !pointsState.isAdmin);
+    if ($('accountPointsPayNote')) {
+      $('accountPointsPayNote').textContent = pointsState.isAdmin
+        ? 'Owner sends do not use your balance. Use Give or Take below to adjust balances.'
+        : 'Payments come out of your balance. Regular members cannot send more points than they have.';
+    }
     if (pointsState.loading && !pointsState.loaded) {
       showMessage('accountPointsMessage', 'Loading your points…', true);
     } else if (pointsState.error) {
