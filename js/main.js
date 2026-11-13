@@ -540,6 +540,45 @@ function syncGameOpenRawButton() {
         link.tabIndex = -1;
     }
 }
+function findGameByTitle(title) {
+    const key = String(title || '').trim().toLowerCase();
+    if (!key)
+        return null;
+    return games.find(game => String(game.title || '').trim().toLowerCase() === key) || null;
+}
+function activeGameIsMultiplayer() {
+    const active = getActiveGameTab();
+    const game = active ? findGameByTitle(active.title) : null;
+    return !!(game && game.multiplayer);
+}
+function syncGameInviteButton() {
+    const button = document.getElementById('gameInviteBtn');
+    if (!button)
+        return;
+    const active = getActiveGameTab();
+    const game = active ? findGameByTitle(active.title) : null;
+    const multiplayer = !!(game && game.multiplayer);
+    button.hidden = !multiplayer;
+    button.disabled = !multiplayer;
+    if (multiplayer) {
+        button.title = 'Invite friends to ' + game.title;
+        button.setAttribute('aria-label', 'Invite friends to ' + game.title);
+    }
+}
+function inviteCurrentGame() {
+    const active = getActiveGameTab();
+    if (!active || !activeGameIsMultiplayer())
+        return;
+    const payload = { title: active.title, url: active.url, slug: gameSlug(active.title) };
+    if (typeof window.openGameInvite === 'function') {
+        window.openGameInvite(payload);
+        return;
+    }
+    window.setTimeout(function () {
+        if (typeof window.openGameInvite === 'function')
+            window.openGameInvite(payload);
+    }, 600);
+}
 function toggleFavorite(title, button) {
     const index = favorites.indexOf(title);
     const isNowFavorite = index === -1;
@@ -3936,6 +3975,7 @@ function openLesson(t, u, options = {}) {
         syncGameUrl(t, options);
         syncGameFavoriteButton();
         syncGameOpenRawButton();
+        syncGameInviteButton();
         return;
     }
     const tab = ensureActiveGameSession(t, normalizedUrl);
@@ -3945,6 +3985,7 @@ function openLesson(t, u, options = {}) {
     syncGameUrl(t, options);
     syncGameFavoriteButton();
     syncGameOpenRawButton();
+    syncGameInviteButton();
     loadGameIntoTab(tab);
 }
 function exitGameBrowser(options = {}) {

@@ -1929,3 +1929,241 @@ body.chat-profile-open {
     font-size: 1.05rem;
   }
 }
+
+/* ---------- Game invites ---------- */
+body.game-invite-open {
+  overflow: hidden;
+}
+
+.chat-invite-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 4200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+}
+
+.chat-invite-modal[hidden] {
+  display: none;
+}
+
+.chat-invite-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  background: rgba(3, 6, 14, 0.74);
+  backdrop-filter: blur(3px);
+  cursor: pointer;
+}
+
+.chat-invite-panel {
+  position: relative;
+  display: flex;
+  width: min(360px, 100%);
+  max-height: min(560px, 86vh);
+  flex-direction: column;
+  gap: 10px;
+  padding: 16px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.32);
+  border-radius: 16px;
+  background: linear-gradient(160deg, #111a2d, #070c17);
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.55);
+}
+
+.chat-invite-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.chat-invite-head strong {
+  color: var(--light-text);
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.chat-invite-close {
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--ui-muted);
+  font: inherit;
+  width: 28px;
+  height: 28px;
+  cursor: pointer;
+}
+
+.chat-invite-close:hover {
+  color: var(--light-text);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.chat-invite-sub {
+  margin: 0;
+  color: var(--ui-muted);
+  font-size: 0.72rem;
+  line-height: 1.5;
+}
+
+.chat-invite-list {
+  display: flex;
+  min-height: 60px;
+  flex: 1;
+  flex-direction: column;
+  gap: 4px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.chat-invite-person {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  cursor: pointer;
+}
+
+.chat-invite-person:hover {
+  border-color: rgba(var(--primary-accent-rgb), 0.35);
+}
+
+.chat-invite-person input {
+  accent-color: var(--primary-accent);
+  width: 15px;
+  height: 15px;
+}
+
+.chat-invite-person-name {
+  flex: 1;
+  min-width: 0;
+  color: var(--light-text);
+  font-size: 0.76rem;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.chat-invite-person-state {
+  color: var(--ui-muted);
+  font-size: 0.62rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.chat-invite-person-state[data-state='online'] {
+  color: #59e3c0;
+}
+
+.chat-invite-empty,
+.chat-invite-status {
+  margin: 0;
+  color: var(--ui-muted);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.chat-invite-status {
+  min-height: 16px;
+  color: #8ff0d6;
+}
+
+.chat-invite-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.chat-invite-send {
+  flex: 1;
+  min-height: 38px;
+  border: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--primary-accent), #7c8cff);
+  color: #041017;
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chat-invite-send:hover {
+  transform: translateY(-1px);
+}
+
+.chat-invite-cancel {
+  min-height: 38px;
+  padding: 0 14px;
+  border: 1px solid var(--ui-line);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--light-text);
+  font: inherit;
+  font-size: 0.76rem;
+  cursor: pointer;
+}
+
+.chat-invite-card {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 6px;
+  padding: 10px;
+  border: 1px solid rgba(89, 227, 192, 0.34);
+  border-radius: 12px;
+  background: rgba(89, 227, 192, 0.08);
+}
+
+.chat-invite-card-icon {
+  display: inline-flex;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  border-radius: 9px;
+  background: rgba(89, 227, 192, 0.16);
+  color: #59e3c0;
+}
+
+.chat-invite-card-copy {
+  display: flex;
+  min-width: 0;
+  flex: 1;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.chat-invite-card-copy strong {
+  color: var(--light-text);
+  font-size: 0.76rem;
+}
+
+.chat-invite-card-copy span {
+  color: var(--ui-muted);
+  font-size: 0.64rem;
+}
+
+.chat-invite-join {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #59e3c0, #7c8cff);
+  color: #041017;
+  font: inherit;
+  font-size: 0.7rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.chat-invite-join:hover {
+  transform: translateY(-1px);
+}

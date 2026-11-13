@@ -70,6 +70,8 @@
 
   function notificationSummary(notification) {
     var text = String(notification && notification.text || '');
+    var invite = parseGameInvite(text);
+    if (invite) return 'invited you to play ' + invite.title + '.';
     if (notification.type === 'mention') return 'mentioned you: ' + text;
     if (notification.type === 'reply') return 'replied to you: ' + text;
     if (notification.type === 'friend-request') return text || 'sent you a friend request.';
@@ -1206,8 +1208,14 @@
     meta.appendChild(name);
     meta.appendChild(time);
     var quote = makeReplyQuote(message.replyTo);
-    var text = document.createElement('p');
-    appendMessageText(text, message);
+    var invite = parseGameInvite(message.text);
+    var text;
+    if (invite) {
+      text = makeInviteCard(invite, own);
+    } else {
+      text = document.createElement('p');
+      appendMessageText(text, message);
+    }
     body.appendChild(meta);
     if (quote) body.appendChild(quote);
     body.appendChild(text);
@@ -1382,6 +1390,237 @@
     updateDmCharCount();
     clearDmReply();
     input.focus();
+  }
+
+  /* ---------- Game invites ---------- */
+  var INVITE_PREFIX = '[[game-invite]]';
+  var inviteGame = null;
+  var inviteOwnSocket = false;
+
+  function parseGameInvite(text) {
+    var value = String(text || '');
+    var start = value.indexOf(INVITE_PREFIX);
+    if (start === -1) return null;
+    var parts = value.slice(start + INVITE_PREFIX.length).split('|');
+    if (parts.length < 2) return null;
+    try {
+      return {
+        title: decodeURIComponent(parts[0] || ''),
+        url: decodeURIComponent(parts[1] || ''),
+        slug: decodeURIComponent(parts[2] || '')
+      };
+    } catch (error) {
+      return null;
+    }
+  }
+
+  function openInvitedGame(invite) {
+    if (!invite || !invite.url) return;
+    if (typeof window.openLesson === 'function') {
+      window.openLesson(invite.title || 'Game', invite.url);
+      return;
+    }
+    if (invite.slug) location.hash = 'game=' + encodeURIComponent(invite.slug);
+  }
+
+  function makeInviteCard(invite, own) {
+    var card = document.createElement('div');
+    card.className = 'chat-invite-card';
+    var icon = document.createElement('span');
+    icon.className = 'chat-invite-card-icon';
+    var glyph = document.createElement('i');
+    glyph.className = 'fas fa-gamepad';
+    glyph.setAttribute('aria-hidden', 'true');
+    icon.appendChild(glyph);
+    var copy = document.createElement('div');
+    copy.className = 'chat-invite-card-copy';
+    var title = document.createElement('strong');
+    title.textContent = invite.title || 'Game';
+    var hint = document.createElement('span');
+    hint.textContent = own ? 'You invited them to play' : 'Invited you to play';
+    copy.append(title, hint);
+    var join = document.createElement('button');
+    join.type = 'button';
+    join.className = 'chat-invite-join';
+    join.textContent = 'Join game';
+    join.addEventListener('click', function () { openInvitedGame(invite); });
+    card.append(icon, copy, join);
+    return card;
+  }
+
+  function ensureInviteSocket() {
+    return new Promise(function (resolve) {
+      if (socket && socket.readyState === WebSocket.OPEN) {
+        inviteOwnSocket = false;
+        resolve(true);
+        return;
+      }
+      inviteOwnSocket = true;
+      connect();
+      var waited = 0;
+      var timer = window.setInterval(function () {
+        waited += 200;
+        if (socket && socket.readyState === WebSocket.OPEN) {
+          window.clearInterval(timer);
+          resolve(true);
+          return;
+        }
+        if (waited >= 8000) {
+          window.clearInterval(timer);
+          resolve(false);
+        }
+      }, 200);
+    });
+  }
+
+  function setInviteStatus(text) {
+    var node = $('gameInviteStatus');
+    if (node) node.textContent = text || '';
+  }
+
+  function buildInviteModal() {
+    var existing = $('gameInviteModal');
+    if (existing) return existing;
+    var modal = document.createElement('div');
+    modal.className = 'chat-invite-modal';
+    modal.id = 'gameInviteModal';
+    modal.hidden = true;
+    modal.innerHTML = '<button type="button" class="chat-invite-backdrop" data-invite-close="1" aria-label="Close invites"></button>'
+      + '<div class="chat-invite-panel" role="dialog" aria-modal="true" aria-labelledby="gameInviteTitle">'
+      + '<div class="chat-invite-head"><strong id="gameInviteTitle">Invite friends</strong>'
+      + '<button type="button" class="chat-invite-close" data-invite-close="1" aria-label="Close invites"><i class="fas fa-xmark" aria-hidden="true"></i></button></div>'
+      + '<p class="chat-invite-sub" id="gameInviteSub"></p>'
+      + '<div class="chat-invite-list" id="gameInviteList"></div>'
+      + '<p class="chat-invite-status" id="gameInviteStatus" role="status"></p>'
+      + '<div class="chat-invite-actions">'
+      + '<button type="button" class="chat-invite-send" id="gameInviteSend">Send invite</button>'
+      + '<button type="button" class="chat-invite-cancel" data-invite-close="1">Cancel</button>'
+      + '</div></div>';
+    document.body.appendChild(modal);
+    modal.addEventListener('click', function (event) {
+      var target = event.target instanceof Element ? event.target.closest('[data-invite-close]') : null;
+      if (target) closeInviteModal();
+    });
+    var send = $('gameInviteSend');
+    if (send) send.addEventListener('click', sendGameInvites);
+    document.addEventListener('keydown', function (event) {
+      if (event.key !== 'Escape') return;
+      if (!modal || modal.hidden) return;
+      closeInviteModal();
+    });
+    return modal;
+  }
+
+  function renderInviteFriends() {
+    var list = $('gameInviteList');
+    if (!list) return;
+    list.replaceChildren();
+    if (!friends.length) {
+      var empty = document.createElement('p');
+      empty.className = 'chat-invite-empty';
+      empty.textContent = 'No friends yet. Add someone in the CHAT tab, then invite them here.';
+      list.appendChild(empty);
+      return;
+    }
+    var ordered = friends.slice().sort(function (a, b) {
+      var onlineDiff = (isOnlineUser(b.id) ? 1 : 0) - (isOnlineUser(a.id) ? 1 : 0);
+      if (onlineDiff) return onlineDiff;
+      return displayName(a).localeCompare(displayName(b));
+    });
+    ordered.forEach(function (friend) {
+      var online = isOnlineUser(friend.id);
+      var row = document.createElement('label');
+      row.className = 'chat-invite-person';
+      var box = document.createElement('input');
+      box.type = 'checkbox';
+      box.value = String(friend.id);
+      box.checked = online;
+      var who = document.createElement('span');
+      who.className = 'chat-invite-person-name';
+      who.textContent = displayName(friend);
+      var state = document.createElement('span');
+      state.className = 'chat-invite-person-state';
+      state.dataset.state = online ? 'online' : 'offline';
+      state.textContent = online ? 'Online' : 'Offline';
+      row.append(box, who, state);
+      list.appendChild(row);
+    });
+  }
+
+  function closeInviteModal() {
+    var modal = $('gameInviteModal');
+    if (modal) modal.hidden = true;
+    document.body.classList.remove('game-invite-open');
+    inviteGame = null;
+    if (inviteOwnSocket) {
+      inviteOwnSocket = false;
+      closeSocket('Disconnected');
+    }
+  }
+
+  function openGameInvite(payload) {
+    var user = currentUser();
+    if (!user || isLocal(user)) {
+      showAccountPrompt();
+      return;
+    }
+    inviteGame = {
+      title: String(payload && payload.title || 'Game').slice(0, 80),
+      url: String(payload && payload.url || ''),
+      slug: String(payload && payload.slug || '')
+    };
+    if (!inviteGame.url) return;
+    var modal = buildInviteModal();
+    var sub = $('gameInviteSub');
+    if (sub) sub.textContent = 'Send ' + inviteGame.title + ' to your friends. They get a real invite in chat and join with one tap.';
+    setInviteStatus('');
+    renderInviteFriends();
+    modal.hidden = false;
+    document.body.classList.add('game-invite-open');
+  }
+
+  function sendGameInvites() {
+    if (!inviteGame) return;
+    var boxes = document.querySelectorAll('#gameInviteList .chat-invite-person input:checked');
+    var ids = [];
+    Array.prototype.forEach.call(boxes, function (box) { ids.push(String(box.value)); });
+    if (!ids.length) {
+      setInviteStatus('Pick at least one friend.');
+      return;
+    }
+    var invite = inviteGame;
+    var text = INVITE_PREFIX + [invite.title, invite.url, invite.slug].map(encodeURIComponent).join('|');
+    setInviteStatus(ids.length === 1 ? 'Sending invite…' : 'Sending ' + ids.length + ' invites…');
+    ensureInviteSocket().then(function (ready) {
+      if (!ready) {
+        setInviteStatus('Chat could not connect. Open the CHAT tab, sign in, then try again.');
+        return;
+      }
+      // The room rate-limits direct messages, so invites go out one at a time.
+      var index = 0;
+      var sent = 0;
+      var step = function () {
+        if (index >= ids.length) {
+          if (!sent) {
+            setInviteStatus('The invite could not be sent. Try again.');
+            return;
+          }
+          setInviteStatus('Invite sent to ' + sent + (sent === 1 ? ' friend.' : ' friends.'));
+          window.setTimeout(closeInviteModal, 900);
+          return;
+        }
+        var id = ids[index];
+        index += 1;
+        var clientId = (window.crypto && crypto.randomUUID) ? crypto.randomUUID() : 'invite_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+        try {
+          socket.send(JSON.stringify({ type: 'dm', to: id, text: text, clientId: clientId, replyTo: '' }));
+          sent += 1;
+        } catch (error) {}
+        setInviteStatus('Sending ' + index + ' of ' + ids.length + '…');
+        window.setTimeout(step, 800);
+      };
+      step();
+    });
   }
 
   function handleDmError(data) {
@@ -1953,6 +2192,7 @@
     initialized = true;
     bind();
     window.openChat = openChat;
+    window.openGameInvite = openGameInvite;
     window.addEventListener('app:switch-tab', handleSwitch);
     window.addEventListener('cuh-account-change', handleAccountChange);
     var user = currentUser();

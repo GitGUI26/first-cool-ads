@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Invite friends to multiplayer games',
+            items: [
+                'Multiplayer games now have an invite button in the game toolbar that opens your friends list.',
+                'The invite is a real direct message: friends get it in chat, live if they are online and waiting in history if they are not, and it renders as a card with a Join game button that launches the same game for them.',
+                'Single-player games do not show the button, so an invite never lands on a game two people cannot play together.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: '419 archived games playable from the emulator page',
             items: [
                 'The EMULATORS tab now has an archive library: 366 Nintendo DS and 53 PlayStation games from the Internet Archive, searchable and playable without downloading anything first.',
