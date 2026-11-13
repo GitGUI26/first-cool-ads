@@ -9,7 +9,7 @@
     { id: 'n64', label: 'Nintendo 64', short: 'N64', group: 'Nintendo', core: 'n64', exts: ['z64', 'n64', 'v64', 'rom'], bios: false, hint: '' },
     { id: 'gb', label: 'Game Boy / Game Boy Color', short: 'GB / GBC', group: 'Nintendo', core: 'gb', exts: ['gb', 'gbc'], bios: false, hint: '' },
     { id: 'gba', label: 'Game Boy Advance', short: 'GBA', group: 'Nintendo', core: 'gba', exts: ['gba'], bios: false, hint: '' },
-    { id: 'nds', label: 'Nintendo DS', short: 'NDS', group: 'Nintendo', core: 'nds', exts: ['nds'], bios: false, hint: 'Most games boot without a BIOS; add one if your dump asks for it.' },
+    { id: 'nds', label: 'Nintendo DS', short: 'NDS', group: 'Nintendo', core: 'nds', exts: ['nds'], bios: true, hint: 'Every DS core here needs the DS BIOS (bios7.bin, bios9.bin and firmware.bin in one ZIP). Without it the core shows its own menu instead of the game.' },
     { id: 'vb', label: 'Virtual Boy', short: 'VB', group: 'Nintendo', core: 'vb', exts: ['vb', 'vboy'], bios: false, hint: '' },
     { id: '3ds', label: 'Nintendo 3DS (experimental)', short: '3DS', group: 'Nintendo', core: '3ds', exts: ['3ds', 'cci', 'cxi'], bios: false, hint: '3DS support is experimental and may be slow or incomplete.' },
 
@@ -56,6 +56,12 @@
   var biosFile = null;
   var romUrl = '';
   var biosUrl = '';
+  var LIBRARY_URL = 'data/rom-library.json';
+  var library = null;
+  var libraryLoading = false;
+  var libraryQuery = '';
+  var libraryRows = 60;
+  var archiveGame = null;
 
   SYSTEMS.forEach(function (system) { BY_ID[system.id] = system; });
 
@@ -144,24 +150,132 @@
     var clear = $('emulatorClear');
     var system = selectedSystem();
 
-    if (fileBox) fileBox.hidden = !romFile;
-    if (fileName) fileName.textContent = romFile ? romFile.name : 'No file selected';
-    if (fileMeta) fileMeta.textContent = romFile ? formatBytes(romFile.size) + ' · stays on this device' : '';
+    var picked = !!romFile || !!archiveGame;
+    if (fileBox) fileBox.hidden = !picked;
+    if (fileName) fileName.textContent = romFile ? romFile.name : (archiveGame ? archiveGame.t : 'No file selected');
+    if (fileMeta) {
+      fileMeta.textContent = romFile
+        ? formatBytes(romFile.size) + ' · stays on this device'
+        : (archiveGame ? archiveGame.z + ' MB · archive.org' : '');
+    }
     if (coreNote) {
       coreNote.textContent = system
         ? 'Core: ' + system.core + ' · ' + system.label
-        : (romFile ? 'Choose a console above; this file type is shared by more than one system.' : 'Pick a ROM to see its matching core.');
+        : (picked ? 'Choose a console above; this file type is shared by more than one system.' : 'Pick a ROM to see its matching core.');
     }
     updateBiosUi(system);
-    if (start) start.disabled = !romFile || !system;
-    if (clear) clear.disabled = !romFile && !frame;
-    if (!romFile) setStatus('Choose a ROM or boot Android to begin.');
+    if (start) start.disabled = !picked || !system;
+    if (clear) clear.disabled = !picked && !frame;
+    if (!picked) setStatus('Choose a ROM or boot Android to begin.');
     else if (!system) setStatus('Choose the console for this file.', 'warning');
-    else if (!frame) setStatus('Ready: ' + system.short + ' · ' + formatBytes(romFile.size), 'ready');
+    else if (!frame) setStatus('Ready: ' + system.short + ' · ' + (romFile ? formatBytes(romFile.size) : archiveGame.t), 'ready');
+  }
+
+  function encodeArchivePath(path) {
+    return '/api/rom/' + String(path).split('/').map(encodeURIComponent).join('/');
+  }
+
+  function librarySystemLabel(id) {
+    var system = BY_ID[id];
+    return system ? system.short : String(id || '').toUpperCase();
+  }
+
+  function renderLibrary() {
+    var list = $('emulatorLibraryList');
+    var count = $('emulatorLibraryCount');
+    if (!list) return;
+    if (!library) {
+      if (count) count.textContent = libraryLoading ? 'Loading...' : 'Unavailable';
+      return;
+    }
+    var query = libraryQuery.trim().toLowerCase();
+    var matches = library.games.filter(function (game) {
+      return !query || game.t.toLowerCase().indexOf(query) !== -1;
+    });
+    if (count) {
+      count.textContent = matches.length === library.games.length
+        ? library.games.length + ' games'
+        : matches.length + ' of ' + library.games.length;
+    }
+    if (!matches.length) {
+      var empty = document.createElement('p');
+      empty.className = 'emulator-library-empty';
+      empty.textContent = 'No archived game matches that search.';
+      list.replaceChildren(empty);
+      return;
+    }
+    var shown = matches.slice(0, libraryRows);
+    var rows = shown.map(function (game) {
+      var button = document.createElement('button');
+      button.type = 'button';
+      button.className = 'emulator-library-item';
+      button.setAttribute('role', 'option');
+      button.dataset.path = game.p;
+      if (archiveGame && archiveGame.p === game.p) button.classList.add('is-selected');
+      var title = document.createElement('span');
+      title.className = 'emulator-library-title';
+      title.textContent = game.t;
+      var meta = document.createElement('span');
+      meta.className = 'emulator-library-meta';
+      meta.textContent = librarySystemLabel(game.s) + (game.r ? ' · ' + game.r : '') + ' · ' + game.z + ' MB';
+      button.append(title, meta);
+      button.addEventListener('click', function () { chooseArchiveGame(game); });
+      return button;
+    });
+    if (matches.length > shown.length) {
+      var more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'emulator-library-more';
+      more.textContent = 'Show ' + Math.min(libraryRows, matches.length - shown.length) + ' more of ' + matches.length;
+      more.addEventListener('click', function () {
+        libraryRows += 60;
+        renderLibrary();
+      });
+      rows.push(more);
+    }
+    list.replaceChildren.apply(list, rows);
+  }
+
+  function loadLibrary() {
+    if (library || libraryLoading) return;
+    libraryLoading = true;
+    renderLibrary();
+    fetch(LIBRARY_URL, { cache: 'force-cache' })
+      .then(function (response) {
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        return response.json();
+      })
+      .then(function (data) {
+        library = data && Array.isArray(data.games) ? data : { games: [] };
+        libraryLoading = false;
+        renderLibrary();
+      })
+      .catch(function () {
+        libraryLoading = false;
+        library = null;
+        var count = $('emulatorLibraryCount');
+        if (count) count.textContent = 'Unavailable';
+        var note = $('emulatorLibraryNote');
+        if (note) note.textContent = 'The archive library could not be loaded. Check your connection and reopen this list.';
+      });
+  }
+
+  function chooseArchiveGame(game) {
+    if (!game || !game.p) return;
+    archiveGame = game;
+    romFile = null;
+    var romInput = $('romInput');
+    if (romInput) romInput.value = '';
+    var select = $('emulatorSystem');
+    if (select && game.s && BY_ID[game.s]) select.value = game.s;
+    renderLibrary();
+    updateUi();
   }
 
   function chooseRom(file) {
     if (!file) return;
+    archiveGame = null;
+    renderLibrary();
     romFile = file;
     var detected = detectSystem(file);
     var select = $('emulatorSystem');
@@ -249,7 +363,7 @@
 
   function startEmulator() {
     var system = selectedSystem();
-    if (!romFile || !system) {
+    if ((!romFile && !archiveGame) || !system) {
       updateUi();
       return;
     }
@@ -260,8 +374,9 @@
     removeFrame();
     releaseUrls();
 
+    var name = romFile ? String(romFile.name || 'rom') : String(archiveGame.t || 'rom');
     try {
-      romUrl = URL.createObjectURL(romFile);
+      romUrl = romFile ? URL.createObjectURL(romFile) : encodeArchivePath(archiveGame.p);
       if (biosFile) biosUrl = URL.createObjectURL(biosFile);
     } catch (error) {
       setStatus('This browser could not open that ROM file.', 'error');
@@ -271,8 +386,8 @@
     var params = new URLSearchParams();
     params.set('core', system.core);
     params.set('rom', romUrl);
-    params.set('name', String(romFile.name || 'rom').replace(/[<>]/g, '').slice(0, 100));
-    params.set('gameId', String(gameIdFor(romFile)));
+    params.set('name', name.replace(/[<>]/g, '').slice(0, 100));
+    params.set('gameId', String(gameIdFor(romFile || { name: name, size: archiveGame.z })));
     if (biosUrl) params.set('bios', biosUrl);
 
     frame = document.createElement('iframe');
@@ -293,15 +408,19 @@
     stage.replaceChildren(frame);
     if (start) start.disabled = true;
     var title = $('emulatorStageTitle');
-    if (title) title.textContent = romFile.name + ' · ' + system.short;
-    setStatus('Starting ' + system.short + '...', 'loading');
+    if (title) title.textContent = name + ' · ' + system.short;
+    setStatus(romFile
+      ? 'Starting ' + system.short + '...'
+      : 'Streaming ' + name + ' from the archive...', 'loading');
   }
 
   function clearEmulator() {
     removeFrame();
     releaseUrls();
     romFile = null;
+    archiveGame = null;
     biosFile = null;
+    renderLibrary();
     var romInput = $('romInput');
     var biosInput = $('biosInput');
     var systemSelect = $('emulatorSystem');
@@ -317,6 +436,8 @@
     if (initialized) return;
     initialized = true;
     buildSystemOptions();
+
+    renderLibrary();
 
     var dropzone = $('romDropzone');
     var romInput = $('romInput');
@@ -370,6 +491,21 @@
     }
     if (start) start.addEventListener('click', startEmulator);
     if (clear) clear.addEventListener('click', clearEmulator);
+
+    var libraryBox = $('emulatorLibraryBox');
+    var librarySearch = $('emulatorLibrarySearch');
+    if (libraryBox) {
+      libraryBox.addEventListener('toggle', function () {
+        if (libraryBox.open) loadLibrary();
+      });
+    }
+    if (librarySearch) {
+      librarySearch.addEventListener('input', function () {
+        libraryQuery = librarySearch.value || '';
+        libraryRows = 60;
+        renderLibrary();
+      });
+    }
 
     window.addEventListener('message', function (event) {
       if (!frame || event.source !== frame.contentWindow || event.origin !== location.origin) return;

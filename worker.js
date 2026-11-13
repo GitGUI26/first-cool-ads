@@ -1361,9 +1361,95 @@ async function fetchAndroidChunk(start, end, attempt) {
   return null;
 }
 
+/* ---------- Archived ROM library ---------- */
+// EmulatorJS fetches the ROM from this origin, so the archive's missing CORS
+// headers never matter and repeat loads of the same game come from the edge.
+const ROM_ARCHIVE_ID = 'ultimate-rom-collection';
+const ROM_PROXY_PREFIX = '/api/rom/';
+const ROM_ARCHIVE_HOSTS = [
+  'https://archive.org/download/' + ROM_ARCHIVE_ID + '/',
+  'https://ia801900.us.archive.org/2/items/' + ROM_ARCHIVE_ID + '/'
+];
+const ROM_CACHE_LIMIT = 96 * 1024 * 1024;
+const ROM_EXTENSION = /\.(zip|7z|nes|fds|sfc|smc|gb|gbc|gba|nds|n64|z64|iso|chd|pbp|md|gen|smd|sms|gg|32x|a26|a52|a78|j64|lnx|pce|ngp|ngc|ws|wsc|col|d64|adf|prg|crt|tap|d71|d81)$/i;
+
+async function handleRomRequest(request, env, ctx) {
+  if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+  if (request.method !== 'GET' && request.method !== 'HEAD') return json({ error: 'Method not allowed.' }, 405);
+
+  const raw = new URL(request.url).pathname.slice(ROM_PROXY_PREFIX.length);
+  if (!raw) return json({ error: 'Missing ROM path.' }, 400);
+
+  let relative;
+  try {
+    relative = decodeURIComponent(raw);
+  } catch (error) {
+    return json({ error: 'Malformed ROM path.' }, 400);
+  }
+  if (!ROM_EXTENSION.test(relative)) return json({ error: 'Unsupported ROM type.' }, 415);
+  const parts = relative.split('/');
+  if (!parts.length || parts.some(function (part) { return !part || part === '.' || part === '..'; })) {
+    return json({ error: 'Malformed ROM path.' }, 400);
+  }
+
+  const upstreamPath = parts.map(function (part) { return encodeURIComponent(part); }).join('/');
+  const range = request.headers.get('Range');
+  const cacheKey = new Request(new URL(request.url).toString(), { method: 'GET' });
+  let cache = null;
+  try { cache = caches.default; } catch (error) {}
+
+  if (cache && !range) {
+    try {
+      const hit = await cache.match(cacheKey);
+      if (hit) return hit;
+    } catch (error) {}
+  }
+
+  let upstream = null;
+  let source = '';
+  for (const host of ROM_ARCHIVE_HOSTS) {
+    try {
+      const headers = { accept: '*/*', 'user-agent': 'rcms-emulator/1.0' };
+      if (range) headers.range = range;
+      const candidate = await fetch(host + upstreamPath, { headers: headers });
+      if (candidate.status === 200 || candidate.status === 206) {
+        upstream = candidate;
+        source = host;
+        break;
+      }
+      if (candidate.body) { try { await candidate.body.cancel(); } catch (error) {} }
+    } catch (error) {}
+  }
+  if (!upstream) return json({ error: 'That ROM is not available from the archive.' }, 502);
+
+  const headers = new Headers({
+    'content-type': upstream.headers.get('content-type') || 'application/octet-stream',
+    'cache-control': 'public, max-age=31536000, immutable',
+    'access-control-allow-origin': '*',
+    'accept-ranges': 'bytes',
+    'x-content-type-options': 'nosniff',
+    'x-rom-source': new URL(source).hostname
+  });
+  ['content-length', 'content-range'].forEach(function (name) {
+    const value = upstream.headers.get(name);
+    if (value) headers.set(name, value);
+  });
+
+  const response = new Response(request.method === 'HEAD' ? null : upstream.body, { status: upstream.status, headers });
+  const size = Number(upstream.headers.get('content-length') || 0);
+  if (cache && ctx && ctx.waitUntil && !range && upstream.status === 200 && size && size <= ROM_CACHE_LIMIT) {
+    ctx.waitUntil(cache.put(cacheKey, response.clone()).catch(function () {}));
+  }
+  return response;
+}
+
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
+
+    if (pathname.startsWith(ROM_PROXY_PREFIX)) {
+      return handleRomRequest(request, env, ctx);
+    }
 
     if (pathname.startsWith(ANDROID_IMAGE_PREFIX)) {
       if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);

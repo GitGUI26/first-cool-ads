@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: '419 archived games playable from the emulator page',
+            items: [
+                'The EMULATORS tab now has an archive library: 366 Nintendo DS and 53 PlayStation games from the Internet Archive, searchable and playable without downloading anything first.',
+                'Picking a title loads it straight into the player through the site\u2019s own proxy, so the archive\u2019s missing cross-origin headers never block it and the same game is served from the edge next time.',
+                'Only individual ROMs were added: GameCube, PS3, Wii U, Dreamcast, Saturn, PSP and the multi-game disc sets in that collection cannot run or cannot be picked apart by the browser emulator, so they were left out. Nintendo DS and PlayStation dumps need a BIOS file, which the page already accepts.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: '1v1.LOL page no longer pretends to load',
             items: [
                 'The archived 1v1.LOL client still boots but freezes on “Connecting…” because the publisher shut its servers down on 16 November 2025, which is why it looked stuck on a loading screen forever.',

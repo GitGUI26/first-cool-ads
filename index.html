@@ -52,7 +52,7 @@
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/chat.css?v=11" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
-<link href="css/emulators.css?v=3" rel="stylesheet">
+<link href="css/emulators.css?v=4" rel="stylesheet">
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -507,6 +507,12 @@
             <span class="emulator-file-icon"><i class="fas fa-gamepad" aria-hidden="true"></i></span>
             <span class="emulator-file-copy"><strong id="romFileName">No file selected</strong><small id="romFileMeta"></small></span>
           </div>
+          <details class="emulator-library" id="emulatorLibraryBox">
+            <summary>Archive library <span id="emulatorLibraryCount">Loading...</span></summary>
+            <input class="emulator-library-search" id="emulatorLibrarySearch" type="search" placeholder="Search DS and PlayStation titles" autocomplete="off" aria-label="Search the archive library">
+            <div class="emulator-library-list" id="emulatorLibraryList" role="listbox" aria-label="Archive games"></div>
+            <p class="emulator-library-note" id="emulatorLibraryNote">Streams from archive.org on play. Nintendo DS needs a DS BIOS and PlayStation needs a PS1 BIOS; add one under “Add a BIOS file”.</p>
+          </details>
           <label class="emulator-field" for="emulatorSystem">Console / core
             <select class="emulator-select" id="emulatorSystem"></select>
           </label>
@@ -980,11 +986,11 @@
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=22"></script>
   <script src="js/main.js?v=36"></script>
-  <script src="js/updates.js?v=49"></script>
+  <script src="js/updates.js?v=50"></script>
   <script src="js/account.js?v=17"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=11"></script>
-  <script src="js/emulators.js?v=4"></script>
+  <script src="js/emulators.js?v=5"></script>
   <script>
     (function () {
       const overlay = document.getElementById('browserOverlay');
