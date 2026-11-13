@@ -290,7 +290,7 @@ function decodeText(buffer, contentType) {
   try { return new TextDecoder(charset).decode(buffer); } catch (error) { return new TextDecoder('utf-8').decode(buffer); }
 }
 
-function safeHeaders(upstream, isHTML, isCSS) {
+function safeHeaders(upstream, isHTML, isCSS, cacheControl) {
   const headers = new Headers();
   const passthrough = ['content-type', 'content-disposition', 'accept-ranges', 'content-range', 'last-modified', 'etag'];
   passthrough.forEach(name => {
@@ -299,7 +299,9 @@ function safeHeaders(upstream, isHTML, isCSS) {
   });
   if (isHTML) headers.set('content-type', 'text/html; charset=utf-8');
   if (isCSS) headers.set('content-type', 'text/css; charset=utf-8');
-  headers.set('cache-control', 'no-store');
+  // HTML is never cached; assets carry a real lifetime so the browser itself
+  // can reuse them instead of re-fetching every image on every page view.
+  headers.set('cache-control', cacheControl || 'no-store');
   headers.set('access-control-allow-origin', '*');
   headers.set('access-control-allow-methods', 'GET, HEAD, POST, OPTIONS');
   headers.set('access-control-allow-headers', '*');
@@ -364,6 +366,22 @@ const BLOCK_MARKERS = [
   /cf-error-details/i
 ];
 const READER_GATEWAY = 'https://r.jina.ai/';
+
+// Static subresources are cached at the edge: a repeat visit to a game page or
+// site then costs no upstream fetch at all. HTML stays uncached.
+const CACHE_TTL_DEFAULT = 300;
+const CACHE_TTL_MAX = 3600;
+const CACHEABLE_TYPE = /^(image\/|font\/|application\/font|text\/css|application\/javascript|text\/javascript|application\/wasm|video\/|audio\/)/i;
+
+function cacheTtl(header) {
+  const value = String(header || '');
+  if (/no-store|private/i.test(value)) return 0;
+  const shared = /s-maxage=(\d+)/i.exec(value);
+  const maxAge = /max-age=(\d+)/i.exec(value);
+  const seconds = Number((shared && shared[1]) || (maxAge && maxAge[1]) || CACHE_TTL_DEFAULT);
+  if (!Number.isFinite(seconds) || seconds <= 0) return CACHE_TTL_DEFAULT;
+  return Math.max(60, Math.min(CACHE_TTL_MAX, seconds));
+}
 
 function relayOrigins(env) {
   const raw = String((env && env.PROXY_RELAYS) || '');
@@ -479,11 +497,12 @@ async function resolveUpstream(target, method, request, body, env) {
     const type = String(first.response.headers.get('content-type') || '');
     const html = /text\/html|application\/xhtml\+xml/i.test(type);
     if (!html) return { upstream: first, route: 'direct' };
+    // Only a block-ish status is inspected. Cloning and decoding every healthy
+    // page doubled the bytes read and the CPU per request, and a real 404 or
+    // 500 is the site's own page, not a proxy block.
+    if (!BLOCKED_STATUS.has(first.response.status)) return { upstream: first, route: 'direct' };
     const peek = await first.response.clone().text().catch(() => '');
     const snippet = peek.slice(0, 6000);
-    if (!BLOCKED_STATUS.has(first.response.status) && !BLOCK_MARKERS.some(rx => rx.test(snippet))) {
-      return { upstream: first, route: 'direct' };
-    }
     if (CHALLENGE_MARKERS.some(rx => rx.test(snippet))) {
       // Keep the challenge in reserve: a relay on another network may still
       // return the real page, which is always better than a captcha.
@@ -528,8 +547,9 @@ async function resolveUpstream(target, method, request, body, env) {
   return { blocked: true, reason: lastError || 'a block page', routes };
 }
 
-async function handleProxy(request, url, env) {
+async function handleProxy(request, url, env, ctx) {
   if (!['GET', 'HEAD', 'POST'].includes(request.method)) return errorResponse(405, 'Method not allowed');
+  const startedAt = Date.now();
 
   if (url.pathname.startsWith(ROUTE + 'reader/')) {
     const readerTarget = decodeTarget(url.pathname.slice((ROUTE + 'reader/').length));
@@ -549,7 +569,23 @@ async function handleProxy(request, url, env) {
     if (body.byteLength > MAX_BODY) return errorResponse(413, 'Request body too large');
   }
 
+  const cacheStore = typeof caches !== 'undefined' ? caches.default : null;
+  const cacheKey = cacheStore && ctx && request.method === 'GET' && !request.headers.get('range')
+    ? new Request(new URL('/__pxc/' + encodeTarget(target), url.origin).href, { method: 'GET' })
+    : null;
+
+  if (cacheKey) {
+    const hit = await cacheStore.match(cacheKey).catch(() => null);
+    if (hit) {
+      const headers = new Headers(hit.headers);
+      headers.set('x-proxy-cache', 'hit');
+      headers.set('server-timing', `cache;dur=${Date.now() - startedAt}`);
+      return new Response(hit.body, { status: 200, headers });
+    }
+  }
+
   const resolved = await resolveUpstream(target, request.method === 'HEAD' ? 'HEAD' : request.method, request, body, env);
+  const upstreamAt = Date.now();
   if (resolved.reader) return readerPage(resolved.reader.target, resolved.reader.markdown, resolved.reader.via);
   if (resolved.blocked) return blockedPage(target, resolved.reason, resolved.routes);
 
@@ -557,9 +593,12 @@ async function handleProxy(request, url, env) {
   const upstreamType = String(response.headers.get('content-type') || '');
   const isHTML = /text\/html|application\/xhtml\+xml/i.test(upstreamType);
   const isCSS = /text\/css/i.test(upstreamType);
+  const route = resolved.route || 'direct';
 
   if (request.method === 'HEAD') {
-    return new Response(null, { status: response.status, headers: safeHeaders(response, isHTML, isCSS) });
+    const headers = safeHeaders(response, isHTML, isCSS);
+    headers.set('server-timing', `upstream;dur=${upstreamAt - startedAt}`);
+    return new Response(null, { status: response.status, headers });
   }
 
   if (isHTML || isCSS) {
@@ -570,24 +609,53 @@ async function handleProxy(request, url, env) {
     } catch (error) {
       return errorResponse(502, 'Could not read that page');
     }
+    const fetchedAt = Date.now();
     const text = decodeText(buffer, upstreamType);
     let rewritten = isHTML ? rewriteHTML(text, resolvedUrl) : rewriteCSS(text, resolvedUrl);
     if (isHTML && resolved.challenge) rewritten = injectBanner(rewritten, target);
-    const headers = safeHeaders(response, isHTML, isCSS);
-    headers.set('x-proxy-route', resolved.route || 'direct');
+    const cacheCss = Boolean(cacheKey && isCSS && response.status === 200);
+    const ttl = cacheCss ? cacheTtl(response.headers.get('cache-control')) : 0;
+    const headers = safeHeaders(response, isHTML, isCSS, ttl ? `public, max-age=${ttl}` : null);
+    headers.set('x-proxy-route', route);
+    headers.set('server-timing', `upstream;dur=${upstreamAt - startedAt}, body;dur=${fetchedAt - upstreamAt}, rewrite;dur=${Date.now() - fetchedAt}`);
+    headers.set('x-proxy-cache', cacheCss ? 'miss' : 'bypass');
+    if (ttl > 0) {
+      const entryHeaders = new Headers(headers);
+      entryHeaders.delete('x-proxy-cache');
+      entryHeaders.delete('server-timing');
+      entryHeaders.set('cache-control', `public, max-age=${ttl}`);
+      ctx.waitUntil(cacheStore.put(cacheKey, new Response(rewritten, { status: 200, headers: entryHeaders })).catch(() => {}));
+    }
     return new Response(rewritten, { status: response.status, headers });
   }
 
-  const headersOut = safeHeaders(response, false, false);
-  headersOut.set('x-proxy-route', resolved.route || 'direct');
+  const cacheable = Boolean(cacheKey && response.status === 200 && CACHEABLE_TYPE.test(upstreamType));
+  const assetTtl = cacheable ? cacheTtl(response.headers.get('cache-control')) : 0;
+  const headersOut = safeHeaders(response, false, false, assetTtl ? `public, max-age=${assetTtl}` : null);
+  headersOut.set('x-proxy-route', route);
+  headersOut.set('x-proxy-cache', cacheable ? 'miss' : 'bypass');
+  headersOut.set('server-timing', `upstream;dur=${upstreamAt - startedAt}`);
   if (response.status === 204 || response.status === 304 || !response.body) {
     return new Response(null, { status: response.status, headers: headersOut });
   }
-  return new Response(response.body, { status: response.status, headers: headersOut });
+
+  const cacheCopy = cacheable ? response.clone() : null;
+  const clientResponse = new Response(response.body, { status: response.status, headers: headersOut });
+
+  if (cacheCopy && cacheKey && assetTtl > 0) {
+    const entryHeaders = new Headers(headersOut);
+    entryHeaders.delete('x-proxy-cache');
+    entryHeaders.delete('server-timing');
+    entryHeaders.set('cache-control', `public, max-age=${assetTtl}`);
+    const entry = new Response(cacheCopy.body, { status: 200, headers: entryHeaders });
+    ctx.waitUntil(cacheStore.put(cacheKey, entry).catch(() => {}));
+  }
+
+  return clientResponse;
 }
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
     const relays = relayOrigins(env);
@@ -612,7 +680,7 @@ export default {
       });
     }
     if (url.pathname === '/p/login') return jsonResponse({ ok: true });
-    if (url.pathname === '/p' || url.pathname.startsWith(ROUTE)) return handleProxy(request, url, env);
+    if (url.pathname === '/p' || url.pathname.startsWith(ROUTE)) return handleProxy(request, url, env, ctx);
     return new Response('Proxy backend is running. Use /p/<encoded-url>.', {
       status: 404,
       headers: { ...CORS, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }

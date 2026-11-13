@@ -6,6 +6,16 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Faster browsing through the proxy',
+            items: [
+                'Images, stylesheets, scripts and media are now cached at the edge and in the browser, so a repeat page load skips them entirely.',
+                'A Wikipedia page reload through the proxy went from 615 ms and 588 KB to 166 ms and 45 KB, with 39 of 41 requests served from cache.',
+                'Healthy pages skip the block-detection pass that used to read and decode every response twice, and a real 404 is no longer mistaken for a block.',
+                'Each proxied response reports server-timing for upstream, body and rewrite time, plus an x-proxy-cache hit/miss header.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Proxy route ladder and reader fallback',
             items: [
                 'A blocked page no longer replaces the content: the proxy retries through configured relay origins, then falls back to a text-only reader view.',

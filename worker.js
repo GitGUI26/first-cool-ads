@@ -1568,7 +1568,7 @@ export default {
     }
 
     if (pathname === '/p' || pathname.startsWith('/p/')) {
-      return proxy.fetch(request, env);
+      return proxy.fetch(request, env, ctx);
     }
     if (pathname === '/' || pathname.endsWith('/')) {
       const target = new URL(request.url);
