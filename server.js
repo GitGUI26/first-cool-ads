@@ -380,6 +380,53 @@ async function handleProxy(req, res, url) {
   ur.on('error', () => res.destroy());
 }
 
+/* ---------- Android v86 image proxy ---------- */
+const ANDROID_IMAGE_PREFIX = '/api/android-image/android_x86_nonsse3_4.4r1_20140904/';
+const ANDROID_IMAGE_SIZE = 247463936;
+const ANDROID_CHUNK_SIZE = 1048576;
+
+async function handleAndroidImage(req, res, url) {
+  if (req.method !== 'GET' && req.method !== 'HEAD') return sendError(res, 405, 'Method not allowed');
+  const part = url.pathname.slice(ANDROID_IMAGE_PREFIX.length);
+  const match = /^(\d+)-(\d+)\.iso$/.exec(part);
+  if (!match) return sendError(res, 404, 'Image chunk not found');
+  const start = Number(match[1]);
+  const end = Number(match[2]);
+  if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start ||
+      end > ANDROID_IMAGE_SIZE || end - start > ANDROID_CHUNK_SIZE) {
+    return sendError(res, 404, 'Image chunk not found');
+  }
+
+  let up;
+  try {
+    up = await upstream('https://c.copy.sh/android_x86_nonsse3_4.4r1_20140904/' + start + '-' + end + '.iso', 'GET', {
+      'user-agent': 'Mozilla/5.0 (compatible; rcms-android/1.0)',
+      accept: '*/*'
+    }, null, req.headers.host);
+  } catch (e) {
+    return sendError(res, 502, e.message || 'Could not reach the Android image');
+  }
+
+  const { res: ur } = up;
+  req.on('close', () => ur.destroy());
+  if (ur.statusCode !== 200) {
+    ur.destroy();
+    return sendError(res, 502, 'The Android image is unavailable');
+  }
+  const headers = Object.assign({}, CORS, {
+    'content-type': 'application/octet-stream',
+    'cache-control': 'public, max-age=31536000, immutable',
+    'x-content-type-options': 'nosniff'
+  });
+  for (const key of ['content-length', 'content-range', 'accept-ranges']) {
+    if (ur.headers[key]) headers[key] = ur.headers[key];
+  }
+  res.writeHead(206 === ur.statusCode ? 206 : 200, headers);
+  if (req.method === 'HEAD') { ur.destroy(); return res.end(); }
+  ur.pipe(res);
+  ur.on('error', () => res.destroy());
+}
+
 /* ---------- static files ---------- */
 const MIME = {
   '.html': 'text/html; charset=utf-8', '.htm': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8',
@@ -463,6 +510,7 @@ const server = http.createServer(async (req, res) => {
       return sendJSON(res, 401, { ok: false });
     }
     if (u.pathname === '/p' || u.pathname.startsWith(ROUTE)) return await handleProxy(req, res, u);
+    if (u.pathname.startsWith(ANDROID_IMAGE_PREFIX)) return await handleAndroidImage(req, res, u);
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendError(res, 405, 'Method not allowed');
     serveStatic(req, res, u.pathname);
   } catch (e) {

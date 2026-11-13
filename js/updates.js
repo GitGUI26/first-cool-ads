@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Android now boots in the emulator panel',
+            items: [
+                'Android 4.4 runs inside the EMULATORS player instead of opening the copy.sh demo in another tab.',
+                'A self-hosted v86 runtime streams the Android-x86 image in chunks and reuses cached chunks on later boots.',
+                'The Android view has Start, Pause, Restart, and Fullscreen controls, plus a standalone android.html player.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Smarter search and cleaner site details',
             items: [
                 'Search now matches game descriptions as well as titles, so themes like zombies or racing are easier to find.',
@@ -28,7 +37,7 @@
             items: [
                 'The BROWSER tab can now use a relay on another domain, so the proxy path does not depend on this site\'s domain alone.',
                 'Proxy target URLs are encoded instead of showing the visited hostname in the address bar; failures now explain when the network is blocking the proxy itself.',
-                'EMULATORS has an experimental Android 4.4 virtual device that opens from v86 in its own tab. First boot is slow and there is no Google Play.'
+                'EMULATORS has an experimental Android 4.4 virtual device powered by v86. First boot is slow and there is no Google Play.'
             ]
         },
         {

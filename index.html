@@ -53,7 +53,7 @@
 <link href="css/ads.css?v=2" rel="stylesheet">
 <link href="css/chat.css?v=10" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
-<link href="css/emulators.css?v=2" rel="stylesheet">
+<link href="css/emulators.css?v=3" rel="stylesheet">
   <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -521,12 +521,12 @@
           <div class="emulator-device" id="androidDevice">
             <div class="emulator-device-head"><span class="emulator-device-badge">Virtual device</span><i class="fas fa-mobile-screen-button" aria-hidden="true"></i></div>
             <strong>Android 4.4</strong>
-            <p>A real Android-x86 desktop. The VM blocks embedding for security, so it opens in its own tab. First boot can take 1–2 minutes; there is no Google Play.</p>
+            <p>A real Android-x86 desktop running in this page. The first boot streams the image and takes several minutes; there is no Google Play.</p>
             <div class="emulator-device-actions">
-              <a class="emulator-device-open" id="androidStart" href="https://copy.sh/v86/?profile=android4" target="_blank" rel="noopener noreferrer"><i class="fas fa-arrow-up-right-from-square" aria-hidden="true"></i> Open Android</a>
-              <a href="https://copy.sh/v86/?profile=android4" target="_blank" rel="noopener noreferrer">Full tab</a>
+              <a class="emulator-device-open" id="androidStart" href="android.html" target="_blank" rel="noopener noreferrer"><i class="fas fa-mobile-screen-button" aria-hidden="true"></i> Boot Android</a>
+              <a href="android.html" target="_blank" rel="noopener noreferrer">Open full page</a>
             </div>
-            <p class="emulator-device-note">Experimental · keyboard and mouse · opens in a separate tab.</p>
+            <p class="emulator-device-note">Experimental · keyboard and mouse · about 247 MB on first boot.</p>
           </div>
           <div class="emulator-dropzone" id="romDropzone" role="button" tabindex="0">
             <i class="fas fa-file-arrow-up" aria-hidden="true"></i>
@@ -562,9 +562,9 @@
             <span>Local ROM / Android</span>
           </div>
           <div class="emulator-stage" id="emulatorStage">
-            <div class="emulator-empty" id="emulatorEmpty"><i class="fas fa-gamepad" aria-hidden="true"></i><h3>Your ROM or Android goes here</h3><p>Choose a supported ROM and press Play ROM, or open Android above.</p></div>
+            <div class="emulator-empty" id="emulatorEmpty"><i class="fas fa-gamepad" aria-hidden="true"></i><h3>Your ROM or Android goes here</h3><p>Choose a supported ROM and press Play ROM, or boot Android above.</p></div>
           </div>
-          <p class="emulator-stage-hint">Keyboard, touch, and gamepad controls are handled by EmulatorJS. Some systems need a BIOS file; multi-file games should be zipped. Android boots separately from this and works with a keyboard and mouse.</p>
+          <p class="emulator-stage-hint">Keyboard, touch, and gamepad controls are handled by EmulatorJS. Some systems need a BIOS file; multi-file games should be zipped. Android runs in this panel through v86 and works with a keyboard and mouse.</p>
         </div>
       </div>
     </section>
@@ -998,11 +998,11 @@
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=19"></script>
   <script src="js/main.js?v=35"></script>
-  <script src="js/updates.js?v=42"></script>
+  <script src="js/updates.js?v=43"></script>
   <script src="js/account.js?v=15"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=10"></script>
-  <script src="js/emulators.js?v=2"></script>
+  <script src="js/emulators.js?v=3"></script>
   <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">
     <button aria-label="Close advertisement" class="ad-mobile-close" type="button"

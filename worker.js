@@ -1111,9 +1111,61 @@ export class ChatRoom {
   }
 }
 
+const ANDROID_IMAGE_PREFIX = '/api/android-image/android_x86_nonsse3_4.4r1_20140904/';
+const ANDROID_IMAGE_SIZE = 247463936;
+const ANDROID_CHUNK_SIZE = 1048576;
+
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
+
+    if (pathname.startsWith(ANDROID_IMAGE_PREFIX)) {
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (request.method !== 'GET') return json({ error: 'Method not allowed.' }, 405);
+      const part = pathname.slice(ANDROID_IMAGE_PREFIX.length);
+      const match = /^(\d+)-(\d+)\.iso$/.exec(part);
+      if (!match) return json({ error: 'Image chunk not found.' }, 404);
+      const start = Number(match[1]);
+      const end = Number(match[2]);
+      if (!Number.isSafeInteger(start) || !Number.isSafeInteger(end) || start < 0 || end <= start ||
+          end > ANDROID_IMAGE_SIZE || end - start > ANDROID_CHUNK_SIZE) {
+        return json({ error: 'Image chunk not found.' }, 404);
+      }
+
+      const cacheKey = new Request(new URL(pathname, request.url).toString(), { method: 'GET' });
+      let cache = null;
+      try { cache = caches.default; } catch (error) {}
+      if (cache) {
+        try {
+          const hit = await cache.match(cacheKey);
+          if (hit) return hit;
+        } catch (error) {}
+      }
+
+      let upstream;
+      try {
+        upstream = await fetch('https://c.copy.sh/android_x86_nonsse3_4.4r1_20140904/' + start + '-' + end + '.iso', {
+          headers: { accept: '*/*', 'user-agent': 'rcms-android/1.0' }
+        });
+      } catch (error) {
+        return json({ error: 'The Android image is unavailable.' }, 502);
+      }
+      if (!upstream.ok || !upstream.body) return json({ error: 'The Android image is unavailable.' }, 502);
+
+      const headers = new Headers({
+        'content-type': 'application/octet-stream',
+        'cache-control': 'public, max-age=31536000, immutable',
+        'access-control-allow-origin': '*',
+        'x-content-type-options': 'nosniff'
+      });
+      const length = upstream.headers.get('content-length');
+      if (length) headers.set('content-length', length);
+      const response = new Response(upstream.body, { status: 200, headers });
+      if (cache && ctx && ctx.waitUntil) {
+        ctx.waitUntil(cache.put(cacheKey, response.clone()).catch(function () {}));
+      }
+      return response;
+    }
 
     if (pathname === '/api/chat/health') {
       return json({ ok: true, service: 'global-chat' });

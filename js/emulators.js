@@ -2,7 +2,7 @@
   'use strict';
 
   var CDN_DATA = 'https://cdn.emulatorjs.org/stable/data/';
-  var ANDROID_URL = 'https://copy.sh/v86/?profile=android4';
+  var ANDROID_URL = 'android.html';
   var SYSTEMS = [
     { id: 'nes', label: 'Nintendo Entertainment System / Famicom', short: 'NES', group: 'Nintendo', core: 'nes', exts: ['nes', 'fds', 'unf'], bios: false, hint: 'Famicom Disk System games may need their BIOS.' },
     { id: 'snes', label: 'Super Nintendo / Super Famicom', short: 'SNES', group: 'Nintendo', core: 'snes', exts: ['sfc', 'smc', 'fig', 'swc', 'bs'], bios: false, hint: 'BS-X and Sufami Turbo games may need their optional BIOS.' },
@@ -204,7 +204,8 @@
     return Math.max(1, Math.abs(hash) || 1);
   }
 
-  function startAndroid() {
+  function startAndroid(event) {
+    if (event) event.preventDefault();
     var stage = $('emulatorStage');
     var start = $('emulatorStart');
     var clear = $('emulatorClear');
@@ -224,16 +225,26 @@
     if (biosInput) biosInput.value = '';
     if (systemSelect) systemSelect.value = '';
     if (fileBox) fileBox.hidden = true;
-    if (coreNote) coreNote.textContent = 'Android 4.4 · v86 · opens in a new tab';
+    if (coreNote) coreNote.textContent = 'Android 4.4 · v86 · in this panel';
 
-    stage.innerHTML = '<div class="emulator-empty"><i class="fas fa-mobile-screen-button" aria-hidden="true"></i>' +
-      '<h3>Android is in its own tab</h3>' +
-      '<p>The v86 Android VM blocks embedding, so it opens separately. First boot can take 1–2 minutes.</p>' +
-      '<a class="emulator-device-link" href="' + ANDROID_URL + '" target="_blank" rel="noopener noreferrer">Open Android again</a></div>';
-    if (title) title.textContent = 'Android 4.4 · new tab';
+    frame = document.createElement('iframe');
+    frame.className = 'emulator-frame';
+    frame.title = 'Android 4.4 virtual device';
+    frame.setAttribute('allowfullscreen', '');
+    frame.setAttribute('allow', 'fullscreen; autoplay; gamepad');
+    frame.src = ANDROID_URL + '?embed=1';
+    frame.addEventListener('load', function () {
+      setStatus('Android is ready. Press Start in the device to boot. First boot streams about 247 MB and can take several minutes.', 'ready');
+    });
+    frame.addEventListener('error', function () {
+      setStatus('The Android device could not load.', 'error');
+    });
+
+    stage.replaceChildren(frame);
+    if (title) title.textContent = 'Android 4.4 · v86';
     if (start) start.disabled = true;
     if (clear) clear.disabled = false;
-    setStatus('Android opened in a new tab. If nothing appeared, use the Full tab link. First boot can take 1–2 minutes.', 'ready');
+    setStatus('Loading the Android device. Press Start when it appears. First boot streams about 247 MB.', 'loading');
   }
 
   function startEmulator() {

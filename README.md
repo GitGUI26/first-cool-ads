@@ -74,11 +74,15 @@ systems such as PlayStation, Sega CD, Saturn, 3DO, PC-FX, Amiga, Atari 5200, and
 zipped together. EmulatorJS does not have browser cores for every RetroArch target (for example GameCube/Wii,
 Dreamcast, and PlayStation 2 are not available), so the picker only lists systems that can actually run here.
 
-The EMULATORS tab also has an **Open Android** experimental device. It launches the v86 Android-x86 4.4 profile at
-`https://copy.sh/v86/?profile=android4` in a new tab. It cannot be embedded in an iframe because that VM sends
-`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`, which makes a framed copy
-render blank. It is not a local ROM and it does not include Google Play. First boot is slow and needs a fast connection.
-There is no built-in APK installer.
+The EMULATORS tab also has an **Android 4.4** experimental device. It runs directly in the player panel using a
+self-hosted copy of [v86](https://github.com/copy/v86) in `v86/`, rather than framing the copy.sh demo (whose
+`Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers make it render blank in an iframe). The
+Android-x86 4.4 image is streamed in 1 MB chunks from the public v86 image cache through `/api/android-image/...`;
+the Worker proxies and edge-caches those chunks because the upstream cache rejects browser hotlink requests. First
+boot downloads up to about 247 MB and can take several minutes even on a fast connection, so it only starts after
+the visitor presses Start. `android.html` is also available as a standalone player with start, pause, restart, and fullscreen
+controls. It has no Google Play, no guest networking, and no built-in APK installer. The v86 runtime is BSD-2-Clause
+licensed; Android-x86 is a separate open-source project.
 
 ### Game progress
 
