@@ -50,7 +50,7 @@
   <link href="css/account.css?v=9" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
-<link href="css/chat.css?v=10" rel="stylesheet">
+<link href="css/chat.css?v=11" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=3" rel="stylesheet">
   <script type="application/ld+json">
@@ -459,8 +459,10 @@
                   <div class="chat-reply-preview-copy"><strong id="chatReplyName">Replying</strong><span id="chatReplyText"></span></div>
                   <button class="chat-reply-cancel" id="chatReplyCancel" type="button" aria-label="Cancel reply"><i class="fas fa-xmark" aria-hidden="true"></i></button>
                 </div>
+                <div class="chat-emoji-panel" id="chatEmojiPanel" role="group" aria-label="Emoji picker" hidden></div>
                 <form class="chat-form" id="chatForm">
                   <label class="visually-hidden" for="chatInput">Message</label>
+                  <button class="chat-emoji" id="chatEmoji" type="button" aria-label="Add emoji" aria-expanded="false" aria-controls="chatEmojiPanel"><i class="fas fa-face-smile" aria-hidden="true"></i></button>
                   <textarea id="chatInput" rows="1" maxlength="500" placeholder="Message the room..." disabled></textarea>
                   <button class="chat-send" id="chatSend" type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
                 </form>
@@ -479,8 +481,10 @@
                   <div class="chat-reply-preview-copy"><strong id="chatDmReplyName">Replying</strong><span id="chatDmReplyText"></span></div>
                   <button class="chat-reply-cancel" id="chatDmReplyCancel" type="button" aria-label="Cancel reply"><i class="fas fa-xmark" aria-hidden="true"></i></button>
                 </div>
+                <div class="chat-emoji-panel" id="chatDmEmojiPanel" role="group" aria-label="Emoji picker" hidden></div>
                 <form class="chat-form" id="chatDmForm">
                   <label class="visually-hidden" for="chatDmInput">Message friend</label>
+                  <button class="chat-emoji" id="chatDmEmoji" type="button" aria-label="Add emoji" aria-expanded="false" aria-controls="chatDmEmojiPanel"><i class="fas fa-face-smile" aria-hidden="true"></i></button>
                   <textarea id="chatDmInput" rows="1" maxlength="500" placeholder="Message your friend..." disabled></textarea>
                   <button class="chat-send" id="chatDmSend" type="submit" disabled><i class="fas fa-paper-plane" aria-hidden="true"></i><span>Send</span></button>
                 </form>
@@ -995,7 +999,7 @@
   <script src="js/updates.js?v=46"></script>
   <script src="js/account.js?v=17"></script>
   <script src="js/music.js?v=2"></script>
-  <script src="js/chat.js?v=10"></script>
+  <script src="js/chat.js?v=11"></script>
   <script src="js/emulators.js?v=4"></script>
   <script>
     (function () {

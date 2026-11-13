@@ -1633,6 +1633,76 @@
     if (input && count) count.textContent = String(input.value.length) + ' / 500';
   }
 
+  var EMOJIS = [
+    '\uD83D\uDE00', '\uD83D\uDE01', '\uD83D\uDE02', '\uD83E\uDD23', '\uD83D\uDE0A', '\uD83D\uDE0D', '\uD83D\uDE18', '\uD83D\uDE0E',
+    '\uD83D\uDE1C', '\uD83E\uDD2A', '\uD83E\uDD17', '\uD83E\uDD14', '\uD83D\uDE34', '\uD83D\uDE25', '\uD83D\uDE22', '\uD83D\uDE21',
+    '\uD83D\uDE2D', '\uD83D\uDE30', '\uD83D\uDE05', '\uD83D\uDE07', '\uD83D\uDE10', '\uD83D\uDC4D', '\uD83D\uDC4E', '\uD83D\uDC4F',
+    '\uD83D\uDE4C', '\uD83D\uDE4F', '\uD83D\uDCAA', '\uD83D\uDD25', '\u2728', '\uD83D\uDCAF', '\u2764\uFE0F', '\uD83D\uDC9A',
+    '\uD83D\uDC99', '\uD83D\uDC9C', '\u2B50', '\uD83C\uDF89', '\uD83C\uDFAE', '\uD83C\uDFC6', '\u26A1', '\uD83D\uDC80',
+    '\uD83D\uDC40', '\uD83C\uDF55', '\u2615', '\uD83C\uDFB5', '\uD83C\uDFB8', '\uD83C\uDFC0', '\uD83D\uDE80', '\uD83C\uDF08'
+  ];
+
+  function insertAtCaret(input, text) {
+    if (!input || input.disabled) return;
+    var start = typeof input.selectionStart === 'number' ? input.selectionStart : input.value.length;
+    var end = typeof input.selectionEnd === 'number' ? input.selectionEnd : input.value.length;
+    var next = input.value.slice(0, start) + text + input.value.slice(end);
+    if (next.length > 500) next = next.slice(0, 500);
+    input.value = next;
+    var caret = Math.min(next.length, start + text.length);
+    try { input.setSelectionRange(caret, caret); } catch (error) {}
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+
+  function setupEmojiPicker(buttonId, panelId, inputId) {
+    var button = $(buttonId);
+    var panel = $(panelId);
+    var input = $(inputId);
+    if (!button || !panel || !input) return;
+
+    if (!panel.childElementCount) {
+      var grid = document.createElement('div');
+      grid.className = 'chat-emoji-grid';
+      EMOJIS.forEach(function (emoji) {
+        var item = document.createElement('button');
+        item.type = 'button';
+        item.className = 'chat-emoji-item';
+        item.textContent = emoji;
+        item.setAttribute('aria-label', 'Insert ' + emoji);
+        item.addEventListener('click', function () {
+          insertAtCaret(input, emoji);
+          close();
+          if (!input.disabled) input.focus();
+        });
+        grid.appendChild(item);
+      });
+      panel.appendChild(grid);
+    }
+
+    function close() {
+      panel.hidden = true;
+      button.setAttribute('aria-expanded', 'false');
+    }
+
+    function open() {
+      panel.hidden = false;
+      button.setAttribute('aria-expanded', 'true');
+    }
+
+    button.addEventListener('click', function (event) {
+      event.stopPropagation();
+      if (panel.hidden) open(); else close();
+    });
+    panel.addEventListener('click', function (event) { event.stopPropagation(); });
+    document.addEventListener('click', function () { if (!panel.hidden) close(); });
+    document.addEventListener('keydown', function (event) {
+      if (event.key === 'Escape' && !panel.hidden) {
+        close();
+        if (!input.disabled) input.focus();
+      }
+    });
+  }
+
   function sendMessage() {
     var input = $('chatInput');
     if (!input) return;
@@ -1694,6 +1764,9 @@
         updateCharCount();
       });
     }
+
+    setupEmojiPicker('chatEmoji', 'chatEmojiPanel', 'chatInput');
+    setupEmojiPicker('chatDmEmoji', 'chatDmEmojiPanel', 'chatDmInput');
 
     var friendForm = $('chatFriendForm');
     var friendName = $('chatFriendName');
