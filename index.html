@@ -45,11 +45,11 @@
 <link href="css/style.css?v=9" rel="stylesheet">
 <link href="css/refresh.css?v=11" rel="stylesheet">
 <link href="css/browser.css?v=3" rel="stylesheet">
-<link href="css/account.css?v=7" rel="stylesheet">
+<link href="css/account.css?v=8" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
 <link href="css/ads.css?v=2" rel="stylesheet">
-<link href="css/chat.css?v=9" rel="stylesheet">
+<link href="css/chat.css?v=10" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=1" rel="stylesheet">
   <script type="application/ld+json">
@@ -818,6 +818,22 @@
       </div>
     </section>
   </div>
+  <div class="chat-profile-modal" id="chatProfileModal" hidden aria-hidden="true">
+    <div class="chat-profile-backdrop" data-chat-profile-close></div>
+    <section class="chat-profile-card" role="dialog" aria-modal="true" aria-labelledby="chatProfileName">
+      <button class="chat-profile-close" type="button" data-chat-profile-close aria-label="Close profile"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      <div class="chat-profile-head">
+        <div class="chat-profile-avatar" id="chatProfileAvatar" aria-hidden="true"><img id="chatProfileAvatarImage" src="images/default-avatar.svg" alt=""></div>
+        <div class="chat-profile-copy">
+          <span class="chat-profile-kicker">Chat profile</span>
+          <h3 id="chatProfileName">@player</h3>
+          <span id="chatProfileStatus">Site member</span>
+        </div>
+      </div>
+      <p class="chat-profile-bio" id="chatProfileBio"></p>
+      <button class="chat-profile-edit" id="chatProfileEdit" type="button" hidden><i class="fas fa-pen" aria-hidden="true"></i> Edit my bio</button>
+    </section>
+  </div>
   <div class="account-modal" id="accountModal" hidden aria-hidden="true">
     <div class="account-backdrop" data-account-close></div>
     <div class="account-panel" role="dialog" aria-modal="true" aria-labelledby="accountModalTitle">
@@ -903,6 +919,15 @@
                   <div class="account-error" id="avatarError" role="alert" hidden></div>
                 </div>
               </div>
+              <form class="account-bio-form" id="accountBioForm">
+                <label for="accountBio">Bio<span>Shown on your chat profile. Up to 160 characters.</span></label>
+                <textarea id="accountBio" rows="3" maxlength="160" placeholder="Tell people a little about yourself."></textarea>
+                <div class="account-bio-actions">
+                  <span id="accountBioCount">0 / 160</span>
+                  <button class="account-primary" type="submit">Save bio</button>
+                </div>
+                <div class="account-error" id="accountBioError" role="alert" hidden></div>
+              </form>
             </section>
             <section class="account-card">
               <h4>Account snapshot</h4>
@@ -956,14 +981,14 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=3"></script>
-  <script src="js/account-store.js?v=19"></script>
+  <script src="js/account-store.js?v=20"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=19"></script>
   <script src="js/main.js?v=33"></script>
-  <script src="js/updates.js?v=37"></script>
-  <script src="js/account.js?v=14"></script>
+  <script src="js/updates.js?v=38"></script>
+  <script src="js/account.js?v=15"></script>
   <script src="js/music.js?v=2"></script>
-  <script src="js/chat.js?v=8"></script>
+  <script src="js/chat.js?v=9"></script>
   <script src="js/emulators.js?v=1"></script>
   <script src="js/ads.js?v=1"></script>
   <div class="ad-mobile-sticky" id="adMobileSticky">

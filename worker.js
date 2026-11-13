@@ -6,6 +6,7 @@ const MAX_MESSAGE_LENGTH = 500;
 const MAX_HISTORY = 100;
 const MAX_MEMBERS = 60;
 const MAX_AVATAR_LENGTH = 12000;
+const MAX_BIO_LENGTH = 160;
 const MAX_FRIENDS = 50;
 const MAX_FRIEND_REQUESTS = 30;
 const MAX_DM_HISTORY = 100;
@@ -94,6 +95,15 @@ function cleanAvatar(value) {
   return raw;
 }
 
+function cleanBio(value) {
+  const bio = String(value == null ? '' : value)
+    .replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f\u007f<>]/g, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, MAX_BIO_LENGTH);
+  return hasBlockedLanguage(bio) ? '' : bio;
+}
+
 function cleanClientId(value) {
   const id = String(value == null ? '' : value).trim();
   return /^[A-Za-z0-9_-]{8,80}$/.test(id) ? id : '';
@@ -109,11 +119,13 @@ function nameKey(value) {
 }
 
 function profileOf(user) {
-  return {
+  const profile = {
     id: String((user && user.id) || ''),
     name: cleanName(user && user.name),
     avatar: cleanAvatar(user && user.avatar)
   };
+  if (user && user.bio !== undefined) profile.bio = cleanBio(user.bio);
+  return profile;
 }
 
 function friendEntry(value) {
@@ -123,6 +135,7 @@ function friendEntry(value) {
     id,
     name: cleanName(value && value.name),
     avatar: cleanAvatar(value && value.avatar),
+    bio: cleanBio(value && value.bio),
     at: Number(value && value.at) || 0
   };
 }
@@ -265,17 +278,21 @@ function memberList(value) {
     id: String(item.id),
     name: cleanName(item.name),
     avatar: cleanAvatar(item.avatar),
+    bio: cleanBio(item.bio),
     at: Number(item.at) || 0
   })).sort((a, b) => b.at - a.at).slice(0, MAX_MEMBERS);
 }
 
 function rememberMember(members, user, at) {
   if (!user || !user.id) return memberList(members);
-  const next = memberList(members).filter(item => String(item.id) !== String(user.id));
+  const normalized = memberList(members);
+  const previous = normalized.find(item => String(item.id) === String(user.id));
+  const next = normalized.filter(item => String(item.id) !== String(user.id));
   next.unshift({
     id: String(user.id),
     name: cleanName(user.name),
     avatar: cleanAvatar(user.avatar),
+    bio: user.bio === undefined ? cleanBio(previous && previous.bio) : cleanBio(user.bio),
     at: at || Date.now()
   });
   return next.slice(0, MAX_MEMBERS);
@@ -321,6 +338,8 @@ export class ChatRoom {
     const profile = profileOf(user);
     if (!profile.id) return null;
     const directory = await this.readDirectory();
+    const previous = directory.find(item => item.id === profile.id);
+    if (profile.bio === undefined) profile.bio = previous ? previous.bio : '';
     const key = nameKey(profile.name);
     const next = directory.filter(item => item.id !== profile.id && nameKey(item.name) !== key);
     next.unshift({ ...profile, at: Date.now() });
@@ -536,6 +555,7 @@ export class ChatRoom {
       id: item.id,
       name: item.name,
       avatar: item.avatar,
+      bio: item.bio || '',
       at: item.at,
       online: online.has(item.id)
     })).sort((a, b) => (Number(b.online) - Number(a.online)) || a.name.localeCompare(b.name));
@@ -543,6 +563,7 @@ export class ChatRoom {
       id: item.from.id,
       name: item.from.name,
       avatar: item.from.avatar,
+      bio: item.from.bio || '',
       at: item.at,
       online: online.has(item.from.id)
     })).sort((a, b) => (Number(b.online) - Number(a.online)) || (b.at - a.at));
@@ -582,17 +603,19 @@ export class ChatRoom {
     Object.keys(social.friendships).forEach(ownerId => {
       social.friendships[ownerId] = social.friendships[ownerId].map(item => {
         if (item.id !== profile.id) return item;
-        if (item.name === profile.name && item.avatar === profile.avatar) return item;
-        return { ...item, name: profile.name, avatar: profile.avatar };
+        const bio = profile.bio === undefined ? item.bio : profile.bio;
+        if (item.name === profile.name && item.avatar === profile.avatar && item.bio === (bio || '')) return item;
+        return { ...item, name: profile.name, avatar: profile.avatar, bio: bio || '' };
       });
     });
     Object.keys(social.requests).forEach(ownerId => {
       social.requests[ownerId] = social.requests[ownerId].map(item => {
         if (item.from.id !== profile.id) return item;
-        if (item.from.name === profile.name && item.from.avatar === profile.avatar) return item;
+        const bio = profile.bio === undefined ? item.from.bio : profile.bio;
+        if (item.from.name === profile.name && item.from.avatar === profile.avatar && item.from.bio === (bio || '')) return item;
         return {
           ...item,
-          from: { ...item.from, name: profile.name, avatar: profile.avatar }
+          from: { ...item.from, name: profile.name, avatar: profile.avatar, bio: bio || '' }
         };
       });
     });
@@ -745,7 +768,8 @@ export class ChatRoom {
       from: {
         id: String(user.id),
         name: cleanName(user.name),
-        avatar: cleanAvatar(user.avatar)
+        avatar: cleanAvatar(user.avatar),
+        bio: cleanBio(user.bio)
       },
       to,
       text,
@@ -916,14 +940,16 @@ export class ChatRoom {
     if (data.type === 'profile') {
       const now = Date.now();
       if (now - Number(attachment.lastProfileAt || 0) < 1000) return;
-      attachment.user = {
+      const nextUser = {
         id: String(user.id),
         name: cleanName(user.name),
         avatar: cleanAvatar(data.avatar)
       };
+      if (data.bio !== undefined) nextUser.bio = cleanBio(data.bio);
+      const saved = await this.rememberDirectoryUser(nextUser);
+      attachment.user = saved || nextUser;
       attachment.lastProfileAt = now;
       ws.serializeAttachment(attachment);
-      await this.rememberDirectoryUser(attachment.user);
       const state = await this.readState();
       const members = rememberMember(state.members, attachment.user, now);
       try { await this.ctx.storage.put('members', members); } catch (error) {}
@@ -995,7 +1021,8 @@ export class ChatRoom {
       user: {
         id: String(attachment.user.id),
         name: cleanName(attachment.user.name),
-        avatar: authorAvatar
+        avatar: authorAvatar,
+        bio: cleanBio(attachment.user.bio)
       },
       text,
       at: now

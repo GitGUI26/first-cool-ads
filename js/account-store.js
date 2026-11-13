@@ -28,6 +28,7 @@
   var LOGIN_EMAIL_LOCAL_PREFIX = 'arrestmrmann+u';
   var MAX_HISTORY = 200;
   var MAX_WEBSITES = 40;
+  var MAX_BIO_LENGTH = 160;
   var MAX_AVATAR_LENGTH = 500000;
   var MAX_PROGRESS_GAMES = 80;
   var MAX_PROGRESS_KEYS = 120;
@@ -107,6 +108,14 @@
 
   function cleanText(value, maxLength) {
     return String(value == null ? '' : value).replace(/\s+/g, ' ').trim().slice(0, maxLength);
+  }
+
+  function cleanBio(value) {
+    return String(value == null ? '' : value)
+      .replace(/[\u0000-\u001f\u007f<>]/g, ' ')
+      .replace(/\s+/g, ' ')
+      .trim()
+      .slice(0, MAX_BIO_LENGTH);
   }
 
   function cleanEmail(value) {
@@ -466,6 +475,7 @@
     user.websites = normalizeWebsites(user.websites);
     user.apps = normalizeApps(user.apps);
     user.avatar = normalizeAvatar(user.avatar);
+    user.bio = cleanBio(user.bio);
     user.gameProgress = normalizeGameProgress(user.gameProgress);
     if (!user.preferences || typeof user.preferences !== 'object') user.preferences = {};
     user.key = normalizeUsername(user.username);
@@ -478,6 +488,7 @@
       username: cleanText(user && user.username, 24),
       email: cleanEmail(user && user.email) || normalizeEmail(user && user.email),
       avatar: normalizeAvatar(user && user.avatar),
+      bio: cleanBio(user && user.bio),
       gameProgress: normalizeGameProgress(user && user.gameProgress),
       history: normalizeHistory(user && user.history),
       apps: normalizeApps(user && user.apps),
@@ -496,6 +507,7 @@
       username: identity.username,
       email: identity.email,
       avatar: '',
+      bio: '',
       gameProgress: {},
       history: [],
       apps: blankApps(),
@@ -714,6 +726,15 @@
     user.avatar = avatar;
     return saveUser(user)
       ? { ok: true, avatar: avatar }
+      : { ok: false, error: 'This browser is out of storage.' };
+  }
+
+  function setBio(value) {
+    var user = getCurrentUser();
+    if (!user) return { ok: false, error: 'Sign in first.' };
+    user.bio = cleanBio(value);
+    return saveUser(user)
+      ? { ok: true, bio: user.bio }
       : { ok: false, error: 'This browser is out of storage.' };
   }
 
@@ -1111,6 +1132,7 @@
         apps: user.apps || {},
         websites: user.websites || [],
         avatar: user.avatar || '',
+        bio: user.bio || '',
         gameProgress: user.gameProgress || {},
         preferences: preferences
       },
@@ -1184,6 +1206,7 @@
       apps: data.apps && typeof data.apps === 'object' ? data.apps : local.apps,
       websites: Array.isArray(data.websites) ? data.websites : local.websites,
       avatar: data.avatar !== undefined ? data.avatar : local.avatar,
+      bio: data.bio !== undefined ? data.bio : local.bio,
       gameProgress: data.gameProgress !== undefined ? data.gameProgress : local.gameProgress,
       preferences: data.preferences && typeof data.preferences === 'object' ? data.preferences : local.preferences
     });
@@ -1598,6 +1621,7 @@
     snapshotPreferences: snapshotPreferences,
     setApps: setApps,
     setAvatar: setAvatar,
+    setBio: setBio,
     setUsername: setUsername,
     adminStatus: adminStatus,
     adminListAccounts: adminListAccounts,

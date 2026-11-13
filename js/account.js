@@ -286,6 +286,9 @@
     var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
     var local = isLocalUser(user);
     setAvatarImages(user);
+    var bioInput = $('accountBio');
+    if (bioInput && document.activeElement !== bioInput) bioInput.value = user.bio || '';
+    updateBioCount();
     var usernameInput = $('accountUsernameInput');
     if (usernameInput && document.activeElement !== usernameInput) {
       usernameInput.value = user.username;
@@ -732,6 +735,31 @@
     showToast('Default profile picture restored.');
   }
 
+  function updateBioCount() {
+    var input = $('accountBio');
+    var count = $('accountBioCount');
+    if (input && count) count.textContent = String(input.value.length) + ' / 160';
+  }
+
+  function saveBio(event) {
+    event.preventDefault();
+    var input = $('accountBio');
+    var button = event.submitter || (event.target && event.target.querySelector('button[type="submit"]'));
+    if (!input) return;
+    showError('accountBioError', '');
+    if (button) button.disabled = true;
+    var result = Store.setBio(input.value);
+    if (button) button.disabled = false;
+    if (!result.ok) {
+      showError('accountBioError', result.error);
+      return;
+    }
+    input.value = result.bio;
+    updateBioCount();
+    renderDashboard(currentUser());
+    showToast('Bio updated.');
+  }
+
   async function syncAccount() {
     var button = $('accountSyncNow');
     if (!button) return;
@@ -794,6 +822,8 @@
     if ($('savePreferences')) $('savePreferences').addEventListener('click', savePreferencesNow);
     if ($('avatarUpload')) $('avatarUpload').addEventListener('change', handleAvatarUpload);
     if ($('avatarReset')) $('avatarReset').addEventListener('click', resetAvatar);
+    if ($('accountBioForm')) $('accountBioForm').addEventListener('submit', saveBio);
+    if ($('accountBio')) $('accountBio').addEventListener('input', updateBioCount);
     if ($('accountSyncNow')) $('accountSyncNow').addEventListener('click', syncAccount);
     if ($('accountUsernameForm')) {
       $('accountUsernameForm').addEventListener('submit', function (event) {
@@ -878,6 +908,11 @@
         }
         if (event.detail && event.detail.reason === 'profile' && $('historyList')) {
           setAvatarImages(user);
+          var bioInput = $('accountBio');
+          if (bioInput && document.activeElement !== bioInput) {
+            bioInput.value = user.bio || '';
+            updateBioCount();
+          }
           renderHistory(user);
           renderWebsites(user);
           renderAppCards();

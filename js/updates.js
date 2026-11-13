@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Chat profiles and bios',
+            items: [
+                'Click a member\'s name or profile picture in chat to open their profile card.',
+                'Add a short bio in Account settings; it is shown on your chat profile and synced with your account.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Owner tools can grant admin access',
             items: [
                 'Owner tools now show Make admin and Remove admin buttons for every other account.',

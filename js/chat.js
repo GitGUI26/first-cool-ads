@@ -43,6 +43,7 @@
   var notificationTimer = 0;
   var siteOwner = false;
   var ownerStatusBusy = false;
+  var profileUserId = '';
 
   function currentUser() {
     return Store.getCurrentUser();
@@ -378,6 +379,107 @@
     return user && user.name ? String(user.name) : 'player';
   }
 
+  function cacheMember(user) {
+    if (!user || !user.id) return;
+    var id = String(user.id);
+    var existing = members[id] || {};
+    members[id] = {
+      id: id,
+      name: displayName(user) !== 'player' ? displayName(user) : (existing.name || 'player'),
+      avatar: user.avatar || existing.avatar || '',
+      bio: user.bio ? String(user.bio) : (existing.bio || '')
+    };
+  }
+
+  function profileForUser(value) {
+    var id = typeof value === 'object' && value ? String(value.id || '') : String(value || '');
+    if (!id) return null;
+    var me = currentUser();
+    if (me && String(me.id) === id) {
+      return { id: id, name: me.username || 'player', avatar: me.avatar || '', bio: me.bio || '' };
+    }
+    var member = members[id];
+    var friend = friendById(id);
+    var request = requestById(id);
+    var base = member || friend || request || (typeof value === 'object' && value ? value : {});
+    var bio = (member && member.bio) || (friend && friend.bio) || (request && request.bio) ||
+      (typeof value === 'object' && value && value.bio) || '';
+    return {
+      id: id,
+      name: displayName(base) !== 'player' ? displayName(base) : 'player',
+      avatar: avatarFor(base),
+      bio: bio
+    };
+  }
+
+  function decorateProfileName(node, user) {
+    if (!node || !user || !user.id) return node;
+    node.setAttribute('data-profile-user', String(user.id));
+    node.classList.add('chat-profile-link');
+    node.tabIndex = 0;
+    node.setAttribute('role', 'button');
+    node.setAttribute('aria-label', 'View ' + displayName(user) + '\u2019s profile');
+    return node;
+  }
+
+  function openChatProfile(value) {
+    var profile = profileForUser(value);
+    if (!profile || !profile.id) return;
+    var modal = $('chatProfileModal');
+    if (!modal) return;
+    var me = currentUser();
+    var own = !!me && String(me.id) === String(profile.id);
+    profileUserId = String(profile.id);
+    var name = $('chatProfileName');
+    if (name) name.textContent = '@' + (profile.name || 'player');
+    var status = $('chatProfileStatus');
+    if (status) {
+      status.textContent = own
+        ? 'This is you'
+        : (isOnlineUser(profile.id) ? 'Online now' : (friendById(profile.id) ? 'Friend \u00b7 offline' : 'Site member'));
+    }
+    var bioNode = $('chatProfileBio');
+    if (bioNode) {
+      var bio = String(profile.bio || '').trim();
+      bioNode.textContent = bio || (own ? 'Add a bio in Account settings so people can get to know you.' : 'No bio yet.');
+      bioNode.classList.toggle('is-empty', !bio);
+    }
+    var image = $('chatProfileAvatarImage');
+    if (image) {
+      image.src = avatarFor(profile);
+      image.onerror = function () {
+        if (image.src.indexOf(DEFAULT_AVATAR) === -1) image.src = DEFAULT_AVATAR;
+      };
+    }
+    var edit = $('chatProfileEdit');
+    if (edit) edit.hidden = !own;
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('chat-profile-open');
+    var close = modal.querySelector('.chat-profile-close');
+    if (close) close.focus();
+  }
+
+  function closeChatProfile() {
+    var modal = $('chatProfileModal');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('chat-profile-open');
+    profileUserId = '';
+  }
+
+  function editOwnProfile() {
+    closeChatProfile();
+    if (typeof window.openAccount === 'function') window.openAccount();
+    window.setTimeout(function () {
+      var input = $('accountBio');
+      if (!input) return;
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      input.focus();
+    }, 220);
+  }
+
   function formatTime(timestamp) {
     var date = new Date(Number(timestamp) || Date.now());
     if (Number.isNaN(date.getTime())) return '';
@@ -398,7 +500,10 @@
     var id = user && user.id ? String(user.id) : '';
     var wrap = document.createElement('div');
     wrap.className = className || 'chat-avatar';
-    if (id) wrap.setAttribute('data-avatar-user', id);
+    if (id) {
+      wrap.setAttribute('data-avatar-user', id);
+      wrap.setAttribute('data-profile-user', id);
+    }
     var image = document.createElement('img');
     image.src = avatarFor(user);
     image.alt = '';
@@ -444,8 +549,14 @@
         return member && member.id;
       }).map(function (member) {
         var id = String(member.id);
-        if (!members[id] || (member.avatar && member.avatar !== members[id].avatar)) members[id] = member;
-        return members[String(member.id)];
+        var existing = members[id] || {};
+        members[id] = {
+          id: id,
+          name: displayName(member) !== 'player' ? displayName(member) : (existing.name || 'player'),
+          avatar: member.avatar || existing.avatar || '',
+          bio: member.bio !== undefined ? String(member.bio || '') : (existing.bio || '')
+        };
+        return members[id];
       });
     } else if (!total) {
       onlineMembers = [];
@@ -458,10 +569,12 @@
   function updateMember(member) {
     if (!member || !member.id) return;
     var id = String(member.id);
+    var existing = members[id] || {};
     members[id] = {
       id: id,
-      name: displayName(member),
-      avatar: member.avatar || (members[id] && members[id].avatar) || ''
+      name: displayName(member) !== 'player' ? displayName(member) : (existing.name || 'player'),
+      avatar: member.avatar || existing.avatar || '',
+      bio: member.bio !== undefined ? String(member.bio || '') : (existing.bio || '')
     };
     var index = onlineMembers.findIndex(function (item) { return String(item.id) === id; });
     if (index !== -1) onlineMembers[index] = members[id];
@@ -612,6 +725,7 @@
     if (empty) empty.remove();
 
     var user = currentUser();
+    cacheMember(message.user);
     var own = !!user && String(message.user && message.user.id) === String(user.id);
     var item = document.createElement('article');
     item.className = 'chat-message' + (own ? ' is-own' : '');
@@ -625,6 +739,7 @@
     meta.className = 'chat-message-meta';
     var name = document.createElement('strong');
     name.textContent = own ? 'You' : displayName(message.user);
+    decorateProfileName(name, message.user);
     var time = document.createElement('time');
     time.dateTime = new Date(Number(message.at) || Date.now()).toISOString();
     time.textContent = formatTime(message.at);
@@ -685,8 +800,10 @@
     if (!reply || !reply.id) return null;
     var quote = document.createElement('blockquote');
     quote.className = 'chat-reply-quote';
+    cacheMember(reply.user);
     var name = document.createElement('strong');
     name.textContent = displayName(reply.user || {});
+    decorateProfileName(name, reply.user || {});
     var text = document.createElement('span');
     text.textContent = String(reply.text || '');
     quote.append(name, text);
@@ -769,8 +886,9 @@
       var existing = members[id] || {};
       members[id] = {
         id: id,
-        name: displayName(member) || existing.name || 'player',
-        avatar: member.avatar || existing.avatar || ''
+        name: displayName(member) !== 'player' ? displayName(member) : (existing.name || 'player'),
+        avatar: member.avatar || existing.avatar || '',
+        bio: member.bio !== undefined ? String(member.bio || '') : (existing.bio || '')
       };
     });
     renderPresence();
@@ -807,6 +925,7 @@
     copy.className = 'chat-person-copy';
     var name = document.createElement('strong');
     name.textContent = displayName(source);
+    decorateProfileName(name, source);
     var status = document.createElement('span');
     status.textContent = statusText || '';
     copy.appendChild(name);
@@ -983,13 +1102,18 @@
     if (!friend) return;
     var online = isOnlineUser(friend.id);
     var holder = $('chatDmAvatar');
+    var display = memberFor(friend) || friend;
     if (holder) {
-      var avatar = makeAvatar(memberFor(friend) || friend, 'chat-avatar');
+      holder.setAttribute('data-profile-user', String(friend.id));
+      var avatar = makeAvatar(display, 'chat-avatar');
       var image = avatar.querySelector('img');
       holder.replaceChildren(image || avatar);
     }
     var name = $('chatDmName');
-    if (name) name.textContent = displayName(memberFor(friend) || friend);
+    if (name) {
+      name.textContent = displayName(display);
+      decorateProfileName(name, display);
+    }
     var status = $('chatDmStatus');
     if (status) {
       status.textContent = online ? 'Online · messages sync live' : 'Offline · messages delivered when they return';
@@ -1059,8 +1183,10 @@
     var source = {
       id: from.id,
       name: from.name || cached.name || 'player',
-      avatar: from.avatar || cached.avatar || ''
+      avatar: from.avatar || cached.avatar || '',
+      bio: from.bio || cached.bio || ''
     };
+    cacheMember(source);
     var item = document.createElement('article');
     item.className = 'chat-message' + (own ? ' is-own' : '');
     if (message.id) item.setAttribute('data-message-id', message.id);
@@ -1073,6 +1199,7 @@
     meta.className = 'chat-message-meta';
     var name = document.createElement('strong');
     name.textContent = own ? 'You' : displayName(source);
+    decorateProfileName(name, source);
     var time = document.createElement('time');
     time.dateTime = new Date(Number(message.at) || Date.now()).toISOString();
     time.textContent = formatTime(message.at);
@@ -1313,12 +1440,12 @@
     if (!socket || socket.readyState !== WebSocket.OPEN) return;
     var user = currentUser();
     if (!user) return;
-    var key = String(user.id || '') + '|' + String(user.avatar || '');
+    var key = String(user.id || '') + '|' + String(user.avatar || '') + '|' + String(user.bio || '');
     if (!force && lastProfileKey === key) return;
     lastProfileKey = key;
     makeChatAvatar(user.avatar).then(function (avatar) {
       if (!socket || socket.readyState !== WebSocket.OPEN) return;
-      socket.send(JSON.stringify({ type: 'profile', avatar: avatar }));
+      socket.send(JSON.stringify({ type: 'profile', avatar: avatar, bio: user.bio || '' }));
     });
   }
 
@@ -1603,7 +1730,20 @@
         markAllNotificationsRead();
       });
     }
+    document.querySelectorAll('[data-chat-profile-close]').forEach(function (element) {
+      element.addEventListener('click', closeChatProfile);
+    });
+    if ($('chatProfileEdit')) $('chatProfileEdit').addEventListener('click', editOwnProfile);
     document.addEventListener('click', function (event) {
+      var profileLink = event.target && event.target.closest ? event.target.closest('[data-profile-user]') : null;
+      if (profileLink && !profileLink.closest('.notification-item') && !profileLink.closest('#chatProfileModal')) {
+        var profile = profileForUser(profileLink.getAttribute('data-profile-user'));
+        if (profile) {
+          event.preventDefault();
+          openChatProfile(profile);
+          return;
+        }
+      }
       var adminDelete = event.target && event.target.closest ? event.target.closest('[data-admin-delete]') : null;
       if (adminDelete) {
         event.preventDefault();
@@ -1642,8 +1782,19 @@
     }
 
     document.addEventListener('keydown', function (event) {
+      if ((event.key === 'Enter' || event.key === ' ') && event.target && event.target.classList && event.target.classList.contains('chat-profile-link')) {
+        var linkProfile = profileForUser(event.target.getAttribute('data-profile-user'));
+        if (linkProfile) {
+          event.preventDefault();
+          openChatProfile(linkProfile);
+          return;
+        }
+      }
       if (event.key !== 'Escape') return;
-      if (notificationsOpen) {
+      var profileModal = $('chatProfileModal');
+      if (profileModal && !profileModal.hidden) {
+        closeChatProfile();
+      } else if (notificationsOpen) {
         setNotificationsOpen(false);
       } else if (roomReply) {
         clearRoomReply();

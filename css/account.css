@@ -379,6 +379,7 @@ body.account-open textarea {
 
 .account-form input,
 .account-card input,
+.account-card textarea,
 .account-inline-form input {
   width: 100%;
   min-width: 0;
@@ -392,11 +393,38 @@ body.account-open textarea {
   font-size: 0.84rem;
 }
 
+.account-card textarea {
+  min-height: 86px;
+  line-height: 1.55;
+  resize: vertical;
+}
+
 .account-form input:focus,
 .account-card input:focus,
+.account-card textarea:focus,
 .account-inline-form input:focus {
   border-color: rgba(var(--primary-accent-rgb), 0.72);
   box-shadow: 0 0 0 3px rgba(var(--primary-accent-rgb), 0.1);
+}
+
+.account-bio-form {
+  display: grid;
+  gap: 10px;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(var(--primary-accent-rgb), 0.12);
+}
+
+.account-bio-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.account-bio-actions > span {
+  color: var(--gray-text);
+  font-size: 0.68rem;
 }
 
 .account-primary,
