@@ -1330,7 +1330,7 @@ async function fetchAndroidChunk(start, end, attempt) {
         headers: {
           accept: '*/*',
           range: 'bytes=' + start + '-' + lastByte,
-          'user-agent': 'rcms-android/1.0'
+          'user-agent': 'cool-tutoring-hub-android/1.0'
         },
         signal: controller.signal
       });
@@ -1409,7 +1409,7 @@ async function handleRomRequest(request, env, ctx) {
   let source = '';
   for (const host of ROM_ARCHIVE_HOSTS) {
     try {
-      const headers = { accept: '*/*', 'user-agent': 'rcms-emulator/1.0' };
+      const headers = { accept: '*/*', 'user-agent': 'cool-tutoring-hub-emulator/1.0' };
       if (range) headers.range = range;
       const candidate = await fetch(host + upstreamPath, { headers: headers });
       if (candidate.status === 200 || candidate.status === 206) {

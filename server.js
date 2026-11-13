@@ -447,7 +447,7 @@ async function handleAndroidImage(req, res, url) {
     let candidate;
     try {
       candidate = await upstream(origin, 'GET', {
-        'user-agent': 'Mozilla/5.0 (compatible; rcms-android/1.0)',
+        'user-agent': 'Mozilla/5.0 (compatible; cool-tutoring-hub-android/1.0)',
         accept: '*/*',
         range: 'bytes=' + start + '-' + (end - 1)
       }, null, req.headers.host);
