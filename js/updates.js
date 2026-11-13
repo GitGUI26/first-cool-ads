@@ -6,6 +6,13 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'One email for suggestions and bug reports',
+            items: [
+                'The home hero and footer now use a single contact message for both game suggestions and bug reports.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Chat profiles and bios',
             items: [
                 'Click a member\'s name or profile picture in chat to open their profile card.',
