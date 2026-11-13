@@ -228,7 +228,7 @@ from (
   from auth.users u
   left join public.profiles p on p.id = u.id
 ) candidate
-where (candidate.username = '.' or candidate.profile_username = '.')
+where (candidate.username = 'cool' or candidate.profile_username = 'cool')
   and not exists (select 1 from public.site_admins)
 order by candidate.created_at asc nulls last, candidate.id asc
 limit 1

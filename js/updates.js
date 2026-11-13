@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Owner access moves to the cool account',
+            items: [
+                'The site admin allowlist now points at the username cool instead of the old placeholder account.',
+                'Owner tools and chat moderation follow that account after the database migration is applied.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Catalog cleanup and CDN game loader fixes',
             items: [
                 'Retested the catalog and repaired shared packed-game wrapper parsing, Papa\'s Burgeria, Tattletail, FNF Rewrite/Camellia/Impostor V4, and the FNAF CDN hosts.',
