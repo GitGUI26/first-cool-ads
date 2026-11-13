@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Emoji picker in chat',
+            items: [
+                'A smiley button next to the message box opens a grid of common emoji in both the room and friend conversations.',
+                'Picked emoji drop in at your cursor, the character counter and the growing textarea stay in sync, and Escape closes the picker.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Android emulator boots again',
             items: [
                 'The old image host started returning 404 for every chunk, which is why the Android device never showed anything. The player now streams the Android-x86 4.4-r1 image from a live range-readable source.',
