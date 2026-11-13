@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Proxy relay control and Android virtual device',
+            items: [
+                'The BROWSER tab can now use a relay on another domain, so the proxy path does not depend on this site\'s domain alone.',
+                'Proxy target URLs are encoded instead of showing the visited hostname in the address bar; failures now explain when the network is blocking the proxy itself.',
+                'EMULATORS has an experimental Android 4.4 virtual device that opens from v86 in its own tab. First boot is slow and there is no Google Play.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'One email for suggestions and bug reports',
             items: [
                 'The home hero and footer now use a single contact message for both game suggestions and bug reports.'

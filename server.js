@@ -161,13 +161,24 @@ function decodeText(buf, contentType, sniffHtml) {
 
 /* ---------- rewriting ---------- */
 const SKIP = /^\s*(#|data:|javascript:|mailto:|tel:|blob:|about:|sms:)/i;
+const ROUTE = '/p/';
+function encodeTarget(value) {
+  return Buffer.from(String(value), 'utf8').toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function decodeTarget(value) {
+  if (!/^[A-Za-z0-9_-]+$/.test(String(value || ''))) return '';
+  try {
+    const base64 = String(value).replace(/-/g, '+').replace(/_/g, '/');
+    return Buffer.from(base64 + '='.repeat((4 - (base64.length % 4)) % 4), 'base64').toString('utf8');
+  } catch (e) { return ''; }
+}
 function proxied(u, base) {
   u = unesc(String(u)).trim();
   if (!u || SKIP.test(u)) return null;
   try {
     const a = new URL(u, base);
     if (a.protocol !== 'http:' && a.protocol !== 'https:') return null;
-    return { abs: a.href, url: '/p?u=' + encodeURIComponent(a.href) };
+    return { abs: a.href, url: ROUTE + encodeTarget(a.href) };
   } catch (e) { return null; }
 }
 function rewriteCSS(css, base) {
@@ -189,16 +200,34 @@ function rewriteSrcset(v, base) {
 // Runs inside proxied pages (stringified and injected). Keeps requests, links, forms and history in the proxy.
 function shim() {
   var B = window.__PXB;
+  var ROUTE = '/p/';
   var BAD = /^\s*(#|data:|javascript:|mailto:|tel:|blob:|about:|sms:)/i;
+  function encodeTarget(value) {
+    var bytes = new TextEncoder().encode(String(value));
+    var binary = '';
+    for (var i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function decodeTarget(value) {
+    try {
+      var base64 = String(value).replace(/-/g, '+').replace(/_/g, '/');
+      var binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
+      return new TextDecoder().decode(Uint8Array.from(binary, function (c) { return c.charCodeAt(0); }));
+    } catch (e) { return ''; }
+  }
+  function isProxyUrl(value) {
+    return value.indexOf(ROUTE) === 0 || value.indexOf(location.origin + ROUTE) === 0 ||
+      value.indexOf('/p?u=') === 0 || value.indexOf(location.origin + '/p?u=') === 0;
+  }
   function ok(u) { return typeof u === 'string' && u.trim() !== '' && !BAD.test(u); }
   function abs(u) { try { return new URL(u, B).href; } catch (e) { return null; } }
   function prox(u) {
     u = String(u);
     if (!ok(u)) return u;
-    if (u.indexOf('/p?u=') === 0 || u.indexOf(location.origin + '/p?u=') === 0) return u;
+    if (isProxyUrl(u)) return u;
     var a = abs(u);
     if (!a || !/^https?:/i.test(a)) return u;
-    return '/p?u=' + encodeURIComponent(a);
+    return ROUTE + encodeTarget(a);
   }
   var f = window.fetch;
   if (f) window.fetch = function (i, init) {
@@ -248,7 +277,7 @@ function shim() {
     if ((fm.getAttribute('method') || 'get').toLowerCase() !== 'get') return;
     e.preventDefault();
     var ac = fm.getAttribute('action') || '';
-    var a = fm.getAttribute('data-pxa') || (ac.indexOf('/p?u=') === 0 ? decodeURIComponent(ac.slice(5)) : abs(ac)) || B;
+    var a = fm.getAttribute('data-pxa') || (ac.indexOf(ROUTE) === 0 ? decodeTarget(ac.slice(ROUTE.length)) : (ac.indexOf('/p?u=') === 0 ? decodeURIComponent(ac.slice(5)) : abs(ac))) || B;
     var u = new URL(a), s = new URLSearchParams();
     new FormData(fm).forEach(function (v, k) { if (typeof v === 'string') s.append(k, v); });
     u.search = s.toString();
@@ -276,8 +305,8 @@ function rewriteHTML(html, base) {
     attrs = attrs
       .replace(/\s(?:integrity|nonce)\s*=\s*("[^"]*"|'[^']*')/gi, '')
       .replace(/\scrossorigin(?:\s*=\s*("[^"]*"|'[^']*'))?/gi, '')
-      .replace(/\s(href|src|action|poster|formaction|srcset|style)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, (all, name, d, s) => {
-        const v = d !== undefined ? d : s;
+      .replace(/\s(href|src|action|poster|formaction|srcset|style)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi, (all, name, d, s, bare) => {
+        const v = d !== undefined ? d : (s !== undefined ? s : bare);
         name = name.toLowerCase();
         if (name === 'srcset') return ' srcset="' + esc(rewriteSrcset(v, b)) + '"';
         if (name === 'style') return ' style="' + esc(rewriteCSS(unesc(v), b)) + '"';
@@ -303,11 +332,11 @@ function readBody(req, max) {
   });
 }
 
-async function handleProxy(req, res, qs) {
+async function handleProxy(req, res, url) {
   if (!authed(req)) return sendError(res, 401, 'Access key required. Open the Browser tab to enter it.');
   if (req.method !== 'GET' && req.method !== 'POST' && req.method !== 'HEAD') return sendError(res, 405, 'Method not allowed');
-  const target = qs.get('u');
-  if (!target) return sendError(res, 400, 'Missing ?u= address');
+  const target = url.searchParams.get('u') || decodeTarget(url.pathname.slice(ROUTE.length));
+  if (!target) return sendError(res, 400, 'Missing target address');
 
   let body = null;
   if (req.method === 'POST') body = await readBody(req, MAX_POST);
@@ -323,7 +352,7 @@ async function handleProxy(req, res, qs) {
   let up;
   try { up = await upstream(target, req.method === 'HEAD' ? 'GET' : req.method, headers, body, req.headers.host); }
   catch (e) { return sendError(res, 502, e.message || 'Could not reach that site'); }
-  const { res: ur, url } = up;
+  const { res: ur, url: targetUrl } = up;
   req.on('close', () => ur.destroy());
 
   const ct = String(ur.headers['content-type'] || '');
@@ -335,7 +364,7 @@ async function handleProxy(req, res, qs) {
     let buf;
     try { buf = await collect(decoder(ur), MAX_HTML); } catch (e) { return sendError(res, 502, e.message); }
     const text = decodeText(buf, ct, isHTML);
-    const result = isHTML ? rewriteHTML(text, url.href) : rewriteCSS(text, url.href);
+    const result = isHTML ? rewriteHTML(text, targetUrl.href) : rewriteCSS(text, targetUrl.href);
     out['content-type'] = (isHTML ? 'text/html' : 'text/css') + '; charset=utf-8';
     res.writeHead(ur.statusCode, out);
     return res.end(req.method === 'HEAD' ? undefined : result);
@@ -420,7 +449,7 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
     if (u.pathname === '/p/health') {
-      return sendJSON(res, 200, { ok: true, locked: !!KEY, authed: authed(req) });
+      return sendJSON(res, 200, { ok: true, locked: !!KEY, authed: authed(req), network: 'node', routing: 'opaque' });
     }
     if (u.pathname === '/p/login') {
       const ip = clientIP(req);
@@ -433,7 +462,7 @@ const server = http.createServer(async (req, res) => {
       attempts.get(ip).push(Date.now());
       return sendJSON(res, 401, { ok: false });
     }
-    if (u.pathname === '/p') return await handleProxy(req, res, u.searchParams);
+    if (u.pathname === '/p' || u.pathname.startsWith(ROUTE)) return await handleProxy(req, res, u);
     if (req.method !== 'GET' && req.method !== 'HEAD') return sendError(res, 405, 'Method not allowed');
     serveStatic(req, res, u.pathname);
   } catch (e) {

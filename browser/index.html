@@ -77,6 +77,23 @@ body.is-embedded .browser-controls { display: none; }
 #home h1 { margin: 0; color: var(--fg); font: 600 clamp(2rem, 4vw, 3rem)/1.05 var(--display); letter-spacing: -0.035em; }
 #home > p { max-width: 560px; margin: 0; color: var(--mut); font-size: 13px; line-height: 1.7; }
 #home .home-note { max-width: 520px; color: var(--mut); font-size: 11px; opacity: 0.65; }
+.network-panel { width: min(580px, 100%); padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px; background: rgba(255, 255, 255, 0.035); color: var(--mut); font-size: 12px; text-align: left; }
+.network-panel summary { display: flex; align-items: center; justify-content: space-between; gap: 10px; color: var(--fg); cursor: pointer; font-weight: 600; list-style: none; }
+.network-panel summary::-webkit-details-marker { display: none; }
+.network-panel summary::after { content: '+'; color: var(--acc2); font-size: 16px; line-height: 1; }
+.network-panel[open] summary::after { content: '−'; }
+.network-panel summary b { margin-left: auto; padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px; color: var(--acc2); font-size: 10px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; }
+.network-panel p { margin: 10px 0 0; line-height: 1.6; }
+.network-panel label { display: block; margin-top: 10px; color: var(--fg); font-size: 11px; font-weight: 600; }
+.network-panel input { display: block; width: 100%; height: 34px; margin-top: 5px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: rgba(0, 0, 0, 0.22); color: var(--fg); font: 12px var(--font); outline: none; }
+.network-panel input:focus { border-color: rgba(var(--acc-rgb), 0.62); }
+.network-panel-actions { display: flex; flex-wrap: wrap; gap: 7px; margin-top: 9px; }
+.network-panel-actions button { min-height: 30px; padding: 0 10px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); color: var(--fg); font-size: 11px; }
+.network-panel-actions button:hover { border-color: var(--line-strong); background: rgba(255, 255, 255, 0.08); }
+.network-panel-actions button.primary { border-color: rgba(var(--acc-rgb), 0.5); background: rgba(var(--acc-rgb), 0.16); }
+.network-panel #relayStatus { color: var(--acc2); font-size: 11px; }
+.network-panel .network-panel-alt { color: var(--mut); font-size: 11px; }
+.network-panel .network-panel-alt a { color: var(--acc2); font-weight: 600; }
 .q { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin: 2px 0; }
 .q a { display: inline-flex; align-items: center; min-height: 36px; padding: 0 13px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--fg); cursor: pointer; font-size: 12px; text-decoration: none; transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease; }
 .q a:hover { border-color: rgba(var(--acc-rgb), 0.55); background: rgba(var(--acc-rgb), 0.1); transform: translateY(-1px); }
@@ -135,6 +152,19 @@ body.is-embedded .browser-controls { display: none; }
         <a class="app-shortcut app-shortcut-youtube" data-go="https://www.youtube.com/" title="Open YouTube in this browser"><span class="app-shortcut-mark">Y</span> YouTube</a>
       </div>
       <p class="home-note">It is not a VPN: the proxy operator can see what you browse.</p>
+      <details class="network-panel" id="networkPanel">
+        <summary><span>Proxy network</span><b id="networkBadge">Site proxy</b></summary>
+        <p>Pages are fetched by the proxy server, so your device does not connect to the site. If your network blocks this site’s domain, the browser cannot reach the proxy either. Point it at a relay on a different domain instead.</p>
+        <label for="relayUrl">Relay URL
+          <input id="relayUrl" type="url" placeholder="https://your-relay.onrender.com" spellcheck="false" autocomplete="off">
+        </label>
+        <div class="network-panel-actions">
+          <button class="primary" id="relaySave" type="button">Use relay</button>
+          <button id="relayReset" type="button">Use site proxy</button>
+        </div>
+        <p id="relayStatus">Using this site’s proxy.</p>
+        <p class="network-panel-alt">If this site’s domain is blocked, try the <a href="https://rcms-gmk0.onrender.com/browser/" target="_blank" rel="noopener noreferrer">Render mirror</a>.</p>
+      </details>
     </div>
   </div>
 </div>
@@ -147,12 +177,35 @@ const STATIC_HOST = /(^|\.)(github\.io|pages\.dev|netlify\.app|vercel\.app|surge
 // only the fallback for static hosting, so the proxy normally stays same-origin.
 let PROXY = STATIC_HOST ? RENDER_PROXY : location.origin;
 const $ = (s) => document.querySelector(s);
-let tabs = [], cur = null, uid = 0, online = true, fallback = false;
+let tabs = [], cur = null, uid = 0, online = true;
 let browserReady = false, pendingNavigate = '';
+const NETWORK_KEY = 'cool-browser-relay-v1';
 const HEALTH_TIMEOUT = 25000;
 const HEALTH_ATTEMPTS = 3;
 const FALLBACK = 'https://www.4everproxy.com/';
-const FALLBACK_QUERY = 'https://www.4everproxy.com/query';
+let RELAY_OVERRIDE = normalizeRelay(new URLSearchParams(location.search).get('relay')) || readStoredRelay();
+PROXY = RELAY_OVERRIDE || PROXY;
+
+function normalizeRelay(value) {
+  const raw = String(value || '').trim();
+  if (!raw) return '';
+  try {
+    const u = new URL(raw);
+    if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
+    return u.origin;
+  } catch (error) {
+    return '';
+  }
+}
+function readStoredRelay() {
+  try { return normalizeRelay(localStorage.getItem(NETWORK_KEY)); } catch (error) { return ''; }
+}
+function updateNetworkBadge() {
+  const badge = $('#networkBadge');
+  const status = $('#relayStatus');
+  if (badge) badge.textContent = PROXY === location.origin ? 'Site proxy' : (PROXY === RENDER_PROXY ? 'Render relay' : 'Custom relay');
+  if (status) status.textContent = PROXY === location.origin ? 'Using this site’s proxy.' : 'Using ' + PROXY + '.';
+}
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -173,12 +226,11 @@ async function readProxyHealth(timeoutMs) {
 
 async function applyProxyHealth(r) {
   online = r.ok !== false;
-  fallback = false;
   notice('');
   if (r.locked && !r.authed) {
     const k = prompt('Access key for the proxy:');
     if (k) {
-      const l = await fetch(PROXY + '/p/login?k=' + encodeURIComponent(k));
+      const l = await fetch(PROXY + '/p/login?k=' + encodeURIComponent(k), { credentials: 'omit' });
       if (!l.ok) {
         notice('Wrong access key.', true);
         online = false;
@@ -188,11 +240,7 @@ async function applyProxyHealth(r) {
       notice('Access key required.', true);
     }
   }
-  if (!online) {
-    fallback = true;
-    online = true;
-    notice('Private proxy is blocked on this network. Use the public fallback to continue.', false, true);
-  }
+  updateNetworkBadge();
 }
 
 function applyParentTheme() {
@@ -225,7 +273,13 @@ function applyParentTheme() {
   } catch (error) {}
 }
 
-function enc(u) { return PROXY + '/p?u=' + encodeURIComponent(u); }
+function enc(u) {
+  const bytes = new TextEncoder().encode(String(u));
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  const token = btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  return PROXY + '/p/' + token;
+}
 function norm(v) {
   v = v.trim();
   if (!v) return '';
@@ -246,36 +300,6 @@ function notice(t, bad, withFallback) {
   }
   n.className = bad ? 'bad' : '';
   n.style.display = t ? 'block' : 'none';
-}
-function openFallback(url) {
-  const win = window.open('about:blank', '_blank');
-  if (!win) return false;
-  const doc = win.document;
-  doc.open();
-  doc.write('<!doctype html><title>Opening public fallback…</title><body style="margin:0;background:#060a14;color:#eef2ff;font:14px sans-serif">Opening public fallback…</body>');
-  doc.close();
-  const form = doc.createElement('form');
-  form.method = 'POST';
-  form.action = FALLBACK_QUERY;
-  const fields = {
-    u: url,
-    u_default: 'https://www.google.com/',
-    customip: '',
-    server_name: 'qc',
-    selip: 'random',
-    allowCookies: 'on'
-  };
-  Object.entries(fields).forEach(([name, value]) => {
-    const input = doc.createElement('input');
-    input.type = 'hidden';
-    input.name = name;
-    input.value = value;
-    form.appendChild(input);
-  });
-  doc.body.appendChild(form);
-  form.submit();
-  try { win.opener = null; } catch (error) {}
-  return true;
 }
 function newTab(url) {
   const t = { id: ++uid, title: 'New tab', url: '', frame: document.createElement('iframe') };
@@ -329,15 +353,8 @@ function go(raw) {
       url: u
     });
   } catch (error) {}
-  if (fallback) {
-    const opened = openFallback(u);
-    notice(opened
-      ? 'Private proxy is blocked here. Opened this site in the public fallback tab.'
-      : 'Private proxy is blocked here. Open the public fallback tab to continue.', !opened, true);
-    return;
-  }
   if (!online) {
-    notice('Proxy service not reachable. Try again in a moment.', true);
+    notice('The proxy is not reachable from this network. Set a relay on another domain, or open the public fallback in a new tab.', true, true);
     return;
   }
   cur.url = u;
@@ -404,6 +421,9 @@ $('#hm').onclick = () => {
   cur.frame.src = 'about:blank';
   select(cur);
 };
+$('#relaySave').onclick = saveRelay;
+$('#relayReset').onclick = resetRelay;
+$('#relayUrl').addEventListener('keydown', e => { if (e.key === 'Enter') saveRelay(); });
 document.querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go));
 addEventListener('keydown', e => {
   if ((e.ctrlKey || e.metaKey) && e.key === 'l') {
@@ -411,23 +431,26 @@ addEventListener('keydown', e => {
     $('#url').select();
   }
 });
-async function boot() {
-  newTab();
+async function connectProxy() {
+  online = true;
+  updateNetworkBadge();
   // Prefer the main site's own proxy. A short probe keeps static hosts from
   // making the browser wait before falling back to Render.
-  if (!STATIC_HOST && location.origin !== RENDER_PROXY) {
+  if (!RELAY_OVERRIDE && !STATIC_HOST && location.origin !== RENDER_PROXY) {
     try {
-      await applyProxyHealth(await readProxyHealth(5000));
-      finishBoot();
-      return;
+      const health = await readProxyHealth(5000);
+      await applyProxyHealth(health);
+      if (online) { finishBoot(); return; }
     } catch (e) {
       PROXY = RENDER_PROXY;
+      updateNetworkBadge();
     }
   }
   for (let attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++) {
     try {
-      await applyProxyHealth(await readProxyHealth());
-      finishBoot();
+      const health = await readProxyHealth();
+      await applyProxyHealth(health);
+      if (online) { finishBoot(); return; }
       return;
     } catch (e) {
       if (attempt < HEALTH_ATTEMPTS) {
@@ -436,13 +459,44 @@ async function boot() {
       }
     }
   }
-  // The proxy host can be blocked by a local network even when the backend is
-  // healthy, and a sleeping free instance can take too long to wake. The public
-  // fallback refuses to run in an iframe, so it opens as a top-level tab instead.
-  fallback = true;
-  online = true;
-  notice('The private proxy did not respond. Use the public fallback to continue.', false, true);
+  // A proxy cannot make its own hostname reachable on a network that blocks it.
+  // Keep that limit explicit instead of silently sending traffic elsewhere.
+  online = false;
+  notice('The proxy did not respond. This browser cannot bypass a block on the proxy domain itself. Set a relay on another domain below, or open the public fallback in a new tab.', true, true);
   finishBoot();
+}
+
+async function boot() {
+  newTab();
+  const relayInput = $('#relayUrl');
+  if (relayInput) relayInput.value = RELAY_OVERRIDE || '';
+  updateNetworkBadge();
+  await connectProxy();
+}
+
+async function saveRelay() {
+  const input = $('#relayUrl');
+  const normalized = normalizeRelay(input && input.value);
+  if (!normalized) {
+    notice('Enter a full relay URL, for example https://your-relay.onrender.com.', true);
+    return;
+  }
+  RELAY_OVERRIDE = normalized;
+  PROXY = normalized;
+  try { localStorage.setItem(NETWORK_KEY, normalized); } catch (error) {}
+  if (input) input.value = normalized;
+  notice('Checking relay ' + normalized + '…', false);
+  await connectProxy();
+}
+
+async function resetRelay() {
+  RELAY_OVERRIDE = '';
+  PROXY = STATIC_HOST ? RENDER_PROXY : location.origin;
+  try { localStorage.removeItem(NETWORK_KEY); } catch (error) {}
+  const input = $('#relayUrl');
+  if (input) input.value = '';
+  notice('Checking the site proxy…', false);
+  await connectProxy();
 }
 try {
   if (window.parent !== window) {

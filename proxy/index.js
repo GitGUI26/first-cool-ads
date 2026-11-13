@@ -11,6 +11,26 @@ const CORS = {
 
 const SKIP = /^\s*(#|data:|javascript:|mailto:|tel:|blob:|about:|sms:)/i;
 const TEXT_TYPES = /^(text\/html|application\/xhtml\+xml|text\/css)/i;
+const ROUTE = '/p/';
+
+function encodeTarget(value) {
+  const bytes = new TextEncoder().encode(String(value));
+  let binary = '';
+  for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+  return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+
+function decodeTarget(value) {
+  if (!/^[A-Za-z0-9_-]+$/.test(String(value || ''))) return '';
+  try {
+    const base64 = String(value).replace(/-/g, '+').replace(/_/g, '/');
+    const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
+    const bytes = Uint8Array.from(binary, c => c.charCodeAt(0));
+    return new TextDecoder().decode(bytes);
+  } catch (error) {
+    return '';
+  }
+}
 
 function esc(value) {
   return String(value).replace(/[&<>"']/g, c => ({
@@ -83,7 +103,7 @@ function proxied(value, base) {
   try {
     const url = new URL(target, base);
     if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
-    return { abs: url.href, url: '/p?u=' + encodeURIComponent(url.href) };
+    return { abs: url.href, url: ROUTE + encodeTarget(url.href) };
   } catch (error) {
     return null;
   }
@@ -110,7 +130,27 @@ function rewriteSrcset(value, base) {
 
 function clientShim() {
   const BAD = /^\s*(#|data:|javascript:|mailto:|tel:|blob:|about:|sms:)/i;
+  const ROUTE = '/p/';
   let base = window.__PXB;
+  function encodeTarget(value) {
+    const bytes = new TextEncoder().encode(String(value));
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+  }
+  function decodeTarget(value) {
+    try {
+      const base64 = String(value).replace(/-/g, '+').replace(/_/g, '/');
+      const binary = atob(base64 + '='.repeat((4 - (base64.length % 4)) % 4));
+      return new TextDecoder().decode(Uint8Array.from(binary, c => c.charCodeAt(0)));
+    } catch (error) {
+      return '';
+    }
+  }
+  function isProxyUrl(value) {
+    return value.indexOf(ROUTE) === 0 || value.indexOf(location.origin + ROUTE) === 0 ||
+      value.indexOf('/p?u=') === 0 || value.indexOf(location.origin + '/p?u=') === 0;
+  }
   function allowed(value) {
     return typeof value === 'string' && value.trim() !== '' && !BAD.test(value);
   }
@@ -120,10 +160,10 @@ function clientShim() {
   function proxy(value) {
     value = String(value);
     if (!allowed(value)) return value;
-    if (value.indexOf('/p?u=') === 0 || value.indexOf(location.origin + '/p?u=') === 0) return value;
+    if (isProxyUrl(value)) return value;
     const next = absolute(value);
     if (!next || !/^https?:/i.test(next)) return value;
-    return '/p?u=' + encodeURIComponent(next);
+    return ROUTE + encodeTarget(next);
   }
   const nativeFetch = window.fetch;
   if (nativeFetch) {
@@ -191,7 +231,7 @@ function clientShim() {
     if ((form.getAttribute('method') || 'get').toLowerCase() !== 'get') return;
     event.preventDefault();
     const action = form.getAttribute('action') || '';
-    const target = form.getAttribute('data-pxa') || (action.indexOf('/p?u=') === 0 ? decodeURIComponent(action.slice(5)) : absolute(action)) || base;
+    const target = form.getAttribute('data-pxa') || (action.indexOf(ROUTE) === 0 ? decodeTarget(action.slice(ROUTE.length)) : (action.indexOf('/p?u=') === 0 ? decodeURIComponent(action.slice(5)) : absolute(action))) || base;
     const next = new URL(target);
     const params = new URLSearchParams();
     new FormData(form).forEach((value, key) => {
@@ -226,8 +266,8 @@ function rewriteHTML(html, base) {
     attrs = attrs
       .replace(/\s(?:integrity|nonce)\s*=\s*("[^"]*"|'[^']*')/gi, '')
       .replace(/\scrossorigin(?:\s*=\s*("[^"]*"|'[^']*'))?/gi, '')
-      .replace(/\s(href|src|action|poster|formaction|srcset|style)\s*=\s*(?:"([^"]*)"|'([^']*)')/gi, (all, name, doubleQuoted, singleQuoted) => {
-        const value = doubleQuoted !== undefined ? doubleQuoted : singleQuoted;
+      .replace(/\s(href|src|action|poster|formaction|srcset|style)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s"'=<>`]+))/gi, (all, name, doubleQuoted, singleQuoted, unquoted) => {
+        const value = doubleQuoted !== undefined ? doubleQuoted : (singleQuoted !== undefined ? singleQuoted : unquoted);
         name = name.toLowerCase();
         if (name === 'srcset') return ' srcset="' + esc(rewriteSrcset(value, pageBase)) + '"';
         if (name === 'style') return ' style="' + esc(rewriteCSS(unesc(value), pageBase)) + '"';
@@ -306,8 +346,8 @@ async function follow(target, method, headers, body) {
 
 async function handleProxy(request, url) {
   if (!['GET', 'HEAD', 'POST'].includes(request.method)) return errorResponse(405, 'Method not allowed');
-  const target = url.searchParams.get('u');
-  if (!target) return errorResponse(400, 'Missing ?u= address');
+  const target = url.searchParams.get('u') || decodeTarget(url.pathname.slice(ROUTE.length));
+  if (!target) return errorResponse(400, 'Missing target address');
 
   let body = null;
   if (request.method === 'POST') {
@@ -368,10 +408,10 @@ export default {
   async fetch(request) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-    if (url.pathname === '/p/health') return jsonResponse({ ok: true, locked: false, authed: true });
+    if (url.pathname === '/p/health') return jsonResponse({ ok: true, locked: false, authed: true, network: 'cloudflare', routing: 'opaque' });
     if (url.pathname === '/p/login') return jsonResponse({ ok: true });
-    if (url.pathname === '/p') return handleProxy(request, url);
-    return new Response('Proxy backend is running. Use /p?u=<url>.', {
+    if (url.pathname === '/p' || url.pathname.startsWith(ROUTE)) return handleProxy(request, url);
+    return new Response('Proxy backend is running. Use /p/<encoded-url>.', {
       status: 404,
       headers: { ...CORS, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }
     });

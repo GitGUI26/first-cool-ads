@@ -68,6 +68,116 @@
   background: linear-gradient(155deg, rgba(17, 24, 43, 0.9), rgba(8, 13, 24, 0.84));
 }
 
+.emulator-device {
+  margin-bottom: 14px;
+  padding: 14px;
+  border: 1px solid rgba(89, 227, 192, 0.28);
+  border-radius: 14px;
+  background:
+    radial-gradient(circle at 100% 0, rgba(124, 140, 255, 0.14), transparent 62%),
+    rgba(89, 227, 192, 0.045);
+}
+
+.emulator-device-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 7px;
+}
+
+.emulator-device-head i {
+  color: var(--emu-accent);
+  font-size: 1rem;
+}
+
+.emulator-device-badge {
+  color: var(--emu-accent);
+  font-size: 0.56rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.emulator-device > strong {
+  display: block;
+  color: var(--light-text);
+  font-family: var(--font-display);
+  font-size: 1rem;
+}
+
+.emulator-device > p {
+  margin: 5px 0 0;
+  color: var(--gray-text);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.emulator-device-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.emulator-device-actions button,
+.emulator-device-actions a {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 0 11px;
+  border-radius: 9px;
+  color: var(--light-text);
+  font: inherit;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.emulator-device-actions button {
+  border: 0;
+  background: linear-gradient(135deg, var(--emu-accent), #7c8cff);
+  color: #041017;
+}
+
+.emulator-device-actions button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.emulator-device-actions button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.emulator-device-actions a {
+  border: 1px solid var(--ui-line);
+  background: transparent;
+}
+
+.emulator-device-actions a:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.emulator-device-actions .emulator-device-open {
+  border: 0;
+  background: linear-gradient(135deg, var(--emu-accent), #7c8cff);
+  color: #041017;
+}
+
+.emulator-device-actions .emulator-device-open:hover {
+  background: linear-gradient(135deg, var(--emu-accent), #7c8cff);
+  transform: translateY(-1px);
+}
+
+.emulator-device .emulator-device-note {
+  margin-top: 10px;
+  color: var(--ui-muted);
+  font-size: 0.61rem;
+}
+
 .emulator-dropzone {
   display: flex;
   min-height: 190px;
@@ -424,6 +534,24 @@
   margin: 7px 0 0;
   font-size: 0.72rem;
   line-height: 1.5;
+}
+
+.emulator-empty .emulator-device-link {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  margin-top: 12px;
+  padding: 0 12px;
+  border: 1px solid rgba(89, 227, 192, 0.3);
+  border-radius: 9px;
+  color: var(--emu-accent);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.emulator-empty .emulator-device-link:hover {
+  background: rgba(89, 227, 192, 0.08);
 }
 
 .emulator-frame {

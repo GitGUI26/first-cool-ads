@@ -74,6 +74,12 @@ systems such as PlayStation, Sega CD, Saturn, 3DO, PC-FX, Amiga, Atari 5200, and
 zipped together. EmulatorJS does not have browser cores for every RetroArch target (for example GameCube/Wii,
 Dreamcast, and PlayStation 2 are not available), so the picker only lists systems that can actually run here.
 
+The EMULATORS tab also has an **Open Android** experimental device. It launches the v86 Android-x86 4.4 profile at
+`https://copy.sh/v86/?profile=android4` in a new tab. It cannot be embedded in an iframe because that VM sends
+`Cross-Origin-Opener-Policy: same-origin` and `Cross-Origin-Embedder-Policy: require-corp`, which makes a framed copy
+render blank. It is not a local ROM and it does not include Google Play. First boot is slow and needs a fast connection.
+There is no built-in APK installer.
+
 ### Game progress
 
 Signed-in players' progress is saved to their account. The game loader injects a small bridge that mirrors each game's `localStorage` into the account profile under `gameProgress`, keyed by the game's URL, and seeds it again the next time the game opens. With Supabase configured, that profile syncs through the `profiles` table, so progress follows the account across domains and devices. Limits: 80 games per profile, 120 keys per game, 1 MB per profile. Only `localStorage` saves are captured; games that keep progress in IndexedDB or on their own servers manage it themselves. Signed-out visitors keep the game's native local storage.
@@ -92,9 +98,17 @@ Duplicates are detected by normalized title and by identical file contents, agai
 within the new ones. Re-running is safe.
 
 ## What the proxy does / doesn't do
-Does: sites see the site's proxy server instead of your device; cookies + referrers are stripped; private/local addresses are blocked.
-Doesn't: encrypt anything from whoever runs the proxy, or work on heavy sites (YouTube, Google login, anything that
-builds URLs in complex JS). For better compatibility swap in Ultraviolet or Scramjet on the same proxy.
+Does: sites see the proxy server's network instead of your device; target URLs are base64url-encoded in `/p/<target>`
+so hostnames do not appear in the browser's URL bar or request path; cookies + referrers are stripped; private/local
+addresses are blocked.
+
+Doesn't: make the proxy host reachable when the network blocks the site or proxy domain. A proxy is not a VPN, and a
+same-origin Worker cannot provide a second network. To use a relay on another domain, deploy `server.js` on Render (or
+any Node host) and set its origin under **Proxy network** in the BROWSER tab, or open the browser with
+`?relay=https://your-relay.example.com`. The relay panel also links the existing Render mirror at
+`https://rcms-gmk0.onrender.com/browser/` as an alternate site address. It still will not encrypt traffic from whoever
+runs the relay, and heavy sites (YouTube, Google login, anything that builds URLs in complex JS) may not work. For
+better compatibility swap in Ultraviolet or Scramjet on the same proxy.
 
 ## Ads
 

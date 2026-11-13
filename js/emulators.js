@@ -2,6 +2,7 @@
   'use strict';
 
   var CDN_DATA = 'https://cdn.emulatorjs.org/stable/data/';
+  var ANDROID_URL = 'https://copy.sh/v86/?profile=android4';
   var SYSTEMS = [
     { id: 'nes', label: 'Nintendo Entertainment System / Famicom', short: 'NES', group: 'Nintendo', core: 'nes', exts: ['nes', 'fds', 'unf'], bios: false, hint: 'Famicom Disk System games may need their BIOS.' },
     { id: 'snes', label: 'Super Nintendo / Super Famicom', short: 'SNES', group: 'Nintendo', core: 'snes', exts: ['sfc', 'smc', 'fig', 'swc', 'bs'], bios: false, hint: 'BS-X and Sufami Turbo games may need their optional BIOS.' },
@@ -91,8 +92,8 @@
   function renderEmptyStage() {
     var stage = $('emulatorStage');
     if (!stage) return;
-    stage.innerHTML = '<div class="emulator-empty"><i class="fas fa-gamepad" aria-hidden="true"></i><h3>Your ROM goes here</h3><p>Choose a supported file, pick its console, and press Play ROM.</p></div>';
-    $('emulatorStageTitle').textContent = 'No ROM loaded';
+    stage.innerHTML = '<div class="emulator-empty"><i class="fas fa-gamepad" aria-hidden="true"></i><h3>Your ROM or Android goes here</h3><p>Choose a supported ROM and press Play ROM, or boot the Android virtual device.</p></div>';
+    $('emulatorStageTitle').textContent = 'No device loaded';
   }
 
   function releaseUrls() {
@@ -154,7 +155,7 @@
     updateBiosUi(system);
     if (start) start.disabled = !romFile || !system;
     if (clear) clear.disabled = !romFile && !frame;
-    if (!romFile) setStatus('Choose a ROM to begin.');
+    if (!romFile) setStatus('Choose a ROM or boot Android to begin.');
     else if (!system) setStatus('Choose the console for this file.', 'warning');
     else if (!frame) setStatus('Ready: ' + system.short + ' · ' + formatBytes(romFile.size), 'ready');
   }
@@ -201,6 +202,38 @@
     var hash = 0;
     for (var i = 0; i < seed.length; i += 1) hash = ((hash << 5) - hash + seed.charCodeAt(i)) | 0;
     return Math.max(1, Math.abs(hash) || 1);
+  }
+
+  function startAndroid() {
+    var stage = $('emulatorStage');
+    var start = $('emulatorStart');
+    var clear = $('emulatorClear');
+    var title = $('emulatorStageTitle');
+    if (!stage) return;
+
+    removeFrame();
+    releaseUrls();
+    romFile = null;
+    biosFile = null;
+    var romInput = $('romInput');
+    var biosInput = $('biosInput');
+    var systemSelect = $('emulatorSystem');
+    var fileBox = $('romFile');
+    var coreNote = $('emulatorCoreNote');
+    if (romInput) romInput.value = '';
+    if (biosInput) biosInput.value = '';
+    if (systemSelect) systemSelect.value = '';
+    if (fileBox) fileBox.hidden = true;
+    if (coreNote) coreNote.textContent = 'Android 4.4 · v86 · opens in a new tab';
+
+    stage.innerHTML = '<div class="emulator-empty"><i class="fas fa-mobile-screen-button" aria-hidden="true"></i>' +
+      '<h3>Android is in its own tab</h3>' +
+      '<p>The v86 Android VM blocks embedding, so it opens separately. First boot can take 1–2 minutes.</p>' +
+      '<a class="emulator-device-link" href="' + ANDROID_URL + '" target="_blank" rel="noopener noreferrer">Open Android again</a></div>';
+    if (title) title.textContent = 'Android 4.4 · new tab';
+    if (start) start.disabled = true;
+    if (clear) clear.disabled = false;
+    setStatus('Android opened in a new tab. If nothing appeared, use the Full tab link. First boot can take 1–2 minutes.', 'ready');
   }
 
   function startEmulator() {
@@ -266,7 +299,7 @@
     if (systemSelect) systemSelect.value = '';
     renderEmptyStage();
     updateUi();
-    setStatus('Choose a ROM to begin.');
+    setStatus('Choose a ROM or boot Android to begin.');
   }
 
   function init() {
@@ -280,6 +313,9 @@
     var systemSelect = $('emulatorSystem');
     var start = $('emulatorStart');
     var clear = $('emulatorClear');
+    var androidStart = $('androidStart');
+
+    if (androidStart) androidStart.addEventListener('click', startAndroid);
 
     if (dropzone && romInput) {
       dropzone.addEventListener('click', function (event) {
@@ -339,7 +375,7 @@
     window.addEventListener('app:switch-tab', function (event) {
       var active = event.detail && event.detail.tab === 'emulators';
       document.body.classList.toggle('emulator-active', active);
-      if (!active && frame && frame.contentWindow) {
+      if (!active && frame && !frame.dataset.external && frame.contentWindow) {
         frame.contentWindow.postMessage({ type: 'emulator-pause' }, location.origin);
       }
       if (active && dropzone) {
