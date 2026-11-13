@@ -46,6 +46,7 @@ function performSearch(searchTerm) {
         const titleEl = card.querySelector('.lesson-title');
         let title = titleEl ? titleEl.textContent : '';
         title = normalizeText(title);
+        const description = normalizeText(card.getAttribute('data-game-desc') || '');
 
         let matchScore = 0;
 
@@ -63,6 +64,9 @@ function performSearch(searchTerm) {
             }
             else if (title.includes(searchTermLower)) {
                 matchScore = 70;
+            }
+            else if (description.includes(searchTermLower)) {
+                matchScore = 40;
             }
             else if (searchTermLower.length >= 3 && isFuzzyMatch(title, searchTermLower)) {
                 matchScore = 30;
@@ -587,7 +591,7 @@ function gameCardMarkup(game, isRandom = false) {
     const cardTitle = isRandom ? 'Let fate pick your next game' : game.title + (game.desc ? ' — ' + game.desc : '');
     const cardAttributes = isRandom
         ? ' data-random-game="true" tabindex="0" role="button" aria-label="Play a random game"'
-        : ` data-game-title="${escapeHtml(game.title)}" data-game-url="${escapeHtml(game.url)}"`;
+        : ` data-game-title="${escapeHtml(game.title)}" data-game-url="${escapeHtml(game.url)}" data-game-desc="${escapeHtml(game.desc || '')}"`;
     return `<${isRandom ? 'div' : 'article'} class="lesson-card${isRandom ? ' lesson-card-random' : ''}"${cardAttributes} title="${escapeHtml(cardTitle)}">
     <${innerTag} class="card-inner"${linkAttributes}>
       <div class="card-cover">
@@ -2179,16 +2183,20 @@ function stopImageFlash() {
 }
 const searchInput = document.getElementById('searchInput');
 if (searchInput) {
-    searchInput.addEventListener('input', function (e) {
-        if (String(e.target.value || '').trim()) {
-            performSearch(e.target.value);
-        }
-        else if (typeof applySorting === 'function') {
-            applySorting();
-        }
-        else {
-            performSearch('');
-        }
+    let searchInputTimer = 0;
+    searchInput.addEventListener('input', function () {
+        clearTimeout(searchInputTimer);
+        searchInputTimer = setTimeout(function () {
+            if (searchInput.value.trim()) {
+                performSearch(searchInput.value);
+            }
+            else if (typeof applySorting === 'function') {
+                applySorting();
+            }
+            else {
+                performSearch('');
+            }
+        }, 90);
     });
     const sortSelect = document.getElementById('sortSelect');
     if (sortSelect) {

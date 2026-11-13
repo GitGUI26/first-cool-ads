@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Smarter search and cleaner site details',
+            items: [
+                'Search now matches game descriptions as well as titles, so themes like zombies or racing are easier to find.',
+                'Search waits briefly while you type instead of rerendering the whole library on every keystroke.',
+                'Fixed the stale game count in share previews, metadata, and the empty-search field, and added a proper page heading for screen readers.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Game audio mute and a faster Animal Crossing port',
             items: [
                 'The game browser toolbar has a mute toggle that remembers its setting across games and reloads.',
