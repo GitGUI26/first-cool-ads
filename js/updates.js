@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Browser searches now use Bing',
+            items: [
+                'Typing a search into the private browser used to land on DuckDuckGo\u2019s anti-bot page almost every time, which looks like a captcha you can never pass.',
+                'Searches now go to Bing, which answers the proxy in about 200 ms and returns ten real results with no challenge page.',
+                'The start page shortcut now opens Bing too.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Emoji picker in chat',
             items: [
                 'A smiley button next to the message box opens a grid of common emoji in both the room and friend conversations.',

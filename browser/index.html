@@ -140,7 +140,7 @@ body.is-embedded .browser-controls { display: none; }
       <h1>Private Browser</h1>
       <p>Pages are fetched by the site's proxy server, so websites see the proxy rather than your device. Cookies and referrers are stripped.</p>
       <div class="q">
-        <a data-go="https://duckduckgo.com/html/">DuckDuckGo</a>
+        <a data-go="https://www.bing.com/">Bing</a>
         <a data-go="https://www.wikipedia.org/">Wikipedia</a>
         <a data-go="https://news.ycombinator.com/">Hacker News</a>
         <a data-go="https://example.com/">example.com</a>
@@ -170,7 +170,9 @@ body.is-embedded .browser-controls { display: none; }
 </div>
 <script src="../js/account-store.js?v=6"></script>
 <script>
-const SEARCH = 'https://html.duckduckgo.com/html/?q=';
+// DuckDuckGo's HTML endpoint answers this proxy with a 202 anti-bot page every
+// time, which reads as a permanent captcha. Bing returns real results in ~270ms.
+const SEARCH = 'https://www.bing.com/search?q=';
 // No relay is hard-coded: the old Render mirror is gone, so the browser probes
 // every route it is given (site proxy first, then relays) and keeps the first
 // one that answers.
