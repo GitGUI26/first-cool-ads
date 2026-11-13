@@ -206,6 +206,14 @@ function updateNetworkBadge() {
   if (badge) badge.textContent = PROXY === location.origin ? 'Site proxy' : (PROXY === RENDER_PROXY ? 'Render relay' : 'Custom relay');
   if (status) status.textContent = PROXY === location.origin ? 'Using this site’s proxy.' : 'Using ' + PROXY + '.';
 }
+function setRelayQuery(value) {
+  try {
+    const u = new URL(location.href);
+    if (value) u.searchParams.set('relay', value);
+    else u.searchParams.delete('relay');
+    history.replaceState(null, '', u);
+  } catch (error) {}
+}
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -484,6 +492,7 @@ async function saveRelay() {
   RELAY_OVERRIDE = normalized;
   PROXY = normalized;
   try { localStorage.setItem(NETWORK_KEY, normalized); } catch (error) {}
+  setRelayQuery(normalized);
   if (input) input.value = normalized;
   notice('Checking relay ' + normalized + '…', false);
   await connectProxy();
@@ -493,6 +502,7 @@ async function resetRelay() {
   RELAY_OVERRIDE = '';
   PROXY = STATIC_HOST ? RENDER_PROXY : location.origin;
   try { localStorage.removeItem(NETWORK_KEY); } catch (error) {}
+  setRelayQuery('');
   const input = $('#relayUrl');
   if (input) input.value = '';
   notice('Checking the site proxy…', false);
