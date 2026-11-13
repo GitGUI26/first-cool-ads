@@ -1048,6 +1048,12 @@ header {
   background: rgba(255, 255, 255, 0.07);
 }
 
+.game-toolbar .btn.is-muted {
+  color: var(--ui-text);
+  border-color: var(--primary-accent);
+  background: rgba(var(--primary-accent-rgb), 0.2);
+}
+
 /* ---------------------------------------------------------------- settings */
 
 #settings-section {

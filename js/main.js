@@ -2937,6 +2937,13 @@ function setDefaultSettings() {
     }
 }
 const ACTIVE_GAME_ID = 'active-game-session';
+const GAME_AUDIO_MUTED_KEY = 'coolGameAudioMuted';
+let gameAudioMuted = false;
+try {
+    gameAudioMuted = localStorage.getItem(GAME_AUDIO_MUTED_KEY) === '1';
+}
+catch (error) {
+}
 const gameSessionState = {
     activeGame: null,
     hideTimer: null
@@ -2949,11 +2956,34 @@ function getGameShellElements() {
         title: document.getElementById('gameSessionTitle')
     };
 }
+function syncGameMuteButton() {
+    const button = document.getElementById('gameMuteBtn');
+    if (!button)
+        return;
+    const muted = gameAudioMuted;
+    button.classList.toggle('is-muted', muted);
+    button.setAttribute('aria-pressed', muted ? 'true' : 'false');
+    button.title = muted ? 'Unmute game' : 'Mute game';
+    button.setAttribute('aria-label', muted ? 'Unmute game' : 'Mute game');
+    button.innerHTML = `<i class="fas ${muted ? 'fa-volume-xmark' : 'fa-volume-high'}" aria-hidden="true"></i>`;
+}
+function toggleGameMute() {
+    gameAudioMuted = !gameAudioMuted;
+    try {
+        localStorage.setItem(GAME_AUDIO_MUTED_KEY, gameAudioMuted ? '1' : '0');
+    }
+    catch (error) {
+    }
+    syncGameMuteButton();
+    applyGameMuteToTab(getActiveGameTab());
+}
+window.toggleGameMute = toggleGameMute;
 function updateGameSessionTitle(title = 'Select a game') {
     const titleEl = getGameShellElements().title;
     if (!titleEl)
         return;
     titleEl.textContent = title;
+    syncGameMuteButton();
 }
 function getActiveGameTab() {
     return gameSessionState.activeGame;
@@ -3048,6 +3078,200 @@ function pauseMediaInFrame(frame, reset = false) {
     }
     catch (error) {
     }
+}
+function getGameAudioMuteSource() {
+    return `(function () {
+  if (window.__coolGameAudioMuteInstalled) return;
+  window.__coolGameAudioMuteInstalled = true;
+
+  var STORAGE_KEY = 'coolGameAudioMuted';
+  var muted = false;
+  try { muted = localStorage.getItem(STORAGE_KEY) === '1'; } catch (error) {}
+  var contexts = [];
+
+  function suspendContext(ctx) {
+    try {
+      if (ctx && ctx.state === 'running' && typeof ctx.suspend === 'function') {
+        Promise.resolve(ctx.suspend()).catch(function () {});
+      }
+    } catch (error) {}
+  }
+
+  function resumeContext(ctx) {
+    try {
+      if (ctx && ctx.state === 'suspended' && typeof ctx.resume === 'function') {
+        Promise.resolve(ctx.resume()).catch(function () {});
+      }
+    } catch (error) {}
+  }
+
+  function rememberContext(ctx) {
+    if (!ctx || contexts.indexOf(ctx) !== -1) return;
+    contexts.push(ctx);
+    if (muted) suspendContext(ctx);
+  }
+
+  function scanKnownContexts() {
+    var candidates = [];
+    try { candidates.push(window.Module && window.Module.SDL2 && window.Module.SDL2.audioContext); } catch (error) {}
+    try { candidates.push(window.SDL2 && window.SDL2.audioContext); } catch (error) {}
+    try { candidates.push(window.Module && window.Module.audioContext); } catch (error) {}
+    try { candidates.push(window.game && window.game.sound && window.game.sound.context); } catch (error) {}
+    try { candidates.push(window.cc && window.cc.sys && window.cc.sys.__audioSupport && window.cc.sys.__audioSupport.context); } catch (error) {}
+    try { candidates.push(window.unityInstance && window.unityInstance.Module && window.unityInstance.Module.audioContext); } catch (error) {}
+    try { candidates.push(window.audioContext); } catch (error) {}
+    try { candidates.push(window.audioCtx); } catch (error) {}
+    for (var i = 0; i < candidates.length; i++) rememberContext(candidates[i]);
+  }
+
+  function applyMediaMuted() {
+    try {
+      var media = document.querySelectorAll('audio, video');
+      for (var i = 0; i < media.length; i++) media[i].muted = muted;
+    } catch (error) {}
+  }
+
+  function setMuted(nextMuted) {
+    muted = !!nextMuted;
+    window.__COOL_MUTED__ = muted;
+    scanKnownContexts();
+    for (var i = 0; i < contexts.length; i++) {
+      if (muted) suspendContext(contexts[i]);
+      else if (!window.__COOL_FROZEN__) resumeContext(contexts[i]);
+    }
+    applyMediaMuted();
+  }
+
+  try {
+    var NativeCtor = window.AudioContext || window.webkitAudioContext;
+    if (NativeCtor && !NativeCtor.__coolAudioMuteWrapped) {
+      var WrappedAudioContext = function () {
+        var ctx = new NativeCtor(...arguments);
+        rememberContext(ctx);
+        return ctx;
+      };
+      WrappedAudioContext.prototype = NativeCtor.prototype;
+      WrappedAudioContext.__coolAudioMuteWrapped = true;
+      try { Object.setPrototypeOf(WrappedAudioContext, NativeCtor); } catch (error) {}
+      if (window.AudioContext) window.AudioContext = WrappedAudioContext;
+      if (window.webkitAudioContext) window.webkitAudioContext = WrappedAudioContext;
+    }
+    var AudioCtor = window.AudioContext || window.webkitAudioContext;
+    if (AudioCtor && AudioCtor.prototype && typeof AudioCtor.prototype.resume === 'function' && !AudioCtor.prototype.__coolAudioMuteResumePatched) {
+      var nativeResume = AudioCtor.prototype.resume;
+      AudioCtor.prototype.resume = function () {
+        if (muted) return Promise.resolve();
+        return nativeResume.apply(this, arguments);
+      };
+      AudioCtor.prototype.__coolAudioMuteResumePatched = true;
+    }
+  } catch (error) {}
+
+  try {
+    var baseProto = window.BaseAudioContext && window.BaseAudioContext.prototype;
+    function trackContextAccess(proto, property) {
+      if (!proto) return;
+      var descriptor = Object.getOwnPropertyDescriptor(proto, property);
+      if (!descriptor || typeof descriptor.get !== 'function' || descriptor.get.__coolAudioMuteTracked) return;
+      var nativeGetter = descriptor.get;
+      var wrappedGetter = function () {
+        rememberContext(this);
+        return nativeGetter.call(this);
+      };
+      wrappedGetter.__coolAudioMuteTracked = true;
+      Object.defineProperty(proto, property, {
+        configurable: true,
+        enumerable: descriptor.enumerable,
+        get: wrappedGetter,
+        set: descriptor.set
+      });
+    }
+    trackContextAccess(baseProto, 'currentTime');
+    trackContextAccess(baseProto, 'destination');
+    var nodeProto = window.AudioNode && window.AudioNode.prototype;
+    if (nodeProto && typeof nodeProto.connect === 'function' && !nodeProto.connect.__coolAudioMuteTracked) {
+      var nativeConnect = nodeProto.connect;
+      var wrappedConnect = function () {
+        try { rememberContext(this.context); } catch (error) {}
+        return nativeConnect.apply(this, arguments);
+      };
+      wrappedConnect.__coolAudioMuteTracked = true;
+      nodeProto.connect = wrappedConnect;
+    }
+  } catch (error) {}
+
+  try {
+    var mediaProto = window.HTMLMediaElement && window.HTMLMediaElement.prototype;
+    if (mediaProto && typeof mediaProto.play === 'function' && !mediaProto.__coolAudioMutePlayPatched) {
+      var nativePlay = mediaProto.play;
+      mediaProto.play = function () {
+        if (muted) {
+          try { this.muted = true; } catch (error) {}
+        }
+        return nativePlay.apply(this, arguments);
+      };
+      mediaProto.__coolAudioMutePlayPatched = true;
+    }
+  } catch (error) {}
+
+  try {
+    if (window.MutationObserver) {
+      new MutationObserver(function () {
+        if (muted) applyMediaMuted();
+      }).observe(document.documentElement, { childList: true, subtree: true });
+    }
+  } catch (error) {}
+
+  window.addEventListener('message', function (event) {
+    if (!event || !event.data || event.data.type !== 'COOL_GAME_MUTE') return;
+    setMuted(!!event.data.muted);
+  });
+
+  window.__COOL_SET_MUTED__ = setMuted;
+  setMuted(muted);
+})();`;
+}
+function getGameAudioMuteScript() {
+    return `<script>${getGameAudioMuteSource()}</script>`;
+}
+function applyGameAudioMuteToFrame(frame, depth = 0) {
+    if (!frame || depth > 3)
+        return;
+    const muted = gameAudioMuted;
+    try {
+        const win = frame.contentWindow;
+        if (!win)
+            return;
+        win.postMessage({ type: 'COOL_GAME_MUTE', muted }, '*');
+        const doc = frame.contentDocument;
+        if (!doc)
+            return;
+        if (typeof win.__COOL_SET_MUTED__ === 'function') {
+            win.__COOL_SET_MUTED__(muted);
+        }
+        else if (doc.documentElement && !win.__coolGameAudioMuteInstalled) {
+            const script = doc.createElement('script');
+            script.textContent = getGameAudioMuteSource();
+            (doc.head || doc.documentElement).appendChild(script);
+            if (typeof win.__COOL_SET_MUTED__ === 'function')
+                win.__COOL_SET_MUTED__(muted);
+        }
+        const childFrames = doc.querySelectorAll('iframe, frame');
+        childFrames.forEach(child => {
+            applyGameAudioMuteToFrame(child, depth + 1);
+            if (!child.__coolGameMuteLoadBound) {
+                child.__coolGameMuteLoadBound = true;
+                child.addEventListener('load', () => applyGameAudioMuteToFrame(child, depth + 1));
+            }
+        });
+    }
+    catch (error) {
+    }
+}
+function applyGameMuteToTab(tab) {
+    if (!tab || !tab.frame)
+        return;
+    applyGameAudioMuteToFrame(tab.frame);
 }
 function getGameFreezeHarnessScript() {
     return `<script>
@@ -3342,6 +3566,8 @@ function ensureActiveGameSession(title, url) {
             if (liveTab.frozen)
                 pauseMediaInFrame(frame, false);
             postTabFreezeMessage(liveTab, !!liveTab.frozen);
+            syncGameMuteButton();
+            applyGameMuteToTab(liveTab);
         });
         shell.views.appendChild(frame);
         gameSessionState.activeGame = activeTab;
@@ -3525,7 +3751,7 @@ function injectFreezeHarnessIntoHtml(html, gameUrl, gameProgress) {
     } catch (error) {}
 })();
 </script>`;
-    const harness = baseTag + compatibility + progressScript + '\n' + getGameFreezeHarnessScript();
+    const harness = baseTag + compatibility + progressScript + '\n' + getGameFreezeHarnessScript() + '\n' + getGameAudioMuteScript();
     const urlShim = '<script>try{Object.defineProperty(document,"URL",{configurable:true,get:function(){return document.baseURI||"https://cdn.jsdelivr.net/";}});}catch(e){}<\/script>';
     const firstScript = html.search(/<script\b/i);
     const headMatch = html.search(/<head[^>]*>/i);
@@ -3645,6 +3871,7 @@ function createGameFrameWithHarness(gamePath, gameTitle) {
         }
     </style>
     ${getGameFreezeHarnessScript()}
+    ${getGameAudioMuteScript()}
 </head>
 <body>
     <iframe id="cool-inner-game-frame" src="${gamePath}" frameborder="0" allowfullscreen></iframe>

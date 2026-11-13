@@ -43,7 +43,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=9" rel="stylesheet">
-<link href="css/refresh.css?v=12" rel="stylesheet">
+<link href="css/refresh.css?v=13" rel="stylesheet">
 <link href="css/browser.css?v=3" rel="stylesheet">
 <link href="css/account.css?v=8" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
@@ -765,6 +765,7 @@
           <span class="game-session-title" id="gameSessionTitle">Select a game</span>
         </div>
         <div class="game-toolbar">
+          <button class="btn" id="gameMuteBtn" onclick="toggleGameMute()" title="Mute game" aria-label="Mute game" aria-pressed="false"><i class="fas fa-volume-high" aria-hidden="true"></i></button>
           <button class="btn refresh-btn" onclick="refreshGame()" title="Reload Game"><i
               class="fas fa-rotate-right"></i></button>
           <button class="btn" onclick="downloadCurrentGame()" title="Download Game"><i
@@ -993,7 +994,7 @@
   <script src="js/account-store.js?v=20"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=19"></script>
-  <script src="js/main.js?v=33"></script>
+  <script src="js/main.js?v=34"></script>
   <script src="js/updates.js?v=40"></script>
   <script src="js/account.js?v=15"></script>
   <script src="js/music.js?v=2"></script>
