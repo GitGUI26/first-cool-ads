@@ -16,6 +16,7 @@
   var initialized = false;
   var activeAuthMode = 'signin';
   var ownerState = { userId: '', status: 'idle', isOwner: false, loading: false, accounts: [] };
+  var pointsState = { userId: '', loading: false, loaded: false, balance: 0, dailyAmount: 15, claimedToday: false, isAdmin: false, error: '' };
 
   function isLocalUser(user) {
     return !!user && String(user.id || '').indexOf('local-') === 0;
@@ -281,6 +282,171 @@
     if (syncButton) syncButton.disabled = local || !configured;
   }
 
+  function renderPoints() {
+    var card = $('accountPointsCard');
+    var user = currentUser();
+    var canShow = !!user && !isLocalUser(user);
+    setHidden(card, !canShow);
+    if (!canShow) return;
+    var balance = Number(pointsState.balance);
+    if (!Number.isFinite(balance) || balance < 0) balance = 0;
+    var daily = Number(pointsState.dailyAmount) || 15;
+    if ($('accountPointsBalance')) $('accountPointsBalance').textContent = String(balance);
+    if ($('accountPointsPill')) $('accountPointsPill').textContent = balance + (balance === 1 ? ' pt' : ' pts');
+    var claim = $('accountClaimPoints');
+    if (claim) {
+      claim.disabled = pointsState.loading || pointsState.claimedToday;
+      claim.textContent = pointsState.loading && !pointsState.loaded
+        ? 'Loading…'
+        : (pointsState.claimedToday ? 'Claimed today' : 'Claim ' + daily + ' points');
+    }
+    setHidden($('accountPointsAdmin'), !pointsState.isAdmin);
+    if (pointsState.loading && !pointsState.loaded) {
+      showMessage('accountPointsMessage', 'Loading your points…', true);
+    } else if (pointsState.error) {
+      showError('accountPointsMessage', pointsState.error);
+    } else if (pointsState.claimedToday) {
+      showSuccess('accountPointsMessage', 'Daily ' + daily + ' points claimed. Resets at midnight UTC.');
+    } else {
+      showSuccess('accountPointsMessage', 'Claim ' + daily + ' points once each UTC day.');
+    }
+  }
+
+  function resetPoints() {
+    pointsState = { userId: '', loading: false, loaded: false, balance: 0, dailyAmount: 15, claimedToday: false, isAdmin: false, error: '' };
+    renderPoints();
+  }
+
+  function applyPoints(data) {
+    var user = currentUser();
+    pointsState.userId = user ? String(user.id) : '';
+    pointsState.loading = false;
+    pointsState.loaded = true;
+    pointsState.balance = Math.max(0, Number(data && data.balance) || 0);
+    pointsState.dailyAmount = Math.max(1, Number(data && data.dailyAmount) || 15);
+    pointsState.claimedToday = !!(data && data.claimedToday);
+    pointsState.isAdmin = !!(data && data.isAdmin);
+    pointsState.error = '';
+  }
+
+  async function loadPoints(claim) {
+    var user = currentUser();
+    if (!user || isLocalUser(user)) {
+      resetPoints();
+      return;
+    }
+    if (pointsState.loading && pointsState.userId === user.id) return;
+    pointsState.userId = String(user.id);
+    pointsState.loading = true;
+    pointsState.error = '';
+    renderPoints();
+    var result = await (claim ? Store.claimDailyPoints() : Store.pointsSummary());
+    var latest = currentUser();
+    if (!latest || String(latest.id) !== String(user.id)) {
+      resetPoints();
+      return;
+    }
+    pointsState.loading = false;
+    if (!result || !result.ok) {
+      pointsState.error = (result && result.error) || 'Points could not be loaded.';
+      renderPoints();
+      return;
+    }
+    applyPoints(result.data);
+    renderPoints();
+    if (claim && result.data && result.data.claimedNow) {
+      showToast('Daily ' + (Number(result.data.dailyAmount) || 15) + ' points claimed.');
+    }
+  }
+
+  async function claimPoints() {
+    if (pointsState.loading) return;
+    await loadPoints(true);
+  }
+
+  async function payPoints(event) {
+    event.preventDefault();
+    var form = $('accountPayForm');
+    var target = $('accountPayUser') ? $('accountPayUser').value.trim() : '';
+    var amountField = $('accountPayAmount');
+    var amount = Number(amountField ? amountField.value : 0);
+    showError('accountPayError', '');
+    if (!target) {
+      showError('accountPayError', 'Enter the username you want to pay.');
+      return;
+    }
+    if (!Number.isInteger(amount) || amount < 1) {
+      showError('accountPayError', 'Choose a whole number of points to send.');
+      return;
+    }
+    setBusy(form, true, 'Sending…');
+    var result = await Store.payPoints(target, amount);
+    setBusy(form, false);
+    if (!result.ok) {
+      showError('accountPayError', result.error);
+      return;
+    }
+    var data = result.data || {};
+    pointsState.balance = Math.max(0, Number(data.balance) || 0);
+    pointsState.loaded = true;
+    pointsState.error = '';
+    renderPoints();
+    var name = (data.recipient && data.recipient.name) || target;
+    var note = data.isAdmin ? ' Owner payments do not use your balance.' : '';
+    showSuccess('accountPointsMessage', 'Sent ' + amount + ' point' + (amount === 1 ? '' : 's') + ' to @' + name + '.' + note);
+    if ($('accountPayUser')) $('accountPayUser').value = '';
+    if ($('accountPayAmount')) $('accountPayAmount').value = '15';
+    showToast('Sent ' + amount + ' points to @' + name + '.');
+  }
+
+  async function submitAdminPoints(event) {
+    event.preventDefault();
+    var form = $('accountPointsAdminForm');
+    var target = $('accountPointsTarget') ? $('accountPointsTarget').value.trim().replace(/^@+/, '') : '';
+    var amountField = $('accountPointsAdminAmount');
+    var amount = Number(amountField ? amountField.value : 0);
+    var direction = $('accountPointsDirection') ? $('accountPointsDirection').value : 'give';
+    showError('accountPointsAdminError', '');
+    if (!Number.isInteger(amount) || amount < 1) {
+      showError('accountPointsAdminError', 'Choose a whole number of points.');
+      return;
+    }
+    var signed = direction === 'take' ? -amount : amount;
+    setBusy(form, true, 'Applying…');
+    var result = await Store.adminAdjustPoints('', target, signed);
+    setBusy(form, false);
+    if (!result.ok) {
+      showError('accountPointsAdminError', result.error);
+      return;
+    }
+    var data = result.data || {};
+    var targetData = data.target || {};
+    pointsState.balance = Math.max(0, Number(data.balance) || 0);
+    pointsState.loaded = true;
+    pointsState.error = '';
+    renderPoints();
+    var name = targetData.name || target || 'yourself';
+    showSuccess('accountPointsMessage', (signed > 0 ? 'Gave ' : 'Took ') + amount + ' point' + (amount === 1 ? '' : 's') + ' ' + (signed > 0 ? 'to' : 'from') + ' @' + name + '.');
+    showToast((signed > 0 ? 'Gave ' : 'Took ') + amount + ' points ' + (signed > 0 ? 'to' : 'from') + ' @' + name + '.');
+  }
+
+  async function adjustOwnerPoints(id, username) {
+    var raw = window.prompt('Points for @' + username + '.\nPositive gives points; negative takes points.', '15');
+    if (raw === null) return;
+    var amount = Number(String(raw).trim());
+    if (!Number.isInteger(amount) || amount === 0) {
+      showError('accountOwnerMessage', 'Enter a non-zero whole number of points.');
+      return;
+    }
+    var result = await Store.adminAdjustPoints(id, username, amount);
+    if (!result.ok) {
+      showError('accountOwnerMessage', result.error);
+      return;
+    }
+    showSuccess('accountOwnerMessage', (amount > 0 ? 'Gave ' + amount : 'Took ' + Math.abs(amount)) + ' point' + (Math.abs(amount) === 1 ? '' : 's') + ' ' + (amount > 0 ? 'to' : 'from') + ' @' + username + '.');
+    loadPoints(false);
+  }
+
   function renderDashboard(user) {
     if (!user) return;
     var configured = Store.isCloudConfigured ? Store.isCloudConfigured() : false;
@@ -312,6 +478,7 @@
     renderWebsites(user);
     renderAppCards();
     renderNav();
+    renderPoints();
     refreshOwnerTools(false);
   }
 
@@ -345,9 +512,15 @@
       var meta = account.isAdmin ? 'Owner' : (account.lastSignInAt ? 'Last seen ' + formatDate(account.lastSignInAt) : 'Has not signed in yet');
       details.appendChild(item('span', '', meta));
       row.appendChild(details);
+      var points = item('button', 'account-secondary account-owner-button', 'Points');
+      points.type = 'button';
+      points.setAttribute('data-owner-points', account.id);
+      points.setAttribute('data-owner-name', account.username);
       if (String(account.id) === String(user.id)) {
+        row.appendChild(points);
         row.appendChild(item('span', 'account-owner-you', 'You'));
       } else {
+        row.appendChild(points);
         var admin = item('button', 'account-secondary account-owner-button', account.isAdmin ? 'Remove admin' : 'Make admin');
         admin.type = 'button';
         admin.setAttribute('data-owner-admin', account.id);
@@ -490,6 +663,9 @@
     if (!modal) return;
     ensureInitialized();
     render();
+    if (currentUser() && !isLocalUser(currentUser()) && (!pointsState.loaded || pointsState.error)) {
+      loadPoints(true);
+    }
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
     modal.classList.add('is-open');
@@ -825,6 +1001,9 @@
     if ($('accountBioForm')) $('accountBioForm').addEventListener('submit', saveBio);
     if ($('accountBio')) $('accountBio').addEventListener('input', updateBioCount);
     if ($('accountSyncNow')) $('accountSyncNow').addEventListener('click', syncAccount);
+    if ($('accountClaimPoints')) $('accountClaimPoints').addEventListener('click', claimPoints);
+    if ($('accountPayForm')) $('accountPayForm').addEventListener('submit', payPoints);
+    if ($('accountPointsAdminForm')) $('accountPointsAdminForm').addEventListener('submit', submitAdminPoints);
     if ($('accountUsernameForm')) {
       $('accountUsernameForm').addEventListener('submit', function (event) {
         event.preventDefault();
@@ -834,6 +1013,11 @@
     if ($('accountOwnerRefresh')) $('accountOwnerRefresh').addEventListener('click', refreshOwnerAccounts);
     if ($('accountOwnerList')) {
       $('accountOwnerList').addEventListener('click', function (event) {
+        var points = event.target.closest('[data-owner-points]');
+        if (points) {
+          adjustOwnerPoints(points.getAttribute('data-owner-points'), points.getAttribute('data-owner-name'));
+          return;
+        }
         var rename = event.target.closest('[data-owner-rename]');
         if (rename) {
           renameOwnerAccount(rename.getAttribute('data-owner-rename'), rename.getAttribute('data-owner-name'));
@@ -895,6 +1079,8 @@
       if (modal && !modal.hidden) renderSyncStatus();
       if (event.detail && ['signin', 'signup', 'signout', 'restore'].indexOf(event.detail.reason) !== -1) {
         if (modal && !modal.hidden) render();
+        if (event.detail.reason === 'signout') resetPoints();
+        else loadPoints(true);
         return;
       }
       var user = currentUser();
@@ -927,6 +1113,7 @@
     initialized = true;
     bindEvents();
     render();
+    if (currentUser()) loadPoints(true);
   }
 
   window.openAccount = function () {

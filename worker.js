@@ -16,6 +16,9 @@ const MAX_MENTIONS = 5;
 const MESSAGE_COOLDOWN_MS = 2200;
 const DM_COOLDOWN_MS = 700;
 const FRIEND_REQUEST_COOLDOWN_MS = 1400;
+const DAILY_POINTS = 15;
+const MAX_POINTS = 1000000000;
+const MAX_POINT_TRANSFER = 1000000;
 
 const SLUR_ROOTS = [
   'nigger', 'nigga', 'faggot', 'fagot', 'fag', 'kike', 'spic', 'chink',
@@ -114,6 +117,14 @@ function cleanId(value) {
   return id.length <= 80 && /^[A-Za-z0-9_-]+$/.test(id) ? id : '';
 }
 
+function cleanPointsAmount(value, allowNegative) {
+  const amount = Number(value);
+  if (!Number.isFinite(amount) || Math.floor(amount) !== amount || amount === 0) return null;
+  if (!allowNegative && amount < 0) return null;
+  if (Math.abs(amount) > MAX_POINT_TRANSFER) return null;
+  return amount;
+}
+
 function nameKey(value) {
   return String(value == null ? '' : value).trim().normalize('NFKC').toLowerCase();
 }
@@ -187,6 +198,20 @@ function chatHeaders(request) {
   // owner check; never let a caller smuggle them through a normal chat route.
   headers.delete('x-chat-admin-delete');
   headers.delete('x-chat-admin-purge');
+  headers.delete('x-points-action');
+  headers.delete('x-points-admin');
+  return headers;
+}
+
+function pointsHeaders(request) {
+  const headers = new Headers(request.headers);
+  // The Worker derives these fields after checking the access token and admin
+  // status. Strip anything a caller tried to inject first.
+  headers.delete('x-chat-user');
+  headers.delete('x-chat-admin-delete');
+  headers.delete('x-chat-admin-purge');
+  headers.delete('x-points-action');
+  headers.delete('x-points-admin');
   return headers;
 }
 
@@ -272,6 +297,26 @@ async function isSiteAdmin(request, env) {
   return !result.error && result.data === true;
 }
 
+async function forwardPoints(request, env, action, adminOnly) {
+  if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+  if (!env.CHAT_ROOM) return json({ error: 'Points are not available.' }, 503);
+  const user = await verifySupabaseUser(request, env);
+  if (!user) return json({ error: 'Sign in with an online account to use points.' }, 401);
+  const admin = await isSiteAdmin(request, env);
+  if (adminOnly && !admin) return json({ error: 'Owner access required.' }, 403);
+  const headers = pointsHeaders(request);
+  headers.set('x-chat-user', encodeURIComponent(JSON.stringify(user)));
+  headers.set('x-points-action', action);
+  headers.set('x-points-admin', admin ? '1' : '0');
+  const id = env.CHAT_ROOM.idFromName('global');
+  const room = env.CHAT_ROOM.get(id);
+  try {
+    return await room.fetch(new Request(request, { headers }));
+  } catch (error) {
+    return json({ error: 'Points could not be updated. Try again.' }, 500);
+  }
+}
+
 function memberList(value) {
   if (!Array.isArray(value)) return [];
   return value.filter(item => item && item.id).map(item => ({
@@ -354,6 +399,141 @@ export class ChatRoom {
     const key = nameKey(target);
     return directory.find(item => item.id === target) ||
       directory.find(item => nameKey(item.name) === key) || null;
+  }
+
+  async readPointsState() {
+    let state = null;
+    try { state = await this.ctx.storage.get('points'); } catch (error) {}
+    if (!state || typeof state !== 'object') state = {};
+    if (!state.balances || typeof state.balances !== 'object') state.balances = {};
+    if (!state.claims || typeof state.claims !== 'object') state.claims = {};
+    return state;
+  }
+
+  async savePointsState(state) {
+    await this.ctx.storage.put('points', state);
+  }
+
+  pointsBalance(state, userId) {
+    const value = Number(state.balances[String(userId)] || 0);
+    return Number.isFinite(value) && value > 0 ? Math.floor(value) : 0;
+  }
+
+  async pointsSummary(user, isAdmin) {
+    await this.rememberDirectoryUser(user);
+    const state = await this.readPointsState();
+    const id = String(user.id);
+    const today = new Date().toISOString().slice(0, 10);
+    return json({
+      ok: true,
+      balance: this.pointsBalance(state, id),
+      dailyAmount: DAILY_POINTS,
+      claimedToday: state.claims[id] === today,
+      lastClaim: state.claims[id] || '',
+      isAdmin: !!isAdmin
+    });
+  }
+
+  async pointsClaim(user, isAdmin) {
+    await this.rememberDirectoryUser(user);
+    const id = String(user.id);
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const state = await this.readPointsState();
+      const today = new Date().toISOString().slice(0, 10);
+      let claimedNow = false;
+      if (state.claims[id] !== today) {
+        state.claims[id] = today;
+        state.balances[id] = this.pointsBalance(state, id) + DAILY_POINTS;
+        await this.savePointsState(state);
+        claimedNow = true;
+      }
+      return json({
+        ok: true,
+        balance: this.pointsBalance(state, id),
+        dailyAmount: DAILY_POINTS,
+        claimedToday: true,
+        claimedNow,
+        lastClaim: state.claims[id] || today,
+        isAdmin: !!isAdmin
+      });
+    });
+  }
+
+  async pointsPay(user, isAdmin, data) {
+    const amount = cleanPointsAmount(data && data.amount, false);
+    if (!amount) return json({ error: 'Choose a whole number of points to send.' }, 400);
+    const target = await this.findDirectoryUser(data && (data.to || data.username));
+    if (!target) {
+      return json({ error: 'That username is not in the member directory yet. They need to open the site once.' }, 404);
+    }
+    if (String(target.id) === String(user.id)) return json({ error: 'You cannot pay yourself.' }, 400);
+    await this.rememberDirectoryUser(user);
+    const senderId = String(user.id);
+    const targetId = String(target.id);
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const state = await this.readPointsState();
+      const balance = this.pointsBalance(state, senderId);
+      if (!isAdmin && balance < amount) {
+        return json({ error: 'You do not have enough points for that payment.' }, 400);
+      }
+      if (!isAdmin) state.balances[senderId] = balance - amount;
+      state.balances[targetId] = this.pointsBalance(state, targetId) + amount;
+      await this.savePointsState(state);
+      return json({
+        ok: true,
+        amount,
+        balance: this.pointsBalance(state, senderId),
+        recipient: { id: targetId, name: target.name },
+        isAdmin: !!isAdmin
+      });
+    });
+  }
+
+  async pointsAdmin(user, data) {
+    const amount = cleanPointsAmount(data && data.amount, true);
+    if (!amount) return json({ error: 'Choose a non-zero whole number of points.' }, 400);
+    const targetId = cleanId(data && data.targetId);
+    const rawTargetName = String(data && (data.targetUsername || data.target) || '').trim().replace(/^@+/, '');
+    const targetName = rawTargetName ? cleanName(rawTargetName) : '';
+    let target = null;
+    if (targetId) {
+      target = { id: targetId, name: targetName || targetId };
+    } else if (targetName) {
+      target = await this.findDirectoryUser(targetName);
+    } else {
+      target = { id: String(user.id), name: user.name };
+    }
+    if (!target) {
+      return json({ error: 'That username is not in the member directory yet.' }, 404);
+    }
+    return this.ctx.blockConcurrencyWhile(async () => {
+      const state = await this.readPointsState();
+      const balance = this.pointsBalance(state, target.id);
+      const next = Math.max(0, Math.min(MAX_POINTS, balance + amount));
+      state.balances[target.id] = next;
+      await this.savePointsState(state);
+      return json({
+        ok: true,
+        target: { id: target.id, name: target.name, balance: next },
+        balance: this.pointsBalance(state, user.id),
+        isAdmin: true
+      });
+    });
+  }
+
+  async handlePoints(request, user, isAdmin, action) {
+    if (action === 'summary') return this.pointsSummary(user, isAdmin);
+    if (action === 'claim') return this.pointsClaim(user, isAdmin);
+    let data = {};
+    if (action === 'pay' || action === 'admin') {
+      try { data = await request.json(); } catch (error) {}
+    }
+    if (action === 'pay') return this.pointsPay(user, isAdmin, data);
+    if (action === 'admin') {
+      if (!isAdmin) return json({ error: 'Owner access required.' }, 403);
+      return this.pointsAdmin(user, data);
+    }
+    return json({ error: 'Unknown points action.' }, 404);
   }
 
   async resolveMentions(text, sender) {
@@ -500,6 +680,13 @@ export class ChatRoom {
       requestsRemoved += before - social.requests[ownerId].length;
     });
     await this.ctx.storage.put('social', social);
+
+    try {
+      const points = await this.readPointsState();
+      delete points.balances[id];
+      delete points.claims[id];
+      await this.savePointsState(points);
+    } catch (error) {}
 
     const directory = await this.readDirectory();
     await this.ctx.storage.put('directory', directory.filter(item => String(item.id) !== id));
@@ -817,6 +1004,11 @@ export class ChatRoom {
       return new Response('Unauthorized.', { status: 401 });
     }
     user = { id: String(user.id), name: cleanName(user.name), avatar: cleanAvatar(user.avatar) };
+
+    const pointsAction = request.headers.get('x-points-action');
+    if (pointsAction) {
+      return this.handlePoints(request, user, request.headers.get('x-points-admin') === '1', pointsAction);
+    }
 
     if (request.headers.get('x-chat-admin-delete') === '1') {
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
@@ -1205,6 +1397,26 @@ export default {
       const user = await verifySupabaseUser(request, env);
       if (!user) return json({ error: 'Sign in with an online account.' }, 401);
       return json({ owner: await isSiteAdmin(request, env) });
+    }
+
+    if (pathname === '/api/points') {
+      if (request.method !== 'GET') return json({ error: 'Method not allowed.' }, 405);
+      return forwardPoints(request, env, 'summary', false);
+    }
+
+    if (pathname === '/api/points/claim') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      return forwardPoints(request, env, 'claim', false);
+    }
+
+    if (pathname === '/api/points/pay') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      return forwardPoints(request, env, 'pay', false);
+    }
+
+    if (pathname === '/api/points/admin') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      return forwardPoints(request, env, 'admin', true);
     }
 
     if (pathname === '/api/chat/admin/delete-message') {

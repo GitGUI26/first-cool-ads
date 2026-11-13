@@ -906,6 +906,61 @@
     return { ok: true, data: data || {} };
   }
 
+  async function pointsFetch(path, options) {
+    var token = await getAccessToken();
+    if (!token) return { ok: false, error: 'Sign in with an online account to use points.' };
+    var response;
+    try {
+      response = await fetch(path, Object.assign({}, options || {}, {
+        headers: Object.assign({
+          Authorization: 'Bearer ' + token,
+          'content-type': 'application/json'
+        }, options && options.headers ? options.headers : {}),
+        cache: 'no-store',
+        credentials: 'same-origin'
+      }));
+    } catch (error) {
+      return { ok: false, error: 'Could not reach the points server. Check your connection and try again.' };
+    }
+    var data = null;
+    try { data = await response.json(); } catch (error) {}
+    if (response.status === 401) return { ok: false, error: 'Your session expired. Sign in again and try again.' };
+    if (!response.ok) return { ok: false, error: (data && data.error) || 'The points action could not be completed.' };
+    return { ok: true, data: data || {} };
+  }
+
+  async function pointsSummary() {
+    return pointsFetch('/api/points', { method: 'GET' });
+  }
+
+  async function claimDailyPoints() {
+    return pointsFetch('/api/points/claim', { method: 'POST', body: '{}' });
+  }
+
+  async function payPoints(to, amount) {
+    var target = String(to == null ? '' : to).trim().replace(/^@+/, '');
+    var value = Number(amount);
+    if (!target) return { ok: false, error: 'Enter the username you want to pay.' };
+    if (!Number.isInteger(value) || value < 1) return { ok: false, error: 'Choose a whole number of points to send.' };
+    return pointsFetch('/api/points/pay', {
+      method: 'POST',
+      body: JSON.stringify({ to: target, amount: value })
+    });
+  }
+
+  async function adminAdjustPoints(targetId, targetUsername, amount) {
+    var value = Number(amount);
+    if (!Number.isInteger(value) || value === 0) return { ok: false, error: 'Choose a non-zero whole number of points.' };
+    return pointsFetch('/api/points/admin', {
+      method: 'POST',
+      body: JSON.stringify({
+        targetId: String(targetId || '').trim(),
+        targetUsername: String(targetUsername || '').trim(),
+        amount: value
+      })
+    });
+  }
+
   async function adminStatus() {
     var result = await adminFetch('/api/admin/status', { method: 'GET' });
     if (!result.ok) return { ok: false, owner: false, error: result.error };
@@ -1623,6 +1678,10 @@
     setAvatar: setAvatar,
     setBio: setBio,
     setUsername: setUsername,
+    pointsSummary: pointsSummary,
+    claimDailyPoints: claimDailyPoints,
+    payPoints: payPoints,
+    adminAdjustPoints: adminAdjustPoints,
     adminStatus: adminStatus,
     adminListAccounts: adminListAccounts,
     adminChangeUsername: adminChangeUsername,

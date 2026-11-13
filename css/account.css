@@ -916,7 +916,112 @@ body.account-open textarea {
   line-height: 1.5;
 }
 
+.account-points-card {
+  border-color: rgba(255, 205, 96, 0.26);
+  background: linear-gradient(135deg, rgba(255, 205, 96, 0.07), rgba(var(--primary-accent-rgb), 0.025));
+}
+
+.account-points-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin: 4px 0 12px;
+  padding: 13px 14px;
+  border: 1px solid rgba(255, 205, 96, 0.18);
+  border-radius: 12px;
+  background: rgba(2, 6, 14, 0.3);
+}
+
+.account-points-balance {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.account-points-balance b {
+  color: var(--light-text);
+  font-size: 1.9rem;
+  line-height: 1;
+}
+
+.account-points-balance span {
+  color: var(--gray-text);
+  font-size: 0.72rem;
+}
+
+.account-points-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 9px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(var(--primary-accent-rgb), 0.12);
+}
+
+.account-points-form label {
+  flex: 1 1 140px;
+}
+
+.account-points-form button {
+  flex: 0 0 auto;
+}
+
+.account-points-form select {
+  width: 100%;
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.26);
+  border-radius: 10px;
+  outline: none;
+  background: rgba(2, 6, 14, 0.55);
+  color: var(--light-text);
+  font: inherit;
+  font-size: 0.84rem;
+}
+
+.account-points-form select:focus {
+  border-color: rgba(var(--primary-accent-rgb), 0.72);
+  box-shadow: 0 0 0 3px rgba(var(--primary-accent-rgb), 0.1);
+}
+
+.account-points-note {
+  margin: 10px 0 0;
+  color: var(--gray-text);
+  font-size: 0.68rem;
+  line-height: 1.5;
+}
+
+.account-points-admin {
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px solid rgba(255, 205, 96, 0.16);
+}
+
+.account-points-admin h5 {
+  margin: 0 0 4px;
+  color: var(--light-text);
+  font-size: 0.8rem;
+}
+
+.account-points-admin > p {
+  margin: 0;
+  color: var(--gray-text);
+  font-size: 0.7rem;
+  line-height: 1.5;
+}
+
 @media (max-width: 620px) {
+  .account-points-hero {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .account-points-form button {
+    width: 100%;
+  }
+
   .account-username-form {
     grid-template-columns: 1fr;
   }
