@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Owner tools can grant admin access',
+            items: [
+                'Owner tools now show Make admin and Remove admin buttons for every other account.',
+                'You cannot remove your own owner access, so the site always keeps at least one owner.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Owner access moves to the cool account',
             items: [
                 'The site admin allowlist now points at the username cool instead of the old placeholder account.',

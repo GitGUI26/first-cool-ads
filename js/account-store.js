@@ -846,10 +846,12 @@
     if (code === '23505' || /username_taken|duplicate key.*username/i.test(message)) {
       return 'That username is already taken. Pick another one.';
     }
-    if (code === '22023' || /invalid_username|account_not_found|cannot_delete_self/i.test(message)) {
-      return /cannot_delete_self/i.test(message)
-        ? 'You cannot delete your own owner account here.'
-        : 'That account or username is not valid.';
+    if (code === '22023' || /invalid_username|account_not_found|cannot_delete_self|cannot_demote_self/i.test(message)) {
+      return /cannot_demote_self/i.test(message)
+        ? 'You cannot remove your own owner access.'
+        : (/cannot_delete_self/i.test(message)
+          ? 'You cannot delete your own owner account here.'
+          : 'That account or username is not valid.');
     }
     if (code === 'PGRST301' || /jwt|session expired|not authenticated/i.test(message)) {
       return 'Your session expired. Sign in again and retry.';
@@ -932,6 +934,21 @@
       }
     });
     if (changed) writeLocalAuth(registry);
+  }
+
+  async function adminSetAdmin(targetId, makeAdmin) {
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+    var target = String(targetId || '').trim();
+    if (!target) return { ok: false, error: 'Choose an account.' };
+    var result;
+    try {
+      result = await auth.rpc('site_admin_set', { target: target, make_admin: !!makeAdmin });
+    } catch (error) {
+      return { ok: false, error: adminError(error) };
+    }
+    if (result.error) return { ok: false, error: adminError(result.error) };
+    return { ok: true, isAdmin: !!makeAdmin };
   }
 
   async function adminChangeUsername(targetId, value) {
@@ -1585,6 +1602,7 @@
     adminStatus: adminStatus,
     adminListAccounts: adminListAccounts,
     adminChangeUsername: adminChangeUsername,
+    adminSetAdmin: adminSetAdmin,
     adminDeleteAccount: adminDeleteAccount,
     adminDeleteMessage: adminDeleteMessage,
     isCloudConfigured: isCloudConfigured,

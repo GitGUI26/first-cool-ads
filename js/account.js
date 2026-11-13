@@ -345,6 +345,11 @@
       if (String(account.id) === String(user.id)) {
         row.appendChild(item('span', 'account-owner-you', 'You'));
       } else {
+        var admin = item('button', 'account-secondary account-owner-button', account.isAdmin ? 'Remove admin' : 'Make admin');
+        admin.type = 'button';
+        admin.setAttribute('data-owner-admin', account.id);
+        admin.setAttribute('data-owner-admin-value', account.isAdmin ? '0' : '1');
+        admin.setAttribute('data-owner-name', account.username);
         var rename = item('button', 'account-secondary account-owner-button', 'Rename');
         rename.type = 'button';
         rename.setAttribute('data-owner-rename', account.id);
@@ -353,6 +358,7 @@
         remove.type = 'button';
         remove.setAttribute('data-owner-delete', account.id);
         remove.setAttribute('data-owner-name', account.username);
+        row.appendChild(admin);
         row.appendChild(rename);
         row.appendChild(remove);
       }
@@ -413,6 +419,22 @@
     showSuccess('accountOwnerMessage', 'Renamed to @' + result.username + '.');
     refreshOwnerAccounts();
     render();
+  }
+
+  async function setOwnerAdmin(id, username, makeAdmin) {
+    if (!makeAdmin) {
+      var confirmed = window.confirm('Remove owner access from @' + username + '?');
+      if (!confirmed) return;
+    }
+    var result = await Store.adminSetAdmin(id, makeAdmin);
+    if (!result.ok) {
+      showError('accountOwnerMessage', result.error);
+      return;
+    }
+    showSuccess('accountOwnerMessage', makeAdmin
+      ? '@' + username + ' can now use Owner tools.'
+      : '@' + username + ' no longer has owner access.');
+    refreshOwnerAccounts();
   }
 
   async function deleteOwnerAccount(id, username) {
@@ -785,6 +807,11 @@
         var rename = event.target.closest('[data-owner-rename]');
         if (rename) {
           renameOwnerAccount(rename.getAttribute('data-owner-rename'), rename.getAttribute('data-owner-name'));
+          return;
+        }
+        var admin = event.target.closest('[data-owner-admin]');
+        if (admin) {
+          setOwnerAdmin(admin.getAttribute('data-owner-admin'), admin.getAttribute('data-owner-name'), admin.getAttribute('data-owner-admin-value') === '1');
           return;
         }
         var remove = event.target.closest('[data-owner-delete]');
