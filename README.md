@@ -78,7 +78,8 @@ The EMULATORS tab also has an **Android 4.4** experimental device. It runs direc
 self-hosted copy of [v86](https://github.com/copy/v86) in `v86/`, rather than framing the copy.sh demo (whose
 `Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers make it render blank in an iframe). The
 Android-x86 4.4 image is streamed in 1 MB chunks from the public v86 image cache through `/api/android-image/...`;
-the Worker proxies and edge-caches those chunks because the upstream cache rejects browser hotlink requests. First
+the Worker tries `c.copy.sh` first and automatically falls back to the `i.copy.sh` mirror, then proxies and edge-caches
+the successful chunks because the upstream cache rejects browser hotlink requests. First
 boot downloads up to about 247 MB and can take several minutes even on a fast connection, so it only starts after
 the visitor presses Start. `android.html` is also available as a standalone player with start, pause, restart, and fullscreen
 controls. It has no Google Play, no guest networking, and no built-in APK installer. The v86 runtime is BSD-2-Clause

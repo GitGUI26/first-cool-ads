@@ -381,9 +381,15 @@ async function handleProxy(req, res, url) {
 }
 
 /* ---------- Android v86 image proxy ---------- */
-const ANDROID_IMAGE_PREFIX = '/api/android-image/android_x86_nonsse3_4.4r1_20140904/';
+const ANDROID_IMAGE_PATH = '/android_x86_nonsse3_4.4r1_20140904/';
+const ANDROID_IMAGE_PREFIX = '/api/android-image' + ANDROID_IMAGE_PATH;
 const ANDROID_IMAGE_SIZE = 247463936;
 const ANDROID_CHUNK_SIZE = 1048576;
+// The environment override makes mirror handling testable locally.
+const ANDROID_IMAGE_ORIGINS = String(process.env.ANDROID_IMAGE_ORIGINS || 'https://c.copy.sh,https://i.copy.sh')
+  .split(',')
+  .map(origin => origin.trim().replace(/\/+$/, ''))
+  .filter(Boolean);
 
 async function handleAndroidImage(req, res, url) {
   if (req.method !== 'GET' && req.method !== 'HEAD') return sendError(res, 405, 'Method not allowed');
@@ -397,26 +403,41 @@ async function handleAndroidImage(req, res, url) {
     return sendError(res, 404, 'Image chunk not found');
   }
 
-  let up;
-  try {
-    up = await upstream('https://c.copy.sh/android_x86_nonsse3_4.4r1_20140904/' + start + '-' + end + '.iso', 'GET', {
-      'user-agent': 'Mozilla/5.0 (compatible; rcms-android/1.0)',
-      accept: '*/*'
-    }, null, req.headers.host);
-  } catch (e) {
-    return sendError(res, 502, e.message || 'Could not reach the Android image');
+  const expectedLength = end - start;
+  let up = null;
+  let source = '';
+  for (const origin of ANDROID_IMAGE_ORIGINS) {
+    let candidate;
+    try {
+      candidate = await upstream(origin + ANDROID_IMAGE_PATH + start + '-' + end + '.iso', 'GET', {
+        'user-agent': 'Mozilla/5.0 (compatible; rcms-android/1.0)',
+        accept: '*/*'
+      }, null, req.headers.host);
+    } catch (e) {
+      continue;
+    }
+
+    const ur = candidate.res;
+    const declaredLength = Number(ur.headers['content-length'] || 0);
+    if ((ur.statusCode !== 200 && ur.statusCode !== 206) ||
+        (declaredLength && declaredLength !== expectedLength)) {
+      ur.destroy();
+      continue;
+    }
+    up = candidate;
+    source = origin;
+    break;
   }
+
+  if (!up) return sendError(res, 502, 'The Android image and its mirror are unavailable');
 
   const { res: ur } = up;
   req.on('close', () => ur.destroy());
-  if (ur.statusCode !== 200) {
-    ur.destroy();
-    return sendError(res, 502, 'The Android image is unavailable');
-  }
   const headers = Object.assign({}, CORS, {
     'content-type': 'application/octet-stream',
     'cache-control': 'public, max-age=31536000, immutable',
-    'x-content-type-options': 'nosniff'
+    'x-content-type-options': 'nosniff',
+    'x-android-image-source': new URL(source).hostname
   });
   for (const key of ['content-length', 'content-range', 'accept-ranges']) {
     if (ur.headers[key]) headers[key] = ur.headers[key];

@@ -1111,9 +1111,42 @@ export class ChatRoom {
   }
 }
 
-const ANDROID_IMAGE_PREFIX = '/api/android-image/android_x86_nonsse3_4.4r1_20140904/';
+const ANDROID_IMAGE_PATH = '/android_x86_nonsse3_4.4r1_20140904/';
+const ANDROID_IMAGE_PREFIX = '/api/android-image' + ANDROID_IMAGE_PATH;
 const ANDROID_IMAGE_SIZE = 247463936;
 const ANDROID_CHUNK_SIZE = 1048576;
+// c.copy.sh is the CDN front; i.copy.sh mirrors the same split image.
+const ANDROID_IMAGE_ORIGINS = [
+  'https://c.copy.sh',
+  'https://i.copy.sh'
+];
+
+async function fetchAndroidChunk(start, end) {
+  const expectedLength = end - start;
+  for (const origin of ANDROID_IMAGE_ORIGINS) {
+    let upstream;
+    try {
+      upstream = await fetch(origin + ANDROID_IMAGE_PATH + start + '-' + end + '.iso', {
+        headers: { accept: '*/*', 'user-agent': 'rcms-android/1.0' }
+      });
+    } catch (error) {
+      continue;
+    }
+    if (!upstream.ok || !upstream.body) {
+      if (upstream.body) {
+        try { await upstream.body.cancel(); } catch (error) {}
+      }
+      continue;
+    }
+    const declaredLength = Number(upstream.headers.get('content-length') || 0);
+    if (declaredLength && declaredLength !== expectedLength) {
+      try { await upstream.body.cancel(); } catch (error) {}
+      continue;
+    }
+    return { upstream, source: origin };
+  }
+  return null;
+}
 
 export default {
   async fetch(request, env, ctx) {
@@ -1142,21 +1175,16 @@ export default {
         } catch (error) {}
       }
 
-      let upstream;
-      try {
-        upstream = await fetch('https://c.copy.sh/android_x86_nonsse3_4.4r1_20140904/' + start + '-' + end + '.iso', {
-          headers: { accept: '*/*', 'user-agent': 'rcms-android/1.0' }
-        });
-      } catch (error) {
-        return json({ error: 'The Android image is unavailable.' }, 502);
-      }
-      if (!upstream.ok || !upstream.body) return json({ error: 'The Android image is unavailable.' }, 502);
+      const chunk = await fetchAndroidChunk(start, end);
+      if (!chunk) return json({ error: 'The Android image and its mirror are unavailable.' }, 502);
+      const upstream = chunk.upstream;
 
       const headers = new Headers({
         'content-type': 'application/octet-stream',
         'cache-control': 'public, max-age=31536000, immutable',
         'access-control-allow-origin': '*',
-        'x-content-type-options': 'nosniff'
+        'x-content-type-options': 'nosniff',
+        'x-android-image-source': new URL(chunk.source).hostname
       });
       const length = upstream.headers.get('content-length');
       if (length) headers.set('content-length', length);

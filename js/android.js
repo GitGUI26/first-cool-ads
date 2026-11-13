@@ -188,7 +188,7 @@
 
       emulator.add_listener('download-error', function (event) {
         var name = event && event.file_name ? ' (' + event.file_name + ')' : '';
-        showError('A required Android image chunk could not be loaded' + name + '. Check your connection and try again.');
+        showError('A required Android image chunk could not be loaded' + name + '. The image host or its mirror may be unavailable. Check your connection and try again.');
       });
 
 
