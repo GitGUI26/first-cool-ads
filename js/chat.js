@@ -1837,6 +1837,7 @@
     document.body.classList.toggle('chat-active', tab === 'chat');
     positionNotificationNav(tab);
     if (tab && tab !== 'chat') {
+      closeChatProfile();
       closeSocial();
       closeDm();
       closeSocket('Disconnected');
@@ -1846,6 +1847,7 @@
   function handleAccountChange() {
     var user = currentUser();
     if (!user) {
+      closeChatProfile();
       notifications = [];
       siteOwner = false;
       applyAdminDeleteControls();
