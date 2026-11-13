@@ -51,6 +51,8 @@
     'flashEnabled',
     'lastSearchTerm',
     'sortMethod',
+    'adsEnabled',
+    'adsPopunder',
     'carouselAutoplay',
     'reduceMotion',
     'gameGridColumns'

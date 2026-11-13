@@ -1629,3 +1629,36 @@ body.reduce-motion #custom-cursor,
 body.reduce-motion #allLessonsGrid .lesson-card {
   transition: none !important;
 }
+
+/* ------------------------------------------------------------------ ad slot */
+
+.ad-slot {
+  margin: 26px auto 8px;
+  padding: 10px;
+  border: 1px solid var(--ui-line);
+  border-radius: 14px;
+  background: rgba(8, 13, 24, 0.6);
+  text-align: center;
+}
+
+.ad-slot[hidden] {
+  display: none;
+}
+
+.ad-slot-label {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--ui-muted);
+  font-size: 0.6rem;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
+.ad-slot-mount {
+  display: flex;
+  justify-content: center;
+}
+
+#settings-section .setting-ads .settings-toggle {
+  margin-top: 10px;
+}

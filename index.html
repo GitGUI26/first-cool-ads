@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=9" rel="stylesheet">
-<link href="css/refresh.css?v=13" rel="stylesheet">
+<link href="css/refresh.css?v=14" rel="stylesheet">
 <link href="css/browser.css?v=3" rel="stylesheet">
   <link href="css/account.css?v=9" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
@@ -674,6 +674,25 @@
             </label>
             <p class="settings-control-note">Reduced motion stops the featured carousel and most interface animations.</p>
           </div>
+          <div class="setting-item setting-ads">
+            <div class="setting-label">
+              <i class="fas fa-rectangle-ad"></i> Ads
+            </div>
+            <div class="setting-description">
+              Ads keep the site free. Turn them off for this browser at any time.
+            </div>
+            <label class="settings-toggle">
+              <input id="adsEnabledToggle" type="checkbox" checked onchange="setAdsEnabledPreference(this.checked)">
+              <span class="settings-toggle-track" aria-hidden="true"></span>
+              <span>Show ads</span>
+            </label>
+            <label class="settings-toggle">
+              <input id="adsPopunderToggle" type="checkbox" onchange="setAdsPopunderPreference(this.checked)">
+              <span class="settings-toggle-track" aria-hidden="true"></span>
+              <span>Allow popunder ads</span>
+            </label>
+            <p class="settings-control-note">Popunders are off unless you allow them here.</p>
+          </div>
           <div class="setting-item setting-import">
             <div class="setting-label">
               <i class="fas fa-database"></i> Export/Import Site Data
@@ -984,11 +1003,12 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=3"></script>
-  <script src="js/account-store.js?v=21"></script>
+  <script src="js/account-store.js?v=22"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=23"></script>
-  <script src="js/main.js?v=37"></script>
-  <script src="js/updates.js?v=51"></script>
+  <script src="js/main.js?v=38"></script>
+  <script src="js/ads.js?v=1"></script>
+  <script src="js/updates.js?v=52"></script>
   <script src="js/account.js?v=17"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=12"></script>

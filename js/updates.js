@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Ads are a setting you control',
+            items: [
+                'Settings now has an Ads section with two switches: one turns ads off entirely for this browser, and popunders stay off unless you deliberately allow them.',
+                'Nothing changes for anyone yet because no ad tag is installed; the site stays completely ad free until one is added.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Invite friends to multiplayer games',
             items: [
                 'Multiplayer games now have an invite button in the game toolbar that opens your friends list.',
