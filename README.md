@@ -82,7 +82,8 @@ the Worker proxies and edge-caches those chunks because the upstream cache rejec
 boot downloads up to about 247 MB and can take several minutes even on a fast connection, so it only starts after
 the visitor presses Start. `android.html` is also available as a standalone player with start, pause, restart, and fullscreen
 controls. It has no Google Play, no guest networking, and no built-in APK installer. The v86 runtime is BSD-2-Clause
-licensed; Android-x86 is a separate open-source project.
+licensed, and its bundled firmware is LGPL (see `v86/LICENSE`, `v86/COPYING.LESSER`, and `v86/NOTICE.md`);
+Android-x86 is a separate open-source project.
 
 ### Game progress
 
