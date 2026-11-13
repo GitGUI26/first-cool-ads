@@ -231,7 +231,7 @@
     frame.className = 'emulator-frame';
     frame.title = 'Android 4.4 virtual device';
     frame.setAttribute('allowfullscreen', '');
-    frame.setAttribute('allow', 'fullscreen; autoplay; gamepad');
+    frame.setAttribute('allow', 'fullscreen; autoplay; gamepad; pointer-lock');
     frame.src = ANDROID_URL + '?embed=1';
     frame.addEventListener('load', function () {
       setStatus('Android is ready. Press Start in the device to boot. First boot streams about 247 MB and can take several minutes.', 'ready');

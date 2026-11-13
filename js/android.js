@@ -25,6 +25,7 @@
   var booting = false;
   var started = false;
   var runRequested = false;
+  var readyWatcher = 0;
   var lastProgressAt = 0;
 
   function setState(label, state) {
@@ -41,6 +42,7 @@
   }
 
   function showError(message) {
+    window.clearInterval(readyWatcher);
     if (!errorBox) return;
     if (startScreen) startScreen.hidden = false;
     errorBox.hidden = false;
@@ -58,6 +60,32 @@
     if (restartButton) restartButton.disabled = false;
     if (fullscreenButton) fullscreenButton.disabled = false;
     if (bootMeta) bootMeta.textContent = 'Android is running in this tab.';
+  }
+
+  function startReadyWatch() {
+    window.clearInterval(readyWatcher);
+    readyWatcher = window.setInterval(function () {
+      if (!started || paused || !screen) return;
+      var canvas = screen.querySelector('canvas');
+      if (!canvas || canvas.style.display === 'none' || !canvas.width || !canvas.height) return;
+      try {
+        var sample = document.createElement('canvas');
+        sample.width = 32;
+        sample.height = 24;
+        var ctx = sample.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(canvas, 0, 0, 32, 24);
+        var data = ctx.getImageData(0, 0, 32, 24).data;
+        var lit = 0;
+        for (var i = 0; i < data.length; i += 4) {
+          if (data[i] + data[i + 1] + data[i + 2] > 60) lit += 1;
+        }
+        if (lit > 0.18 * 32 * 24) {
+          window.clearInterval(readyWatcher);
+          setState('Running', 'running');
+          setStatus('Android is ready. Click the screen to capture the mouse; press Esc to release it.');
+        }
+      } catch (error) {}
+    }, 2500);
   }
 
   function runEmulator() {
@@ -135,6 +163,7 @@
         setRunningUi();
         setState('Booting', 'loading');
         setStatus('Android is booting. The first boot can take several minutes; the screen changes when Android is ready.');
+        startReadyWatch();
         // Android-x86 stops at its boot menu; the public v86 profile sends Enter
         // after three seconds so the default entry continues automatically.
         window.setTimeout(function () {
@@ -170,12 +199,14 @@
 
   function togglePause() {
     if (!emulator || !started) return;
+    window.clearInterval(readyWatcher);
     if (paused) {
       paused = false;
       if (pauseButton) pauseButton.textContent = 'Pause';
       setState('Running', 'running');
       setStatus('Resuming Android…');
       emulator.run().catch(function () { showError('Android could not resume.'); });
+      startReadyWatch();
     } else {
       paused = true;
       if (pauseButton) pauseButton.textContent = 'Resume';
@@ -187,11 +218,13 @@
 
   function restart() {
     if (!emulator || !started) return;
+    window.clearInterval(readyWatcher);
     paused = false;
     if (pauseButton) pauseButton.textContent = 'Pause';
     setState('Restarting', 'loading');
     setStatus('Restarting Android…');
     try { emulator.restart(); } catch (error) { showError('Android could not restart.'); }
+    window.setTimeout(startReadyWatch, 5000);
   }
 
   function goFullscreen() {
@@ -210,7 +243,14 @@
   if (pauseButton) pauseButton.addEventListener('click', togglePause);
   if (restartButton) restartButton.addEventListener('click', restart);
   if (fullscreenButton) fullscreenButton.addEventListener('click', goFullscreen);
-  if (screen) screen.addEventListener('click', function () { if (started && emulator) emulator.focus && emulator.focus(); });
+  if (screen) screen.addEventListener('click', function () {
+    if (!started || !emulator) return;
+    if (typeof emulator.lock_mouse === 'function') {
+      Promise.resolve(emulator.lock_mouse()).catch(function () { if (emulator.focus) emulator.focus(); });
+    } else if (emulator.focus) {
+      emulator.focus();
+    }
+  });
 
 
   if (embedded) {
