@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Game audio mute and a faster Animal Crossing port',
+            items: [
+                'The game browser toolbar has a mute toggle that remembers its setting across games and reloads.',
+                'Animal Crossing now caps its render target at a 4:3 1280x960 maximum, requests the high-performance GPU, and only preserves the WebGL drawing buffer when a filter needs it.',
+                'The port loads from a pinned CDN revision with preloaded loader and WebAssembly files.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Proxy relay control and Android virtual device',
             items: [
                 'The BROWSER tab can now use a relay on another domain, so the proxy path does not depend on this site\'s domain alone.',
