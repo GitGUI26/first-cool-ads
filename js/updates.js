@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: '1v1.LOL page no longer pretends to load',
+            items: [
+                'The archived 1v1.LOL client still boots but freezes on “Connecting…” because the publisher shut its servers down on 16 November 2025, which is why it looked stuck on a loading screen forever.',
+                'The game page now says that plainly and opens 1v1.LOL RELOADED, a fan-run revival with working matchmaking, instead of hanging on a client that can never connect.',
+                'The old loader files are gone, so nothing downloads 48 MB of Unity build just to reach a dead menu.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Browser searches now use Bing',
             items: [
                 'Typing a search into the private browser used to land on DuckDuckGo\u2019s anti-bot page almost every time, which looks like a captcha you can never pass.',
