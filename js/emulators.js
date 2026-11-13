@@ -234,7 +234,7 @@
     frame.setAttribute('allow', 'fullscreen; autoplay; gamepad; pointer-lock');
     frame.src = ANDROID_URL + '?embed=1';
     frame.addEventListener('load', function () {
-      setStatus('Android is ready. Press Start in the device to boot. First boot streams about 247 MB and can take several minutes.', 'ready');
+      setStatus('Android is ready. Press Start in the device to boot. First boot streams about 360 MB and can take several minutes.', 'ready');
     });
     frame.addEventListener('error', function () {
       setStatus('The Android device could not load.', 'error');
@@ -244,7 +244,7 @@
     if (title) title.textContent = 'Android 4.4 · v86';
     if (start) start.disabled = true;
     if (clear) clear.disabled = false;
-    setStatus('Loading the Android device. Press Start when it appears. First boot streams about 247 MB.', 'loading');
+    setStatus('Loading the Android device. Press Start when it appears. First boot streams about 360 MB.', 'loading');
   }
 
   function startEmulator() {

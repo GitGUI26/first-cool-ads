@@ -1,8 +1,8 @@
 (function () {
   'use strict';
 
-  var IMAGE_URL = '/api/android-image/android_x86_nonsse3_4.4r1_20140904/.iso';
-  var IMAGE_SIZE = 247463936;
+  var IMAGE_URL = '/api/android-image/android-x86-4.4-r1/.iso';
+  var IMAGE_SIZE = 359661568;
   var IMAGE_CHUNK = 1048576;
   var params = new URLSearchParams(window.location.search);
   var embedded = params.get('embed') === '1';
@@ -62,8 +62,21 @@
     if (bootMeta) bootMeta.textContent = 'Android is running in this tab.';
   }
 
+  // v86 only repaints pixels the guest writes, so a blank canvas after a window
+  // resize stays blank until the guest draws again. A Shift press costs nothing
+  // inside the guest and forces the next frame to be drawn.
+  function nudgeRepaint() {
+    if (!emulator || !started || paused) return;
+    try {
+      if (typeof emulator.keyboard_send_scancodes === 'function') {
+        Promise.resolve(emulator.keyboard_send_scancodes([0x2a, 0xaa])).catch(function () {});
+      }
+    } catch (error) {}
+  }
+
   function startReadyWatch() {
     window.clearInterval(readyWatcher);
+    var litSamples = 0;
     readyWatcher = window.setInterval(function () {
       if (!started || paused || !screen) return;
       var canvas = screen.querySelector('canvas');
@@ -80,9 +93,16 @@
           if (data[i] + data[i + 1] + data[i + 2] > 60) lit += 1;
         }
         if (lit > 0.18 * 32 * 24) {
+          litSamples += 1;
+        } else {
+          litSamples = 0;
+        }
+        // One bright frame is just the kernel log scrolling past. Android counts
+        // as up once the display stays busy across a few samples.
+        if (litSamples >= 3) {
           window.clearInterval(readyWatcher);
           setState('Running', 'running');
-          setStatus('Android is ready. Click the screen to capture the mouse; press Esc to release it.');
+          setStatus('Android is running. Click the screen to capture the mouse; press Esc to release it.');
         }
       } catch (error) {}
     }, 2500);
@@ -237,6 +257,15 @@
       emulator.screen_go_fullscreen();
     }
   }
+
+  var repaintTimer = 0;
+  window.addEventListener('resize', function () {
+    window.clearTimeout(repaintTimer);
+    repaintTimer = window.setTimeout(nudgeRepaint, 400);
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) window.setTimeout(nudgeRepaint, 300);
+  });
 
   if (bootButton) bootButton.addEventListener('click', boot);
   if (powerButton) powerButton.addEventListener('click', boot);

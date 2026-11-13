@@ -6,6 +6,15 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Android emulator boots again',
+            items: [
+                'The old image host started returning 404 for every chunk, which is why the Android device never showed anything. The player now streams the Android-x86 4.4-r1 image from a live range-readable source.',
+                'Chunks are still cut into 1 MB pieces and edge-cached, so a second visit starts far faster than the first.',
+                'A browser tab emulates the CPU in WebAssembly, so this is much slower than a native emulator like MuMu Player: no Google Play, no ARM translation, no GPU acceleration.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Faster browsing through the proxy',
             items: [
                 'Images, stylesheets, scripts and media are now cached at the edge and in the browser, so a repeat page load skips them entirely.',

@@ -1302,40 +1302,62 @@ export class ChatRoom {
   }
 }
 
-const ANDROID_IMAGE_PATH = '/android_x86_nonsse3_4.4r1_20140904/';
+const ANDROID_IMAGE_PATH = '/android-x86-4.4-r1/';
 const ANDROID_IMAGE_PREFIX = '/api/android-image' + ANDROID_IMAGE_PATH;
-const ANDROID_IMAGE_SIZE = 247463936;
+const ANDROID_IMAGE_SIZE = 359661568;
 const ANDROID_CHUNK_SIZE = 1048576;
-// c.copy.sh is the CDN front; i.copy.sh mirrors the same split image.
+// The v86 split image used to live on c.copy.sh/i.copy.sh, which now 404 it. The
+// upstream Android-x86 4.4-r1 ISO is range-readable on the Internet Archive and
+// v86 supports SSE3, so that build boots in the emulator.
 const ANDROID_IMAGE_ORIGINS = [
-  'https://c.copy.sh',
-  'https://i.copy.sh'
+  'https://archive.org/download/android-x86-4.4-r1/android-x86-4.4-r1.iso',
+  'https://ia600802.us.archive.org/31/items/android-x86-4.4-r1/android-x86-4.4-r1.iso'
 ];
 
-async function fetchAndroidChunk(start, end) {
+async function fetchAndroidChunk(start, end, attempt) {
   const expectedLength = end - start;
+  const lastByte = end - 1;
+  const tries = attempt || 0;
   for (const origin of ANDROID_IMAGE_ORIGINS) {
+    // Archive nodes occasionally stall on a cold range. Without a timeout the
+    // whole chunk request would hang until the browser gave up. The timer is
+    // cleared once headers arrive so a slow body is never cut short.
+    const controller = new AbortController();
+    const stallTimer = setTimeout(function () { controller.abort(); }, 9000);
     let upstream;
     try {
-      upstream = await fetch(origin + ANDROID_IMAGE_PATH + start + '-' + end + '.iso', {
-        headers: { accept: '*/*', 'user-agent': 'rcms-android/1.0' }
+      upstream = await fetch(origin, {
+        headers: {
+          accept: '*/*',
+          range: 'bytes=' + start + '-' + lastByte,
+          'user-agent': 'rcms-android/1.0'
+        },
+        signal: controller.signal
       });
     } catch (error) {
+      clearTimeout(stallTimer);
       continue;
     }
-    if (!upstream.ok || !upstream.body) {
+    clearTimeout(stallTimer);
+    if (upstream.status !== 206 || !upstream.body) {
       if (upstream.body) {
         try { await upstream.body.cancel(); } catch (error) {}
       }
       continue;
     }
+    const contentRange = upstream.headers.get('content-range') || '';
     const declaredLength = Number(upstream.headers.get('content-length') || 0);
     if (declaredLength && declaredLength !== expectedLength) {
       try { await upstream.body.cancel(); } catch (error) {}
       continue;
     }
+    if (contentRange && contentRange.indexOf('bytes ' + start + '-' + lastByte + '/') !== 0) {
+      try { await upstream.body.cancel(); } catch (error) {}
+      continue;
+    }
     return { upstream, source: origin };
   }
+  if (tries < 1) return fetchAndroidChunk(start, end, tries + 1);
   return null;
 }
 
@@ -1377,8 +1399,7 @@ export default {
         'x-content-type-options': 'nosniff',
         'x-android-image-source': new URL(chunk.source).hostname
       });
-      const length = upstream.headers.get('content-length');
-      if (length) headers.set('content-length', length);
+      headers.set('content-length', String(end - start));
       const response = new Response(upstream.body, { status: 200, headers });
       if (cache && ctx && ctx.waitUntil) {
         ctx.waitUntil(cache.put(cacheKey, response.clone()).catch(function () {}));

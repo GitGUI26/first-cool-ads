@@ -79,13 +79,14 @@ Dreamcast, and PlayStation 2 are not available), so the picker only lists system
 
 The EMULATORS tab also has an **Android 4.4** experimental device. It runs directly in the player panel using a
 self-hosted copy of [v86](https://github.com/copy/v86) in `v86/`, rather than framing the copy.sh demo (whose
-`Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers make it render blank in an iframe). The
-Android-x86 4.4 image is streamed in 1 MB chunks from the public v86 image cache through `/api/android-image/...`;
-the Worker tries `c.copy.sh` first and automatically falls back to the `i.copy.sh` mirror, then proxies and edge-caches
-the successful chunks because the upstream cache rejects browser hotlink requests. First
-boot downloads up to about 247 MB and can take several minutes even on a fast connection, so it only starts after
+`Cross-Origin-Opener-Policy` and `Cross-Origin-Embedder-Policy` headers make it render blank in an iframe). The Android-x86 4.4-r1 ISO is read with HTTP range requests from the Internet Archive through `/api/android-image/...`,
+cut into 1 MB chunks and edge-cached, because the archive's own file responses carry no CORS headers. First
+boot streams up to about 360 MB and can take several minutes even on a fast connection, so it only starts after
 the visitor presses Start. `android.html` is also available as a standalone player with start, pause, restart, and fullscreen
-controls. It has no Google Play, no guest networking, and no built-in APK installer. The v86 runtime is BSD-2-Clause
+controls. It has no Google Play, no guest networking, and no built-in APK installer. Because v86 translates x86
+instructions to WebAssembly in a single browser thread, Android runs far slower here than in a native hypervisor such
+as MuMu Player, which uses hardware virtualization, GPU passthrough and ARM translation. A browser tab cannot have
+those, so expect a slow, degraded desktop rather than a gaming-grade Android. The v86 runtime is BSD-2-Clause
 licensed, and its bundled firmware is LGPL (see `v86/LICENSE`, `v86/COPYING.LESSER`, and `v86/NOTICE.md`);
 Android-x86 is a separate open-source project.
 

@@ -447,7 +447,7 @@
             <h2>Android 4.4, in this tab</h2>
             <p>A real Android-x86 desktop running locally in WebAssembly. The first boot streams the image in chunks, so give it several minutes.</p>
             <button class="android-boot" id="androidBoot" type="button">Start Android</button>
-            <p class="android-boot-meta" id="androidBootMeta">About 247 MB downloaded on first boot · experimental</p>
+            <p class="android-boot-meta" id="androidBootMeta">About 360 MB downloaded on first boot · experimental</p>
             <p class="android-error" id="androidError" hidden></p>
           </div>
         </div>
@@ -472,12 +472,12 @@
           <li>Use the on-screen controls to pause, restart, or go fullscreen.</li>
           <li>Network access inside Android is not configured. Local apps and the built-in browser still work.</li>
         </ul>
-        <p class="android-legal">Android-x86 is an independent open-source project. v86 is BSD-2-Clause licensed. The Android image is streamed from the public v86 demo cache, with an automatic mirror fallback; no ROMs or personal files leave this browser.</p>
+        <p class="android-legal">Android-x86 is an independent open-source project. v86 is BSD-2-Clause licensed. The Android image is streamed in 1 MB chunks from a range-readable copy of the Android-x86 ISO on the Internet Archive; no ROMs or personal files leave this browser.</p>
       </aside>
     </main>
   </div>
 
   <script src="v86/libv86.js"></script>
-  <script src="js/android.js?v=3"></script>
+  <script src="js/android.js?v=4"></script>
 </body>
 </html>

@@ -415,14 +415,17 @@ async function handleProxy(req, res, url) {
 }
 
 /* ---------- Android v86 image proxy ---------- */
-const ANDROID_IMAGE_PATH = '/android_x86_nonsse3_4.4r1_20140904/';
+const ANDROID_IMAGE_PATH = '/android-x86-4.4-r1/';
 const ANDROID_IMAGE_PREFIX = '/api/android-image' + ANDROID_IMAGE_PATH;
-const ANDROID_IMAGE_SIZE = 247463936;
+const ANDROID_IMAGE_SIZE = 359661568;
 const ANDROID_CHUNK_SIZE = 1048576;
-// The environment override makes mirror handling testable locally.
-const ANDROID_IMAGE_ORIGINS = String(process.env.ANDROID_IMAGE_ORIGINS || 'https://c.copy.sh,https://i.copy.sh')
+// The v86 split image used to live on c.copy.sh/i.copy.sh, which now 404 it. The
+// Android-x86 4.4-r1 ISO on the Internet Archive is range-readable.
+const ANDROID_IMAGE_ORIGINS = String(process.env.ANDROID_IMAGE_ORIGINS ||
+  'https://archive.org/download/android-x86-4.4-r1/android-x86-4.4-r1.iso,' +
+  'https://ia600802.us.archive.org/31/items/android-x86-4.4-r1/android-x86-4.4-r1.iso')
   .split(',')
-  .map(origin => origin.trim().replace(/\/+$/, ''))
+  .map(origin => origin.trim())
   .filter(Boolean);
 
 async function handleAndroidImage(req, res, url) {
@@ -443,9 +446,10 @@ async function handleAndroidImage(req, res, url) {
   for (const origin of ANDROID_IMAGE_ORIGINS) {
     let candidate;
     try {
-      candidate = await upstream(origin + ANDROID_IMAGE_PATH + start + '-' + end + '.iso', 'GET', {
+      candidate = await upstream(origin, 'GET', {
         'user-agent': 'Mozilla/5.0 (compatible; rcms-android/1.0)',
-        accept: '*/*'
+        accept: '*/*',
+        range: 'bytes=' + start + '-' + (end - 1)
       }, null, req.headers.host);
     } catch (e) {
       continue;
