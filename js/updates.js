@@ -6,6 +6,25 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Proxy route ladder and reader fallback',
+            items: [
+                'A blocked page no longer replaces the content: the proxy retries through configured relay origins, then falls back to a text-only reader view.',
+                'The browser UI accepts a list of relays, health-checks each one, and skips any route that stops answering instead of failing the whole session.',
+                'Captcha and JavaScript challenge pages are passed through with a banner that offers the reader view, and /p/diag lists the configured routes.',
+                'The old Render mirror was suspended, so no relay is hard-coded; add your own under Proxy network.'
+            ]
+        },
+        {
+            date: '2026-11-13',
+            title: '1v1.lol loads again and the site is ad-free',
+            items: [
+                '1v1.lol no longer hangs on its loading screen: it loads a live mirrored build instead of a deleted storage host, so the client reaches its main menu.',
+                'All advertising is gone: the Adsterra renderer, every ad slot, the sponsored popup, the mobile banner, and the Settings popup-ads control.',
+                'Bundled game pages dropped their AdSense loaders, which are replaced with an inert stub so the games keep running.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Android now boots in the emulator panel',
             items: [
                 'Android 4.4 runs inside the EMULATORS player instead of opening the copy.sh demo in another tab.',

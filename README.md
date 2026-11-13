@@ -10,13 +10,16 @@ Or run the Node server for a self-hosted local proxy:
 
 Optional: `PROXY_KEY=somesecret node server.js` makes the local proxy ask for a key. `PORT=3000` changes its port.
 
-Hosting: when a site served by `server.js` is used, the BROWSER tab sends its proxy traffic to that same origin
-(for example `https://rcms-gmk0.onrender.com/p?u=...`), so the main site and proxy share one origin. Static hosts
-such as GitHub Pages fall back to the Render service at `https://rcms-gmk0.onrender.com/`; its source is `server.js`
-and its configuration is `render.yaml`. If the main site has no `/p` endpoint, the browser detects that and switches
-to Render automatically.
+Hosting: the BROWSER tab sends proxy traffic to whatever origin served the page (`/p/...` on the same host), then to
+any relay origins configured in the **Proxy network** panel or `PROXY_RELAYS`. No relay is hard-coded: the previous
+Render mirror was suspended by its host, and a dead default is worse than none. If the site has no `/p` endpoint and no
+relay answers, the browser says so instead of silently failing.
 
-## Optional: deploy a Node proxy on Render
+## Optional: deploy a Node relay
+
+A relay gives the proxy a second network identity, which is the only thing that clears a site blocking Cloudflare's
+egress. Any Node host works (Render, Fly, Koyeb, Railway, a VPS); `render.yaml` is a ready Render blueprint, and
+`server.js` exposes the relay protocol at `GET /p/raw?u=<url>`.
 1. Push this folder to GitHub.
 2. render.com -> New -> Blueprint (it reads `render.yaml`) or New -> Web Service (Runtime Node, Start Command `node server.js`, Free plan).
 3. Set the `PROXY_KEY` environment variable (the blueprint generates one; find it under Environment). Visitors to the BROWSER tab are asked for it once.
@@ -108,13 +111,36 @@ Does: sites see the proxy server's network instead of your device; target URLs a
 so hostnames do not appear in the browser's URL bar or request path; cookies + referrers are stripped; private/local
 addresses are blocked.
 
-Doesn't: make the proxy host reachable when the network blocks the site or proxy domain. A proxy is not a VPN, and a
-same-origin Worker cannot provide a second network. To use a relay on another domain, deploy `server.js` on Render (or
-any Node host) and set its origin under **Proxy network** in the BROWSER tab, or open the browser with
-`?relay=https://your-relay.example.com`. The relay panel also links the existing Render mirror at
-`https://rcms-gmk0.onrender.com/browser/` as an alternate site address. It still will not encrypt traffic from whoever
-runs the relay, and heavy sites (YouTube, Google login, anything that builds URLs in complex JS) may not work. For
-better compatibility swap in Ultraviolet or Scramjet on the same proxy.
+Doesn't: make the proxy host reachable when the network blocks the site or proxy domain. A proxy is not a VPN: a VPN
+changes the network your device sits on, while this proxy only changes the network the page is fetched from, and the
+browser must still be able to reach the proxy. Nothing inside this repo can move a device onto another network, and a
+Cloudflare Worker cannot choose its own egress IP.
+
+### Route ladder
+
+Every page request walks a ladder and stops at the first route that returns a real page (`proxy/index.js`):
+
+1. **Direct** — the Worker fetches the site itself, with a browser profile and a no-cache request. Most sites answer here.
+2. **Relay** — if the site answers with a block page or 401/403/407/429/451/503, the same URL is fetched through every
+   origin listed in the `PROXY_RELAYS` variable (comma-separated), using its `GET /p/raw?u=<url>` endpoint. A relay is a
+   different machine on a different network, which is what clears an IP-level block. `server.js` speaks this protocol;
+   deploy it on Render, Fly, Koyeb, Railway or any Node host and put its origin in `PROXY_RELAYS`, e.g.
+   `npx wrangler deploy --var PROXY_RELAYS:"https://relay-a.example.com,https://relay-b.example.com"`.
+3. **Reader** — if no relay answers, the page is fetched through a text-only gateway and rendered as readable text with a
+   banner, so a block page never replaces the content. `/p/reader/<encoded-url>` opens that view directly, and
+   `/p/diag` lists the configured routes.
+
+Sites that fingerprint browsers or demand a captcha (Cloudflare's "Just a moment", Google sign-in) cannot be solved at
+this layer; they need the relay from step 2. Heavy apps (YouTube playback, Google login, anything that builds URLs in
+complex JS) may still not work. For better compatibility swap in Ultraviolet or Scramjet on the same proxy.
+
+### Relays in the browser UI
+
+The BROWSER tab's **Proxy network** panel accepts one or more relay origins, comma-separated, or `?relay=` in the URL.
+Routes are health-checked before use, tried in order, and skipped when they stop answering, so a suspended relay no
+longer breaks the browser. The old Render mirror is gone (the service was suspended), so no relay is hard-coded —
+without `PROXY_RELAYS` a blocked site falls through to the reader view. Whoever runs a relay can see the traffic that
+passes through it.
 
 ## Ads
 

@@ -9,7 +9,6 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="preconnect" href="https://rcms-gmk0.onrender.com" crossorigin>
 <style>
 :root {
   --bg: #060a14;
@@ -155,15 +154,16 @@ body.is-embedded .browser-controls { display: none; }
       <details class="network-panel" id="networkPanel">
         <summary><span>Proxy network</span><b id="networkBadge">Site proxy</b></summary>
         <p>Pages are fetched by the proxy server, so your device does not connect to the site. If your network blocks this site’s domain, the browser cannot reach the proxy either. Point it at a relay on a different domain instead.</p>
-        <label for="relayUrl">Relay URL
-          <input id="relayUrl" type="url" placeholder="https://your-relay.onrender.com" spellcheck="false" autocomplete="off">
+        <label for="relayUrl">Relay URLs (comma-separated, tried in order)
+          <input id="relayUrl" type="text" placeholder="https://relay-a.example.com,https://relay-b.example.com" spellcheck="false" autocomplete="off">
         </label>
         <div class="network-panel-actions">
-          <button class="primary" id="relaySave" type="button">Use relay</button>
+          <button class="primary" id="relaySave" type="button">Use relays</button>
+          <button id="relayTest" type="button">Test routes</button>
           <button id="relayReset" type="button">Use site proxy</button>
         </div>
         <p id="relayStatus">Using this site’s proxy.</p>
-        <p class="network-panel-alt">If this site’s domain is blocked, try the <a href="https://rcms-gmk0.onrender.com/browser/" target="_blank" rel="noopener noreferrer">Render mirror</a>.</p>
+        <p class="network-panel-alt">Every route is probed before it is used, and a relay is skipped automatically when it stops answering. Sites that block the proxy’s own address fall back to a text-only reader view.</p>
       </details>
     </div>
   </div>
@@ -171,40 +171,50 @@ body.is-embedded .browser-controls { display: none; }
 <script src="../js/account-store.js?v=6"></script>
 <script>
 const SEARCH = 'https://html.duckduckgo.com/html/?q=';
-const RENDER_PROXY = 'https://rcms-gmk0.onrender.com';
-const STATIC_HOST = /(^|\.)(github\.io|pages\.dev|netlify\.app|vercel\.app|surge\.sh)$/i.test(location.hostname);
-// Use the server that delivered the main site whenever it has /p. Render is
-// only the fallback for static hosting, so the proxy normally stays same-origin.
-let PROXY = STATIC_HOST ? RENDER_PROXY : location.origin;
+// No relay is hard-coded: the old Render mirror is gone, so the browser probes
+// every route it is given (site proxy first, then relays) and keeps the first
+// one that answers.
 const $ = (s) => document.querySelector(s);
 let tabs = [], cur = null, uid = 0, online = true;
 let browserReady = false, pendingNavigate = '';
 const NETWORK_KEY = 'cool-browser-relay-v1';
 const HEALTH_TIMEOUT = 25000;
-const HEALTH_ATTEMPTS = 3;
 const FALLBACK = 'https://www.4everproxy.com/';
-let RELAY_OVERRIDE = normalizeRelay(new URLSearchParams(location.search).get('relay')) || readStoredRelay();
-PROXY = RELAY_OVERRIDE || PROXY;
+let RELAY_POOL = uniqueRoutes(parseRelays(new URLSearchParams(location.search).get('relay')).concat(readStoredRelays()));
+let PROXY = RELAY_POOL[0] || location.origin;
 
 function normalizeRelay(value) {
   const raw = String(value || '').trim();
   if (!raw) return '';
   try {
-    const u = new URL(raw);
+    const u = new URL(/^[a-z]+:\/\//i.test(raw) ? raw : 'https://' + raw);
     if (u.protocol !== 'http:' && u.protocol !== 'https:') return '';
     return u.origin;
   } catch (error) {
     return '';
   }
 }
-function readStoredRelay() {
-  try { return normalizeRelay(localStorage.getItem(NETWORK_KEY)); } catch (error) { return ''; }
+function parseRelays(value) {
+  return String(value || '').split(',').map(normalizeRelay).filter(Boolean);
+}
+function readStoredRelays() {
+  try { return parseRelays(localStorage.getItem(NETWORK_KEY)); } catch (error) { return []; }
+}
+function uniqueRoutes(list) {
+  return Array.from(new Set(list.filter(Boolean)));
+}
+function routeLabel(route) {
+  return route === location.origin ? 'the site proxy' : route.replace(/^https?:\/\//, '');
+}
+function candidateRoutes() {
+  return uniqueRoutes([location.origin].concat(RELAY_POOL));
 }
 function updateNetworkBadge() {
   const badge = $('#networkBadge');
   const status = $('#relayStatus');
-  if (badge) badge.textContent = PROXY === location.origin ? 'Site proxy' : (PROXY === RENDER_PROXY ? 'Render relay' : 'Custom relay');
-  if (status) status.textContent = PROXY === location.origin ? 'Using this site’s proxy.' : 'Using ' + PROXY + '.';
+  if (badge) badge.textContent = PROXY === location.origin ? 'Site proxy' : 'Relay';
+  if (status) status.textContent = (PROXY === location.origin ? 'Using this site’s proxy' : 'Using ' + PROXY) +
+    (RELAY_POOL.length > 1 ? ' (' + (RELAY_POOL.indexOf(PROXY) + 1) + ' of ' + RELAY_POOL.length + ' relays).' : '.');
 }
 function setRelayQuery(value) {
   try {
@@ -217,11 +227,11 @@ function setRelayQuery(value) {
 
 function sleep(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
-async function readProxyHealth(timeoutMs) {
+async function readProxyHealth(route, timeoutMs) {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs || HEALTH_TIMEOUT);
   try {
-    const res = await fetch(PROXY + '/p/health?t=' + Date.now(), {
+    const res = await fetch((route || PROXY) + '/p/health?t=' + Date.now(), {
       cache: 'no-store',
       signal: controller.signal
     });
@@ -229,6 +239,17 @@ async function readProxyHealth(timeoutMs) {
     return await res.json();
   } finally {
     clearTimeout(timer);
+  }
+}
+
+async function describeRoutes() {
+  try {
+    const res = await fetch(PROXY + '/p/diag?t=' + Date.now(), { cache: 'no-store' });
+    if (!res.ok) return '';
+    const info = await res.json();
+    return Array.isArray(info.routes) ? 'Routes: ' + info.routes.join(' → ') + '.' : '';
+  } catch (error) {
+    return '';
   }
 }
 
@@ -431,6 +452,12 @@ $('#hm').onclick = () => {
 };
 $('#relaySave').onclick = saveRelay;
 $('#relayReset').onclick = resetRelay;
+const relayTestButton = $('#relayTest');
+if (relayTestButton) relayTestButton.onclick = async () => {
+  notice('Testing routes…', false);
+  await connectProxy();
+  if (online) notice('Route ' + routeLabel(PROXY) + ' is answering.', false);
+};
 $('#relayUrl').addEventListener('keydown', e => { if (e.key === 'Enter') saveRelay(); });
 document.querySelectorAll('[data-go]').forEach(a => a.onclick = () => go(a.dataset.go));
 addEventListener('keydown', e => {
@@ -442,65 +469,59 @@ addEventListener('keydown', e => {
 async function connectProxy() {
   online = true;
   updateNetworkBadge();
-  // Prefer the main site's own proxy. A short probe keeps static hosts from
-  // making the browser wait before falling back to Render.
-  if (!RELAY_OVERRIDE && !STATIC_HOST && location.origin !== RENDER_PROXY) {
+  const routes = candidateRoutes();
+  for (let index = 0; index < routes.length; index++) {
+    const route = routes[index];
+    PROXY = route;
+    updateNetworkBadge();
     try {
-      const health = await readProxyHealth(5000);
+      const health = await readProxyHealth(route, index === 0 ? 6000 : 12000);
       await applyProxyHealth(health);
-      if (online) { finishBoot(); return; }
-    } catch (e) {
-      PROXY = RENDER_PROXY;
-      updateNetworkBadge();
-    }
-  }
-  for (let attempt = 1; attempt <= HEALTH_ATTEMPTS; attempt++) {
-    try {
-      const health = await readProxyHealth();
-      await applyProxyHealth(health);
-      if (online) { finishBoot(); return; }
+      finishBoot();
       return;
-    } catch (e) {
-      if (attempt < HEALTH_ATTEMPTS) {
-        notice('Starting the proxy server — a cold Render instance can take up to a minute to wake.', false);
-        await sleep(650 * attempt);
+    } catch (error) {
+      if (index + 1 < routes.length) {
+        notice('No answer from ' + routeLabel(route) + ' — trying ' + routeLabel(routes[index + 1]) + '…', false);
+        await sleep(400);
       }
     }
   }
   // A proxy cannot make its own hostname reachable on a network that blocks it.
   // Keep that limit explicit instead of silently sending traffic elsewhere.
   online = false;
-  notice('The proxy did not respond. This browser cannot bypass a block on the proxy domain itself. Set a relay on another domain below, or open the public fallback in a new tab.', true, true);
+  PROXY = routes[0] || location.origin;
+  updateNetworkBadge();
+  const diag = await describeRoutes();
+  notice('No proxy route answered. If your network blocks this site’s domain, this browser cannot reach the proxy either — add a relay on another domain below. ' + diag, true, true);
   finishBoot();
 }
 
 async function boot() {
   newTab();
   const relayInput = $('#relayUrl');
-  if (relayInput) relayInput.value = RELAY_OVERRIDE || '';
+  if (relayInput) relayInput.value = RELAY_POOL.join(', ');
   updateNetworkBadge();
   await connectProxy();
 }
 
 async function saveRelay() {
   const input = $('#relayUrl');
-  const normalized = normalizeRelay(input && input.value);
-  if (!normalized) {
-    notice('Enter a full relay URL, for example https://your-relay.onrender.com.', true);
+  const list = parseRelays(input && input.value);
+  if (!list.length) {
+    notice('Enter one or more relay URLs, for example https://relay-a.example.com,https://relay-b.example.com.', true);
     return;
   }
-  RELAY_OVERRIDE = normalized;
-  PROXY = normalized;
-  try { localStorage.setItem(NETWORK_KEY, normalized); } catch (error) {}
-  setRelayQuery(normalized);
-  if (input) input.value = normalized;
-  notice('Checking relay ' + normalized + '…', false);
+  RELAY_POOL = uniqueRoutes(list);
+  try { localStorage.setItem(NETWORK_KEY, RELAY_POOL.join(',')); } catch (error) {}
+  setRelayQuery(RELAY_POOL.join(','));
+  if (input) input.value = RELAY_POOL.join(', ');
+  notice('Checking ' + RELAY_POOL.length + (RELAY_POOL.length === 1 ? ' relay route…' : ' relay routes…'), false);
   await connectProxy();
 }
 
 async function resetRelay() {
-  RELAY_OVERRIDE = '';
-  PROXY = STATIC_HOST ? RENDER_PROXY : location.origin;
+  RELAY_POOL = [];
+  PROXY = location.origin;
   try { localStorage.removeItem(NETWORK_KEY); } catch (error) {}
   setRelayQuery('');
   const input = $('#relayUrl');

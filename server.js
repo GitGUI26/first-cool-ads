@@ -91,6 +91,40 @@ function sendJSON(res, code, obj, extra) {
   res.writeHead(code, Object.assign({}, CORS, { 'content-type': 'application/json', 'cache-control': 'no-store' }, extra || {}));
   res.end(JSON.stringify(obj));
 }
+/* ---------- raw passthrough (used by a Cloudflare proxy as a relay hop) ---------- */
+async function handleRaw(req, res, url) {
+  const provided = url.searchParams.get('k') || req.headers['x-proxy-key'] || '';
+  const ok = !KEY || authed(req) || (provided && safeEq(provided, KEY));
+  if (!ok) return sendError(res, 401, 'Access key required.');
+  if (req.method !== 'GET' && req.method !== 'HEAD') return sendError(res, 405, 'Method not allowed');
+  const target = url.searchParams.get('u') || '';
+  if (!target) return sendError(res, 400, 'Missing target address');
+  let up;
+  try {
+    up = await upstream(target, 'GET', {
+      'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+      accept: req.headers.accept || '*/*',
+      'accept-language': 'en-US,en;q=0.9',
+      'accept-encoding': 'identity'
+    }, null, req.headers.host);
+  } catch (e) {
+    return sendError(res, 502, e.message || 'Could not reach that site');
+  }
+  const { res: ur } = up;
+  const type = String(ur.headers['content-type'] || 'application/octet-stream');
+  res.writeHead(200, Object.assign({}, CORS, {
+    'content-type': type,
+    'x-upstream-status': String(ur.statusCode),
+    'x-upstream-type': type,
+    'cache-control': 'no-store'
+  }));
+  if (req.method === 'HEAD') { ur.destroy(); return res.end(); }
+  const stream = decoder(ur);
+  stream.pipe(res);
+  stream.on('error', () => res.destroy());
+  ur.on('error', () => res.destroy());
+}
+
 function sendError(res, code, msg) {
   if (res.headersSent) return res.destroy();
   res.writeHead(code, Object.assign({}, CORS, { 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }));
@@ -517,8 +551,9 @@ const server = http.createServer(async (req, res) => {
       return res.end();
     }
     if (u.pathname === '/p/health') {
-      return sendJSON(res, 200, { ok: true, locked: !!KEY, authed: authed(req), network: 'node', routing: 'opaque' });
+      return sendJSON(res, 200, { ok: true, locked: !!KEY, authed: authed(req), network: 'node', routing: 'opaque', raw: true });
     }
+    if (u.pathname === '/p/raw') return await handleRaw(req, res, u);
     if (u.pathname === '/p/login') {
       const ip = clientIP(req);
       if (!KEY) return sendJSON(res, 200, { ok: true });

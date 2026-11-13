@@ -344,10 +344,204 @@ async function follow(target, method, headers, body) {
   throw new Error('Too many redirects');
 }
 
-async function handleProxy(request, url) {
+/* ---------------------------------------------------------------- routes */
+
+// A browser-like request profile. Datacenter egress is what most sites object
+// to, but a real UA plus fetch metadata removes the trivial bot rejections.
+const BROWSER_UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36';
+const BLOCKED_STATUS = new Set([401, 403, 407, 429, 451, 503]);
+const BLOCK_MARKERS = [
+  /unusual traffic/i,
+  /\/sorry\/index/i,
+  /not a robot/i,
+  /attention required/i,
+  /just a moment\.\.\./i,
+  /checking your browser/i,
+  /verify you are human/i,
+  /access denied/i,
+  /request (?:was )?blocked/i,
+  /enable javascript and cookies/i,
+  /cf-error-details/i
+];
+const READER_GATEWAY = 'https://r.jina.ai/';
+
+function relayOrigins(env) {
+  const raw = String((env && env.PROXY_RELAYS) || '');
+  return raw.split(',')
+    .map(value => value.trim().replace(/\/+$/, ''))
+    .filter(value => /^https?:\/\/[^\s]+$/i.test(value));
+}
+
+function upstreamHeaders(request, body) {
+  const clientUA = String(request.headers.get('user-agent') || '');
+  const headers = {
+    'user-agent': /Mozilla\/5\.0/.test(clientUA) ? clientUA : BROWSER_UA,
+    accept: request.headers.get('accept') || 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8',
+    'accept-language': request.headers.get('accept-language') || 'en-US,en;q=0.9',
+    'cache-control': 'no-cache',
+    pragma: 'no-cache'
+  };
+  const range = request.headers.get('range');
+  if (range) headers.range = range;
+  const contentType = request.headers.get('content-type');
+  if (contentType && body) headers['content-type'] = contentType;
+  return headers;
+}
+
+// A captcha or JS challenge is worth passing through: the visitor can still
+// solve it. A hard block page cannot be, so it goes down the ladder instead.
+const CHALLENGE_MARKERS = [/recaptcha/i, /g-recaptcha/i, /hcaptcha/i, /captcha/i, /challenge-platform/i, /cf-chl/i];
+
+function injectBanner(html, target) {
+  const banner = '<div style="position:fixed;left:0;right:0;top:0;z-index:2147483647;display:flex;gap:12px;' +
+    'align-items:center;justify-content:center;flex-wrap:wrap;padding:8px 14px;background:#1b2440;color:#e8eaf0;' +
+    'font:13px/1.4 system-ui,sans-serif;border-bottom:1px solid #33406b">' +
+    '<span>This site answered with a verification page.</span>' +
+    '<a style="color:#9db4ff" href="' + esc(ROUTE + 'reader/' + encodeTarget(target)) + '">Open the text-only reader view</a>' +
+    '<a style="color:#9db4ff" href="' + esc(ROUTE + encodeTarget(target)) + '">Reload</a></div>';
+  if (/<body\b[^>]*>/i.test(html)) return html.replace(/<body\b[^>]*>/i, match => match + banner);
+  return banner + html;
+}
+
+function blockedPage(target, reason, routes) {
+  const list = routes.length
+    ? '<ul>' + routes.map(route => `<li>${esc(route)}</li>`).join('') + '</ul>'
+    : '<p>No relay is configured for this proxy.</p>';
+  return new Response(
+    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">` +
+    `<title>Blocked upstream</title>` +
+    `<body style="font:15px/1.6 system-ui;background:#0f1115;color:#e8eaf0;padding:40px;max-width:720px;margin:0 auto">` +
+    `<h2 style="margin:0 0 8px">That site refused the proxy</h2>` +
+    `<p style="color:#9aa4bd;margin:0 0 18px">${esc(target)} answered ${esc(reason)}. The request never reached your device — the site is rejecting the proxy server itself.</p>` +
+    `<p style="margin:0 0 6px"><strong>Routes tried</strong></p>${list}` +
+    `<p style="margin:18px 0 0"><a style="color:#7c8cff" href="${esc(ROUTE + 'reader/' + encodeTarget(target))}">Open a text-only reader view</a> ` +
+    `or <a style="color:#7c8cff" href="${esc(ROUTE + encodeTarget(target))}">try again</a>.</p>` +
+    `<p style="color:#9aa4bd;font-size:13px;margin-top:22px">Adding a relay on a different network (the Browser tab's Proxy network panel) usually clears an IP-level block.</p>`, {
+      status: 502,
+      headers: { ...CORS, 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }
+    }
+  );
+}
+
+function readerPage(target, markdown, via) {
+  const body = markdown
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/^######\s?(.*)$/gm, '<h6>$1</h6>')
+    .replace(/^#####\s?(.*)$/gm, '<h5>$1</h5>')
+    .replace(/^####\s?(.*)$/gm, '<h4>$1</h4>')
+    .replace(/^###\s?(.*)$/gm, '<h3>$1</h3>')
+    .replace(/^##\s?(.*)$/gm, '<h2>$1</h2>')
+    .replace(/^#\s?(.*)$/gm, '<h1>$1</h1>')
+    .replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+    .replace(/\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)/g, (match, label, href) =>
+      `<a href="${esc(ROUTE + encodeTarget(href))}">${label}</a>`)
+    .replace(/\n{2,}/g, '</p><p>');
+  return new Response(
+    `<!doctype html><meta charset="utf-8"><meta name="viewport" content="width=device-width">` +
+    `<title>Reader view</title>` +
+    `<body style="font:16px/1.7 system-ui;background:#0f1115;color:#e8eaf0;margin:0">` +
+    `<div style="background:#17203a;padding:12px 20px;font-size:13px;color:#9aa4bd">Text-only reader view via ${esc(via)} — ` +
+    `<a style="color:#7c8cff" href="${esc(ROUTE + encodeTarget(target))}">load the real page</a></div>` +
+    `<article style="max-width:760px;margin:0 auto;padding:28px 20px 60px"><p>${body}</p></article>`, {
+      status: 200,
+      headers: { ...CORS, 'content-type': 'text/html; charset=utf-8', 'cache-control': 'no-store' }
+    }
+  );
+}
+
+async function fetchReader(target, method) {
+  if (method !== 'GET') return null;
+  const response = await fetch(READER_GATEWAY + target, {
+    headers: { accept: 'text/plain', 'x-respond-with': 'markdown' },
+    redirect: 'follow'
+  });
+  if (!response.ok) return null;
+  const text = await response.text();
+  if (!text || text.length < 40) return null;
+  return text;
+}
+
+/* Fetch a page through the route ladder: direct, then relays, then a reader. */
+async function resolveUpstream(target, method, request, body, env) {
+  const headers = upstreamHeaders(request, body);
+  const routes = [];
+  let lastError = '';
+
+  let first;
+  let challengeFallback = null;
+  try {
+    first = await follow(target, method, headers, body);
+  } catch (error) {
+    lastError = error.message || 'Could not reach that site';
+  }
+
+  if (first) {
+    const type = String(first.response.headers.get('content-type') || '');
+    const html = /text\/html|application\/xhtml\+xml/i.test(type);
+    if (!html) return { upstream: first, route: 'direct' };
+    const peek = await first.response.clone().text().catch(() => '');
+    const snippet = peek.slice(0, 6000);
+    if (!BLOCKED_STATUS.has(first.response.status) && !BLOCK_MARKERS.some(rx => rx.test(snippet))) {
+      return { upstream: first, route: 'direct' };
+    }
+    if (CHALLENGE_MARKERS.some(rx => rx.test(snippet))) {
+      // Keep the challenge in reserve: a relay on another network may still
+      // return the real page, which is always better than a captcha.
+      challengeFallback = first;
+      routes.push('direct → HTTP ' + first.response.status + ' (verification page)');
+    } else {
+      routes.push(`direct → HTTP ${first.response.status}${BLOCK_MARKERS.some(rx => rx.test(snippet)) ? ' (block page)' : ''}`);
+    }
+  } else {
+    routes.push('direct → ' + lastError);
+  }
+
+  for (const relay of relayOrigins(env)) {
+    try {
+      const relayUrl = relay + '/p/raw?u=' + encodeURIComponent(target);
+      const response = await fetch(relayUrl, { method: method === 'HEAD' ? 'GET' : method, headers, body: method === 'GET' || method === 'HEAD' ? undefined : body, redirect: 'follow' });
+      const status = Number(response.headers.get('x-upstream-status') || response.status) || 0;
+      const type = String(response.headers.get('x-upstream-type') || response.headers.get('content-type') || '');
+      if (response.ok && !BLOCKED_STATUS.has(status)) {
+        const rebuilt = new Response(response.body, { status: status || 200, headers: { 'content-type': type || 'text/html; charset=utf-8' } });
+        routes.push(relay + ' → HTTP ' + (status || 200));
+        return { upstream: { response: rebuilt, url: target }, route: relay, routes };
+      }
+      routes.push(relay + ' → HTTP ' + (status || response.status));
+    } catch (error) {
+      routes.push(relay + ' → ' + (error.message || 'unreachable'));
+    }
+  }
+
+  const markdown = await fetchReader(target, method).catch(() => null);
+  if (markdown) {
+    routes.push('reader gateway → 200');
+    return { reader: { target, markdown, via: 'reader gateway' }, routes };
+  }
+  routes.push('reader gateway → unavailable');
+
+  if (challengeFallback) {
+    routes.push('served the site’s verification page so it can still be solved');
+    return { upstream: challengeFallback, route: 'challenge', challenge: true, routes };
+  }
+
+  return { blocked: true, reason: lastError || 'a block page', routes };
+}
+
+async function handleProxy(request, url, env) {
   if (!['GET', 'HEAD', 'POST'].includes(request.method)) return errorResponse(405, 'Method not allowed');
+
+  if (url.pathname.startsWith(ROUTE + 'reader/')) {
+    const readerTarget = decodeTarget(url.pathname.slice((ROUTE + 'reader/').length));
+    if (!readerTarget) return errorResponse(400, 'Missing target address');
+    const markdown = await fetchReader(readerTarget, request.method).catch(() => null);
+    if (!markdown) return errorResponse(502, 'The reader gateway could not fetch that page');
+    return readerPage(readerTarget, markdown, 'reader gateway');
+  }
+
   const target = url.searchParams.get('u') || decodeTarget(url.pathname.slice(ROUTE.length));
   if (!target) return errorResponse(400, 'Missing target address');
+  try { parseTarget(target); } catch (error) { return errorResponse(400, error.message); }
 
   let body = null;
   if (request.method === 'POST') {
@@ -355,24 +549,11 @@ async function handleProxy(request, url) {
     if (body.byteLength > MAX_BODY) return errorResponse(413, 'Request body too large');
   }
 
-  const headers = {
-    'user-agent': request.headers.get('user-agent') || 'Mozilla/5.0',
-    accept: request.headers.get('accept') || '*/*',
-    'accept-language': request.headers.get('accept-language') || 'en-US,en;q=0.9'
-  };
-  const range = request.headers.get('range');
-  if (range) headers.range = range;
-  const contentType = request.headers.get('content-type');
-  if (contentType && body) headers['content-type'] = contentType;
+  const resolved = await resolveUpstream(target, request.method === 'HEAD' ? 'HEAD' : request.method, request, body, env);
+  if (resolved.reader) return readerPage(resolved.reader.target, resolved.reader.markdown, resolved.reader.via);
+  if (resolved.blocked) return blockedPage(target, resolved.reason, resolved.routes);
 
-  let upstream;
-  try {
-    upstream = await follow(target, request.method === 'HEAD' ? 'HEAD' : request.method, headers, body);
-  } catch (error) {
-    return errorResponse(502, error.message || 'Could not reach that site');
-  }
-
-  const response = upstream.response;
+  const { response, url: resolvedUrl } = resolved.upstream;
   const upstreamType = String(response.headers.get('content-type') || '');
   const isHTML = /text\/html|application\/xhtml\+xml/i.test(upstreamType);
   const isCSS = /text\/css/i.test(upstreamType);
@@ -390,14 +571,15 @@ async function handleProxy(request, url) {
       return errorResponse(502, 'Could not read that page');
     }
     const text = decodeText(buffer, upstreamType);
-    const rewritten = isHTML ? rewriteHTML(text, upstream.url) : rewriteCSS(text, upstream.url);
-    return new Response(rewritten, {
-      status: response.status,
-      headers: safeHeaders(response, isHTML, isCSS)
-    });
+    let rewritten = isHTML ? rewriteHTML(text, resolvedUrl) : rewriteCSS(text, resolvedUrl);
+    if (isHTML && resolved.challenge) rewritten = injectBanner(rewritten, target);
+    const headers = safeHeaders(response, isHTML, isCSS);
+    headers.set('x-proxy-route', resolved.route || 'direct');
+    return new Response(rewritten, { status: response.status, headers });
   }
 
   const headersOut = safeHeaders(response, false, false);
+  headersOut.set('x-proxy-route', resolved.route || 'direct');
   if (response.status === 204 || response.status === 304 || !response.body) {
     return new Response(null, { status: response.status, headers: headersOut });
   }
@@ -405,12 +587,32 @@ async function handleProxy(request, url) {
 }
 
 export default {
-  async fetch(request) {
+  async fetch(request, env) {
     const url = new URL(request.url);
     if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: CORS });
-    if (url.pathname === '/p/health') return jsonResponse({ ok: true, locked: false, authed: true, network: 'cloudflare', routing: 'opaque' });
+    const relays = relayOrigins(env);
+    if (url.pathname === '/p/health') {
+      return jsonResponse({
+        ok: true,
+        locked: false,
+        authed: true,
+        network: 'cloudflare',
+        routing: 'opaque',
+        relays: relays.length,
+        reader: true
+      });
+    }
+    if (url.pathname === '/p/diag') {
+      return jsonResponse({
+        ok: true,
+        network: 'cloudflare',
+        routes: ['direct'].concat(relays, ['reader gateway']),
+        relays,
+        note: 'Direct egress is Cloudflare. Relays come from the PROXY_RELAYS variable.'
+      });
+    }
     if (url.pathname === '/p/login') return jsonResponse({ ok: true });
-    if (url.pathname === '/p' || url.pathname.startsWith(ROUTE)) return handleProxy(request, url);
+    if (url.pathname === '/p' || url.pathname.startsWith(ROUTE)) return handleProxy(request, url, env);
     return new Response('Proxy backend is running. Use /p/<encoded-url>.', {
       status: 404,
       headers: { ...CORS, 'content-type': 'text/plain; charset=utf-8', 'cache-control': 'no-store' }

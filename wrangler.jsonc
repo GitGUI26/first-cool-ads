@@ -10,7 +10,10 @@
   },
   "vars": {
     "SUPABASE_URL": "https://wpefdqygzqoipbsborqk.supabase.co",
-    "SUPABASE_ANON_KEY": "sb_publishable_IJ6zRJBgC7HLhcFCLpZn9g_rKEl2npg"
+    "SUPABASE_ANON_KEY": "sb_publishable_IJ6zRJBgC7HLhcFCLpZn9g_rKEl2npg",
+    // Comma-separated relay origins tried when a site blocks Cloudflare's
+    // egress. Each one must expose GET /p/raw?u=<url>, which server.js does.
+    "PROXY_RELAYS": ""
   },
   "durable_objects": {
     "bindings": [
