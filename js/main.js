@@ -753,7 +753,7 @@ function buildHomePopularCarousel() {
     const carousel = document.getElementById('homePopularCarousel');
     if (!carousel || !Array.isArray(games))
         return;
-    const requiredTitles = ['Balatro', 'Cloverpit', 'Peaks of Yore', 'Untitled Goose Game'];
+    const requiredTitles = ['Balatro', 'Cloverpit', 'Peaks of Yore'];
     const selectedRequired = requiredTitles
         .map(title => games.find(game => game.title === title))
         .filter(Boolean);

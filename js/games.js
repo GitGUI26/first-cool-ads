@@ -268,7 +268,6 @@ const games = [
   { title: "Dad 'n Me", desc: "A classic side-scrolling beat 'em up where you play as a purple bully causing chaos at the park", url: "games/345.html", image: "images/thumbs/346.webp" },
   { title: "Five Nights at Candy's 1", desc: "A popular fan-made horror game inspired by FNAF, featuring Candy the Cat and his robotic friends", url: "games/346.html", image: "images/thumbs/347.webp" },
   { title: "Five Nights at Candy's 2", desc: "The sequel to the fan-made hit, with new mechanics and even more terrifying animatronics to avoid", url: "games/347.html", image: "images/thumbs/348.webp" },
-  { title: "Untitled Goose Game", desc: "A game where you are a goose let loose on an unsuspecting village terroizing EVERYONE", url: "games/341.html", image: "images/thumbs/342.webp" },
   { title: "Earthbound", desc: "An RPG where a young boy named Ness and his friends must save the world from an intergalactic threat", url: "games/339.html", image: "images/thumbs/340.webp" },
   { title: "Hamtaro: Ham-Ham Heartbreak", desc: "Help Hamtaro and Bijou reunite Ham-Hams and repair broken hearts in this charming adventure", url: "games/336.html", image: "images/thumbs/337.webp" },
   { title: "Antonblast", desc: "An explosive, high-speed action platformer where you must reclaim your prized spirit collection", url: "games/338.html", image: "images/thumbs/339.webp" },
