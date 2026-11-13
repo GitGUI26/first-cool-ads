@@ -3454,6 +3454,19 @@ function getGameProgressBridgeScript(gameId, progress) {
 }
 function injectFreezeHarnessIntoHtml(html, gameUrl, gameProgress) {
     if (!html || typeof html !== 'string') return html;
+    // Some packed games wrap their real document in a Gadget <Module><![CDATA[...]]>
+    // string. In an HTML document the CDATA marker is a bogus comment, so the
+    // browser renders a blank page with a stray "]]>" instead of the game.
+    if (/<Module\b[\s\S]{0,400}?<Content\b[^>]*>\s*<!\[CDATA\[/i.test(html)) {
+        html = html
+            .replace(/<Module\b[\s\S]*?<Content\b[^>]*>\s*<!\[CDATA\[/i, '')
+            .replace(/\]\]>[\s\S]{0,40}?<\\?\/Content>[\s\S]{0,40}?<\\?\/Module>/i, '');
+    }
+    if (/^\s*<Module\b/i.test(html)) {
+        html = html
+            .replace(/^\s*(?:<Module\b[^>]*>\s*)+/i, '')
+            .replace(/(?:\s*<\/Content>\s*)?<\/Module>\s*$/i, '');
+    }
     let baseTag = '';
     if (!/<base\b[^>]*\bhref\s*=/i.test(html)) {
         try { baseTag = '<base href="' + new URL(gameUrl, location.href).href.replace(/"/g, '%22') + '">'; } catch (e) {}
@@ -3588,7 +3601,14 @@ function loadGameIntoTab(tab) {
             .then(html => {
                 const currentTab = getActiveGameTab();
                 if (currentTab && currentTab.frame && currentTab.loadToken === loadToken) {
-                    currentTab.frame.srcdoc = injectFreezeHarnessIntoHtml(html, gameUrl, savedProgress);
+                    // Pages with their own absolute CDN base already know where
+                    // their assets live; srcdoc only breaks their URL resolution.
+                    if (/<base\b[^>]*href\s*=\s*["']https?:/i.test(html)) {
+                        currentTab.frame.removeAttribute('srcdoc');
+                        currentTab.frame.src = new URL(gameUrl, window.location.href).href;
+                    } else {
+                        currentTab.frame.srcdoc = injectFreezeHarnessIntoHtml(html, gameUrl, savedProgress);
+                    }
                 }
             })
             .catch(() => {

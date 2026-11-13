@@ -106,10 +106,10 @@ destinations before it can open. Update the unit keys in `js/ads.js` when changi
 
 ## Games from the Offline HTML Games Pack
 
-78 games from the Offline HTML Games Pack remain after 57 that no longer rendered were removed, bringing the catalog to 653 entries: 652 public cards plus the hidden secret game. The pack is 5.3 GB, so those games are not copied into the repo; the catalog points at the pack's public raw GitHub files and the existing loader fetches each game's HTML. Catalogue covers are 640x360 WebP files in `images/thumbs/`, using official art wherever a game publishes it; site-made arcade games keep their gameplay art, and a few pack games with no published cover keep their generated title cards. Re-running the importer is safe; it skips duplicates by title, URL, alias, and file contents:
+69 games from the Offline HTML Games Pack remain after 66 that no longer rendered were removed, bringing the catalog to 634 entries: 633 public cards plus the hidden secret game. The pack is 5.3 GB, so those games are not copied into the repo; the catalog points at the pack's public raw GitHub files and the existing loader fetches each game's HTML. Catalogue covers are 640x360 WebP files in `images/thumbs/`, using official art wherever a game publishes it; site-made arcade games keep their gameplay art, and a few pack games with no published cover keep their generated title cards. Re-running the importer is safe; it skips duplicates by title, URL, alias, and file contents:
 
     node tools/import_offline_pack.js "C:/path/to/Offline-HTML-Games-Pack-master/offline"
 
 The tool defaults to the Downloads path and writes `.wrangler/import-report.json`. The generated title-card step remains in the importer for brand-new pack games until official cover art is added.
 
-The 135 pack games are fetched from GitHub, so they need an internet connection. Games stored under `games/` remain fully local.
+The 126 pack games are fetched from GitHub, so they need an internet connection. Games stored under `games/` remain fully local.

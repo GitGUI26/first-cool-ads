@@ -5,6 +5,15 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-13',
+            title: 'Catalog cleanup and CDN game loader fixes',
+            items: [
+                'Retested the catalog and repaired shared packed-game wrapper parsing, Papa\'s Burgeria, Tattletail, FNF Rewrite/Camellia/Impostor V4, and the FNAF CDN hosts.',
+                'Games whose pages declare their own absolute CDN base now load directly in the game frame instead of a nested document.',
+                'Removed 19 games that still would not load, leaving 634 entries.'
+            ]
+        },
+        {
             date: '2026-11-12',
             title: 'Private browser fills the screen and gets page controls',
             items: [
