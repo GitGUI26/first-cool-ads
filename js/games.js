@@ -23,7 +23,6 @@ const games = [
   { title: "Four in a Row", desc: "Drop discs, build a line of four and outsmart the CPU in a neon connect-four showdown.", url: "games/arcade/connect4.html", image: "images/thumbs/g_four-in-a-row.webp", tag: "NEW" },
   { title: "Tic-Tac-Toe", desc: "Classic three-in-a-row against a sharp AI. Take the center and plan two moves ahead.", url: "games/arcade/tictactoe.html", image: "images/thumbs/g_tic-tac-toe.webp", tag: "NEW" },
   { title: "Jacksmith", desc: "Forge custom weapons as a determined donkey blacksmith and lead your warriors into battle against Dudley.", url: "games/jacksmith.html", image: "images/thumbs/g_jacksmith.webp" },
-  { title: "Amanda the Adventurer", desc: "A found-footage horror puzzle game about a cheerful children's show hiding a terrifying secret.", url: "games/amanda-the-adventurer.html", image: "images/thumbs/g_amanda-the-adventurer.webp" },
   { title: "Geometry Dash Lite", desc: "The free lite edition of the rhythm platformer. Jump and fly through spike-filled levels.", url: "games/geometry-dash-lite.html", image: "images/thumbs/g_geometry-dash-lite.webp" },
   { title: "Super Mario 63", desc: "A fan-made 2.5D Mario adventure with 64-style moves, secret stars, and huge levels.", url: "games/super-mario-63.html", image: "images/thumbs/g_super-mario-63.webp" },
   { title: "Undertale Yellow", desc: "A fan-made Undertale prequel following the yellow soul through the Underground.", url: "games/undertale-yellow-frame.html", image: "images/thumbs/g_undertale-yellow.webp" },
