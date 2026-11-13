@@ -118,13 +118,11 @@ better compatibility swap in Ultraviolet or Scramjet on the same proxy.
 
 ## Ads
 
-The site uses labeled Adsterra placements: a desktop leaderboard, a banner below the hero, a 300x250 and
-160x300 above the game library, a sticky 160x600 desktop rail, a native unit after the first five rows of games,
-and a dismissible 320x50 banner on mobile. Display ads are always on. Settings has one ad control, **Popup ads**,
-which hides the sponsored popup offer only; it never turns off the display units. Other Settings controls cover
-game-grid columns, featured-carousel autoplay, and reduced motion, and none of them affect display ads. Each display unit is rendered in
-a sandboxed iframe without popup or top-navigation permission, and the popup offer is checked against known adult
-destinations before it can open. Update the unit keys in `js/ads.js` when changing campaigns.
+The site carries no advertising: there are no ad units, no sponsored popup offer, and no ad network scripts.
+The Adsterra renderer (`js/ads.js`), its stylesheet, every ad slot in `index.html`, the in-feed and mobile-sticky
+placements, and the **Popup ads** Settings control have all been removed. Settings now covers themes, backgrounds,
+logo, game-grid columns, featured-carousel autoplay, reduced motion, and site-data export/import only. Bundled
+games keep their own markup, but nothing on the site requests an ad network.
 
 ## Games from the Offline HTML Games Pack
 

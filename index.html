@@ -50,7 +50,6 @@
   <link href="css/account.css?v=9" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
-<link href="css/ads.css?v=2" rel="stylesheet">
 <link href="css/chat.css?v=10" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=3" rel="stylesheet">
@@ -300,9 +299,6 @@
         </div>
       </div>
     </header>
-    <div class="ad-slot ad-slot-top">
-      <div class="ad-unit" id="adTop"></div>
-    </div>
     <section id="home-section" aria-labelledby="siteTitle">
       <h1 class="visually-hidden" id="siteTitle">Cool Tutoring Hub - free games, brain breaks, and classroom tools</h1>
       <div class="home-hero">
@@ -369,9 +365,6 @@
         </div>
       </div>
     </section>
-    <div class="ad-slot ad-slot-hero">
-      <div class="ad-unit" id="adHero"></div>
-    </div>
     <section id="all-lessons">
       <div class="library-head">
         <div class="library-heading">
@@ -405,21 +398,8 @@
       </div>
       <div class="lessons-layout">
         <div class="lessons-main">
-          <div class="ad-slot-lead">
-            <div class="ad-slot ad-slot-rect"><div class="ad-unit" id="adLeadRect"></div></div>
-            <div class="ad-slot ad-slot-rect160"><div class="ad-unit" id="adLeadRect160"></div></div>
-          </div>
           <div class="lessons-grid" id="allLessonsGrid"></div>
         </div>
-        <aside aria-label="Advertisement" class="ad-rail">
-          <div class="ad-unit" id="adRail"></div>
-          <a class="ad-sponsor" id="adPopupSponsor" href="https://araplhn.org/4/692a941bbc55f2c6ad94e07d6053328d" target="_blank" rel="sponsored noopener noreferrer" hidden>
-            <span class="ad-sponsor-kicker">Sponsored popup</span>
-            <span class="ad-sponsor-title">Open partner offer</span>
-            <span class="ad-sponsor-copy">Only shown when popup ads are enabled in Settings.</span>
-          </a>
-          <p class="ad-sponsor-note">Display ads stay on. Popup offers can be turned off in Settings.</p>
-        </aside>
       </div>
     </section>
     <section id="chat-section" class="chat-page" hidden aria-hidden="true" aria-labelledby="chatTitle">
@@ -700,21 +680,6 @@
             </label>
             <p class="settings-control-note">Reduced motion stops the featured carousel and most interface animations.</p>
           </div>
-          <div class="setting-item setting-ads">
-            <div class="setting-label"><i class="fas fa-rectangle-ad"></i> Ads</div>
-            <div class="setting-description">Display ads keep the site free. They are always on.</div>
-            <div class="settings-ad-required">
-              <span class="settings-ad-required-icon"><i class="fas fa-lock" aria-hidden="true"></i></span>
-              <span class="settings-ad-required-copy"><strong>Display ads</strong><small>Required and always on.</small></span>
-              <span class="settings-ad-required-badge">Locked</span>
-            </div>
-            <label class="settings-toggle">
-              <input id="popupAdsToggle" type="checkbox" checked onchange="setPopupAdsPreference(this.checked)">
-              <span class="settings-toggle-track" aria-hidden="true"></span>
-              <span>Allow popup ads</span>
-            </label>
-            <p class="settings-ad-note">Only the popup offer is optional. Display ads cannot be disabled.</p>
-          </div>
           <div class="setting-item setting-import">
             <div class="setting-label">
               <i class="fas fa-database"></i> Export/Import Site Data
@@ -750,9 +715,6 @@
         <div class="updates-list" id="updatesList"></div>
       </div>
     </section>
-    <div class="ad-slot ad-slot-native ad-in-feed" id="adInFeed">
-      <div class="ad-unit" id="adNative"></div>
-    </div>
     <footer class="site-footer">
       <div class="site-footer-left">
         <p>© 2026 Cool Tutoring Hub.</p>
@@ -1035,13 +997,6 @@
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=10"></script>
   <script src="js/emulators.js?v=4"></script>
-  <script src="js/ads.js?v=1"></script>
-  <div class="ad-mobile-sticky" id="adMobileSticky">
-    <button aria-label="Close advertisement" class="ad-mobile-close" type="button"
-      onclick="document.getElementById('adMobileSticky').classList.add('ad-mobile-sticky-hidden')">×</button>
-    <div class="ad-unit" id="adMobile"></div>
-  </div>
-
   <script>
     (function () {
       const overlay = document.getElementById('browserOverlay');

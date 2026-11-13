@@ -126,9 +126,6 @@ function performSearch(searchTerm) {
             searchStats.textContent = `Found ${visibleCount} of ${totalCount} games for "${String(searchTerm || '').trim()}"`;
         }
     }
-    if (typeof placeInFeedAd === 'function') {
-        placeInFeedAd();
-    }
 }
 
 function normalizeText(text) {
@@ -2332,22 +2329,6 @@ function openSettings() {
     updateBackgroundSelectionUI();
     syncDisplaySettingsUI();
 }
-function setPopupAdsPreference(enabled) {
-    try {
-        localStorage.setItem('popupAdsDisabled', enabled ? 'false' : 'true');
-    }
-    catch (error) {}
-    const toggle = document.getElementById('popupAdsToggle');
-    if (toggle) toggle.checked = !!enabled;
-    if (window.CUHAds && typeof window.CUHAds.refreshPopupAd === 'function') {
-        window.CUHAds.refreshPopupAd();
-    }
-    if (window.CoolAccountStore && typeof window.CoolAccountStore.capturePreferences === 'function') {
-        window.CoolAccountStore.capturePreferences();
-    }
-    window.dispatchEvent(new CustomEvent('cuh-popup-ads-change', { detail: { enabled: !!enabled } }));
-}
-window.setPopupAdsPreference = setPopupAdsPreference;
 function persistPreferenceChange() {
     if (window.CoolAccountStore && typeof window.CoolAccountStore.capturePreferences === 'function') {
         window.CoolAccountStore.capturePreferences();
@@ -2434,9 +2415,6 @@ function setGameGridPreference(value) {
     catch (error) {
     }
     applyGameGridPreference(preference);
-    if (typeof placeInFeedAd === 'function') {
-        placeInFeedAd();
-    }
     persistPreferenceChange();
 }
 function applySavedTheme(themeName) {
@@ -2902,13 +2880,6 @@ function initializeSettings() {
             }
         }
         setSiteLogos(savedLogo);
-    }
-    const popupAdsToggle = document.getElementById('popupAdsToggle');
-    if (popupAdsToggle) {
-        popupAdsToggle.checked = localStorage.getItem('popupAdsDisabled') !== 'true';
-    }
-    if (window.CUHAds && typeof window.CUHAds.refreshPopupAd === 'function') {
-        window.CUHAds.refreshPopupAd();
     }
     applyReduceMotionPreference();
     applyCarouselAutoplayPreference();
@@ -4116,7 +4087,6 @@ function getAllSettings() {
             inactiveTabFavicon: localData.inactiveTabFavicon || 'cuh.png',
             customLogo: localData.customLogo || null,
             flashEnabled: localData.flashEnabled || 'true',
-            popupAdsDisabled: localData.popupAdsDisabled || 'false',
             lastSearchTerm: localData.lastSearchTerm || '',
             sortMethod: localData.sortMethod || 'default',
             carouselAutoplay: localData.carouselAutoplay || 'true',
@@ -4265,7 +4235,6 @@ function applyImportedSettings(importedSettings) {
             inactiveTabFavicon: localStorage.getItem('inactiveTabFavicon') || 'cuh.png',
             customLogo: localStorage.getItem('customLogo') || null,
             flashEnabled: localStorage.getItem('flashEnabled') || 'true',
-            popupAdsDisabled: localStorage.getItem('popupAdsDisabled') || 'false',
             lastSearchTerm: localStorage.getItem('lastSearchTerm') || '',
             sortMethod: localStorage.getItem('sortMethod') || 'default',
             carouselAutoplay: localStorage.getItem('carouselAutoplay') || 'true',
@@ -4350,21 +4319,9 @@ function applyImportedSettings(importedSettings) {
     }
     updateCursorColors();
     refreshActiveBackground();
-    try {
-        localStorage.removeItem('adsDisabled');
-    }
-    catch (error) {
-    }
     applyReduceMotionPreference();
     applyCarouselAutoplayPreference();
     applyGameGridPreference();
-    const popupAdsToggle = document.getElementById('popupAdsToggle');
-    if (popupAdsToggle) {
-        popupAdsToggle.checked = localStorage.getItem('popupAdsDisabled') !== 'true';
-    }
-    if (window.CUHAds && typeof window.CUHAds.refreshPopupAd === 'function') {
-        window.CUHAds.refreshPopupAd();
-    }
 }
 function showImportStatus(message, type) {
     const statusDiv = document.getElementById('settingsImportStatus');
@@ -4574,25 +4531,6 @@ document.addEventListener('DOMContentLoaded', function () {
     setTimeout(typeEffect, 1000);
 });
 const LESSON_GRID_COLUMNS = 3;
-var inFeedAd = document.getElementById('adInFeed');
-let inFeedResizeTimer;
-function placeInFeedAd() {
-    const grid = document.getElementById('allLessonsGrid');
-    if (!inFeedAd || !grid)
-        return;
-    const visibleCards = Array.from(grid.querySelectorAll('.lesson-card'))
-        .filter(card => card.style.display !== 'none');
-    const columnCount = Math.max(1, getComputedStyle(grid).gridTemplateColumns.split(' ').filter(Boolean).length);
-    const hasAd = Boolean(inFeedAd.querySelector('.ad-unit'));
-    if (!hasAd || visibleCards.length < columnCount * 5) {
-        inFeedAd.hidden = true;
-        return;
-    }
-    inFeedAd.hidden = false;
-    if (inFeedAd.parentElement !== grid) {
-        grid.appendChild(inFeedAd);
-    }
-}
 function applyGridColumns(columns) {
     const preference = columns === '3' || columns === '4' || columns === '5' ? columns : getGameGridPreference();
     const value = preference === 'auto' ? '' : preference;
@@ -4624,17 +4562,11 @@ if (typeof applySorting === 'function') {
     const originalApplySorting = applySorting;
     window.applySorting = function () {
         originalApplySorting();
-        placeInFeedAd();
         setTimeout(() => {
             applyGridColumns();
-            placeInFeedAd();
         }, 50);
     };
 }
-window.addEventListener('resize', function () {
-    clearTimeout(inFeedResizeTimer);
-    inFeedResizeTimer = setTimeout(placeInFeedAd, 150);
-});
 localStorage.removeItem('gridColumns');
 if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => applyGridColumns());

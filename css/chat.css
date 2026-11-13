@@ -9,8 +9,7 @@ body.chat-active {
   overscroll-behavior: none;
 }
 
-body.chat-active #main-container > header,
-body.chat-active #main-container > .ad-slot {
+body.chat-active #main-container > header {
   display: none;
 }
 
