@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-13',
+            title: 'Your points sit in the header',
+            items: [
+                'Your points balance now shows between the logo and the GAMES tab, so you can see it without opening the account panel.',
+                'It updates after a claim or a transfer and hides itself for signed-out visitors and browser-only accounts.'
+            ]
+        },
+        {
+            date: '2026-11-13',
             title: 'Ads are a setting you control',
             items: [
                 'Settings now has an Ads section with two switches: one turns ads off entirely for this browser, and popunders stay off unless you deliberately allow them.',
