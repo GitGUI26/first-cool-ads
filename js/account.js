@@ -1291,9 +1291,22 @@
     hookLessonHistory();
   }
 
+  function upgradeAmountInputs() {
+    ['payAmount', 'accountPayAmount', 'accountPointsAdminAmount'].forEach(function (id) {
+      var field = $(id);
+      if (!field) return;
+      if (field.type !== 'text') field.type = 'text';
+      field.setAttribute('inputmode', 'decimal');
+      field.removeAttribute('min');
+      field.removeAttribute('step');
+      if (!field.placeholder) field.placeholder = '15, 1k, 2.5m';
+    });
+  }
+
   function ensureInitialized() {
     if (initialized) return;
     initialized = true;
+    upgradeAmountInputs();
     bindEvents();
     render();
     if (currentUser()) loadPoints(true);
