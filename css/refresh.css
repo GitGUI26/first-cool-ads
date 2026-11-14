@@ -159,6 +159,50 @@ header {
   transform: translateY(-1px);
 }
 
+.nav-points {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 36px;
+  padding: 0 13px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.42);
+  border-radius: 999px;
+  background: rgba(var(--primary-accent-rgb), 0.14);
+  color: var(--ui-text);
+  font-family: var(--font-display);
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  cursor: pointer;
+  transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.nav-points[hidden] {
+  display: none;
+}
+
+.nav-points:hover {
+  border-color: var(--accent);
+  background: rgba(var(--accent-rgb), 0.2);
+  transform: translateY(-1px);
+}
+
+.nav-points i {
+  color: var(--accent);
+  font-size: 0.72rem;
+}
+
+@media (max-width: 900px) {
+  .nav-points {
+    min-height: 34px;
+    padding: 0 10px;
+  }
+
+  .nav-points span {
+    display: none;
+  }
+}
+
 /* -------------------------------------------------------------------- hero */
 
 #home-section {

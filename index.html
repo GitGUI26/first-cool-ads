@@ -45,7 +45,7 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=9" rel="stylesheet">
-<link href="css/refresh.css?v=14" rel="stylesheet">
+<link href="css/refresh.css?v=15" rel="stylesheet">
 <link href="css/browser.css?v=3" rel="stylesheet">
   <link href="css/account.css?v=9" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
@@ -247,6 +247,9 @@
             src="images/logo.webp?v=5" fetchpriority="high" decoding="async">
         </div>
         <div class="top-nav-actions">
+          <button class="nav-points" id="headerPoints" type="button" onclick="openAccount()" aria-label="Your points" title="Your points" hidden>
+            <i class="fas fa-coins" aria-hidden="true"></i><span id="headerPointsValue">0 pts</span>
+          </button>
           <div class="nav-tabs">
             <button class="nav-tab active" id="lessonsTab" type="button" onclick="switchTab('lessons')" aria-current="page">GAMES</button>
             <button class="nav-tab" id="musicTab" type="button" onclick="switchTab('music')">MUSIC</button>
@@ -1008,8 +1011,8 @@
   <script src="js/games.js?v=23"></script>
   <script src="js/main.js?v=38"></script>
   <script src="js/ads.js?v=1"></script>
-  <script src="js/updates.js?v=52"></script>
-  <script src="js/account.js?v=17"></script>
+  <script src="js/updates.js?v=53"></script>
+  <script src="js/account.js?v=18"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=12"></script>
   <script src="js/emulators.js?v=5"></script>

@@ -287,9 +287,11 @@
     var user = currentUser();
     var canShow = !!user && !isLocalUser(user);
     setHidden(card, !canShow);
+    setHidden($('headerPoints'), !canShow);
     if (!canShow) return;
     var balance = Number(pointsState.balance);
     if (!Number.isFinite(balance) || balance < 0) balance = 0;
+    if ($('headerPointsValue')) $('headerPointsValue').textContent = balance + (balance === 1 ? ' pt' : ' pts');
     var daily = Number(pointsState.dailyAmount) || 15;
     if ($('accountPointsBalance')) $('accountPointsBalance').textContent = String(balance);
     if ($('accountPointsPill')) $('accountPointsPill').textContent = balance + (balance === 1 ? ' pt' : ' pts');
