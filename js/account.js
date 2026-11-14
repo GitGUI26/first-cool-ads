@@ -292,6 +292,7 @@
     var balance = Number(pointsState.balance);
     if (!Number.isFinite(balance) || balance < 0) balance = 0;
     if ($('headerPointsValue')) $('headerPointsValue').textContent = balance + (balance === 1 ? ' pt' : ' pts');
+    if ($('payModal') && !$('payModal').hidden) renderPayModal();
     var daily = Number(pointsState.dailyAmount) || 15;
     if ($('accountPointsBalance')) $('accountPointsBalance').textContent = String(balance);
     if ($('accountPointsPill')) $('accountPointsPill').textContent = balance + (balance === 1 ? ' pt' : ' pts');
@@ -404,6 +405,99 @@
     if ($('accountPayUser')) $('accountPayUser').value = '';
     if ($('accountPayAmount')) $('accountPayAmount').value = '15';
     showToast('Sent ' + amount + ' points to @' + name + '.');
+  }
+
+  var payTarget = null;
+
+  function renderPayModal() {
+    var title = $('payTitle');
+    if (title) title.textContent = payTarget ? 'Pay @' + payTarget.name : 'Send points';
+    var lede = $('payLede');
+    if (lede) {
+      lede.textContent = payTarget
+        ? 'Enter how many points to send. The amount is all we need.'
+        : 'Type the username and how many points to send from your balance.';
+    }
+    var field = $('payUserField');
+    if (field) field.hidden = !!payTarget;
+    var line = $('payTargetLine');
+    if (line) {
+      line.hidden = !payTarget;
+      line.textContent = payTarget ? 'Sending to @' + payTarget.name : '';
+    }
+    var balance = $('payBalance');
+    if (balance) {
+      balance.textContent = pointsState.loading
+        ? 'Checking your balance…'
+        : 'Balance: ' + (Number(pointsState.balance) || 0) + ' pts';
+    }
+  }
+
+  function openPayModal(options) {
+    var user = currentUser();
+    if (!user || isLocalUser(user)) {
+      showToast('Sign in with an online account to send points.');
+      openAccount();
+      return false;
+    }
+    var target = options && options.user;
+    payTarget = target && target.name ? { id: String(target.id || ''), name: String(target.name) } : null;
+    if ($('payUser')) $('payUser').value = '';
+    if ($('payAmount')) $('payAmount').value = '15';
+    showError('payError', '');
+    var modal = $('payModal');
+    if (!modal) return false;
+    renderPayModal();
+    if (!pointsState.loaded) loadPoints();
+    modal.hidden = false;
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('pay-open');
+    window.setTimeout(function () {
+      var focus = payTarget ? $('payAmount') : $('payUser');
+      if (focus) focus.focus();
+    }, 60);
+    return true;
+  }
+
+  function closePayModal() {
+    var modal = $('payModal');
+    if (!modal || modal.hidden) return;
+    modal.hidden = true;
+    modal.setAttribute('aria-hidden', 'true');
+    document.body.classList.remove('pay-open');
+    payTarget = null;
+    showError('payError', '');
+  }
+
+  async function submitPayModal(event) {
+    event.preventDefault();
+    var form = $('payForm');
+    var target = payTarget ? payTarget.name : ($('payUser') ? $('payUser').value.trim() : '');
+    var amount = Number($('payAmount') ? $('payAmount').value : 0);
+    showError('payError', '');
+    if (!target) {
+      showError('payError', 'Enter the username you want to pay.');
+      return;
+    }
+    if (!Number.isInteger(amount) || amount < 1) {
+      showError('payError', 'Choose a whole number of points to send.');
+      return;
+    }
+    setBusy(form, true, 'Sending…');
+    var result = await Store.payPoints(target, amount);
+    setBusy(form, false);
+    if (!result.ok) {
+      showError('payError', result.error);
+      return;
+    }
+    var data = result.data || {};
+    pointsState.balance = Math.max(0, Number(data.balance) || 0);
+    pointsState.loaded = true;
+    pointsState.error = '';
+    renderPoints();
+    var name = (data.recipient && data.recipient.name) || target;
+    showToast('Sent ' + amount + ' point' + (amount === 1 ? '' : 's') + ' to @' + name + '.');
+    closePayModal();
   }
 
   async function submitAdminPoints(event) {
@@ -1010,6 +1104,10 @@
     if ($('accountSyncNow')) $('accountSyncNow').addEventListener('click', syncAccount);
     if ($('accountClaimPoints')) $('accountClaimPoints').addEventListener('click', claimPoints);
     if ($('accountPayForm')) $('accountPayForm').addEventListener('submit', payPoints);
+    if ($('payForm')) $('payForm').addEventListener('submit', submitPayModal);
+    document.querySelectorAll('[data-pay-close]').forEach(function (element) {
+      element.addEventListener('click', closePayModal);
+    });
     if ($('accountPointsAdminForm')) $('accountPointsAdminForm').addEventListener('submit', submitAdminPoints);
     if ($('accountUsernameForm')) {
       $('accountUsernameForm').addEventListener('submit', function (event) {
@@ -1071,6 +1169,7 @@
     });
     document.addEventListener('keydown', function (event) {
       if (event.key === 'Escape' && modal && !modal.hidden) closeAccount();
+      if (event.key === 'Escape') closePayModal();
     });
     document.addEventListener('change', queuePreferenceSave, true);
     document.addEventListener('click', queuePreferenceSave, true);
@@ -1127,6 +1226,8 @@
     openAccount();
   };
   window.closeAccount = closeAccount;
+  window.openPayModal = openPayModal;
+  window.closePayModal = closePayModal;
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () {

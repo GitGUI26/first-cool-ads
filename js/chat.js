@@ -44,6 +44,7 @@
   var siteOwner = false;
   var ownerStatusBusy = false;
   var profileUserId = '';
+  var profileUserName = '';
 
   function currentUser() {
     return Store.getCurrentUser();
@@ -455,6 +456,9 @@
     }
     var edit = $('chatProfileEdit');
     if (edit) edit.hidden = !own;
+    profileUserName = profile.name || 'player';
+    var pay = $('chatProfilePay');
+    if (pay) pay.hidden = own;
     modal.hidden = false;
     modal.setAttribute('aria-hidden', 'false');
     document.body.classList.add('chat-profile-open');
@@ -2046,6 +2050,16 @@
       element.addEventListener('click', closeChatProfile);
     });
     if ($('chatProfileEdit')) $('chatProfileEdit').addEventListener('click', editOwnProfile);
+    if ($('chatProfilePay')) {
+      $('chatProfilePay').addEventListener('click', function () {
+        var name = profileUserName;
+        var id = profileUserId;
+        closeChatProfile();
+        if (name && typeof window.openPayModal === 'function') {
+          window.openPayModal({ user: { id: id, name: name } });
+        }
+      });
+    }
     document.addEventListener('click', function (event) {
       var profileLink = event.target && event.target.closest ? event.target.closest('[data-profile-user]') : null;
       if (profileLink && !profileLink.closest('.notification-item') && !profileLink.closest('#chatProfileModal')) {

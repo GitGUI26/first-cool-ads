@@ -1899,6 +1899,35 @@ body.chat-active .chat-page-head {
   cursor: pointer;
 }
 
+.chat-profile-pay[hidden] {
+  display: none;
+}
+
+.chat-profile-pay {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 34px;
+  margin-top: 14px;
+  margin-right: 8px;
+  padding: 0 15px;
+  border: 0;
+  border-radius: 9px;
+  background: linear-gradient(135deg, var(--accent), var(--primary-accent));
+  color: #041017;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.chat-profile-pay:hover,
+.chat-profile-pay:focus-visible {
+  filter: brightness(1.08);
+  outline: none;
+}
+
 .chat-profile-edit:hover,
 .chat-profile-edit:focus-visible {
   border-color: rgba(var(--primary-accent-rgb), 0.7);

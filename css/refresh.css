@@ -1706,3 +1706,172 @@ body.reduce-motion #allLessonsGrid .lesson-card {
 #settings-section .setting-ads .settings-toggle {
   margin-top: 10px;
 }
+
+/* ------------------------------------------------------------------ pay modal */
+
+.pay-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+}
+
+.pay-modal[hidden] {
+  display: none;
+}
+
+.pay-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(4, 8, 16, 0.78);
+  -webkit-backdrop-filter: blur(4px);
+  backdrop-filter: blur(4px);
+}
+
+.pay-card {
+  position: relative;
+  width: min(420px, 100%);
+  max-height: calc(100vh - 40px);
+  overflow: auto;
+  padding: 26px;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #141d31, #0b1120);
+  box-shadow: 0 26px 70px rgba(0, 0, 0, 0.55);
+  color: var(--ui-text);
+}
+
+.pay-close {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
+  border: 1px solid var(--ui-line);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ui-muted);
+  cursor: pointer;
+}
+
+.pay-close:hover {
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.pay-kicker {
+  display: block;
+  color: var(--ui-muted);
+  font-family: var(--font-display);
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+.pay-card h3 {
+  margin: 8px 0 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+}
+
+.pay-lede {
+  margin: 8px 0 0;
+  color: var(--ui-muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
+}
+
+.pay-target {
+  margin: 14px 0 0;
+  padding: 10px 13px;
+  border: 1px solid rgba(var(--primary-accent-rgb), 0.45);
+  border-radius: 10px;
+  background: rgba(var(--primary-accent-rgb), 0.14);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.pay-target[hidden] {
+  display: none;
+}
+
+.pay-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+
+.pay-form label {
+  display: grid;
+  gap: 6px;
+  color: var(--ui-muted);
+  font-family: var(--font-display);
+  font-size: 0.62rem;
+  font-weight: 600;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.pay-form label[hidden] {
+  display: none;
+}
+
+.pay-form input {
+  min-height: 42px;
+  padding: 0 13px;
+  border: 1px solid var(--ui-line-strong);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  color: var(--ui-text);
+  font-family: inherit;
+  font-size: 0.92rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
+
+.pay-form input:focus {
+  border-color: var(--accent);
+  outline: none;
+}
+
+.pay-error {
+  color: #ff9d9d;
+  font-size: 0.78rem;
+  line-height: 1.5;
+}
+
+.pay-error[hidden] {
+  display: none;
+}
+
+.pay-submit {
+  min-height: 44px;
+  border: 0;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--accent), var(--primary-accent));
+  color: #041017;
+  font-family: var(--font-display);
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.pay-submit:hover {
+  filter: brightness(1.08);
+}
+
+.pay-balance {
+  margin: 14px 0 0;
+  color: var(--ui-muted);
+  font-size: 0.74rem;
+}
+
+body.pay-open {
+  overflow: hidden;
+}

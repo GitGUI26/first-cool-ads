@@ -5,6 +5,14 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-14',
+            title: 'Send points without leaving the page',
+            items: [
+                'Clicking the points pill in the header opens a payment box: type a username and an amount.',
+                'Clicking someone’s avatar or name opens their profile with a Pay button. That opens the same box with the username already filled in, so you only enter the amount.'
+            ]
+        },
+        {
             date: '2026-11-13',
             title: 'Your points sit in the header',
             items: [

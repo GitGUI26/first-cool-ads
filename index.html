@@ -45,12 +45,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link href="css/style.css?v=9" rel="stylesheet">
-<link href="css/refresh.css?v=15" rel="stylesheet">
+<link href="css/refresh.css?v=16" rel="stylesheet">
 <link href="css/browser.css?v=3" rel="stylesheet">
   <link href="css/account.css?v=9" rel="stylesheet">
 <link href="css/music.css?v=2" rel="stylesheet">
 <link href="css/updates.css?v=1" rel="stylesheet">
-<link href="css/chat.css?v=12" rel="stylesheet">
+<link href="css/chat.css?v=13" rel="stylesheet">
 <link href="css/ui-polish.css?v=1" rel="stylesheet">
 <link href="css/emulators.css?v=4" rel="stylesheet">
   <script type="application/ld+json">
@@ -247,7 +247,7 @@
             src="images/logo.webp?v=5" fetchpriority="high" decoding="async">
         </div>
         <div class="top-nav-actions">
-          <button class="nav-points" id="headerPoints" type="button" onclick="openAccount()" aria-label="Your points" title="Your points" hidden>
+          <button class="nav-points" id="headerPoints" type="button" onclick="openPayModal()" aria-label="Your points — send points" title="Your points — send points" hidden>
             <i class="fas fa-coins" aria-hidden="true"></i><span id="headerPointsValue">0 pts</span>
           </button>
           <div class="nav-tabs">
@@ -824,7 +824,25 @@
         </div>
       </div>
       <p class="chat-profile-bio" id="chatProfileBio"></p>
+      <button class="chat-profile-pay" id="chatProfilePay" type="button" hidden><i class="fas fa-coins" aria-hidden="true"></i> Pay</button>
       <button class="chat-profile-edit" id="chatProfileEdit" type="button" hidden><i class="fas fa-pen" aria-hidden="true"></i> Edit my bio</button>
+    </section>
+  </div>
+  <div class="pay-modal" id="payModal" hidden aria-hidden="true">
+    <div class="pay-backdrop" data-pay-close></div>
+    <section class="pay-card" role="dialog" aria-modal="true" aria-labelledby="payTitle">
+      <button class="pay-close" type="button" data-pay-close aria-label="Close payment"><i class="fas fa-xmark" aria-hidden="true"></i></button>
+      <span class="pay-kicker">Cool / Points</span>
+      <h3 id="payTitle">Send points</h3>
+      <p class="pay-lede" id="payLede">Type the username and how many points to send from your balance.</p>
+      <p class="pay-target" id="payTargetLine" hidden></p>
+      <form class="pay-form" id="payForm">
+        <label id="payUserField">Username<input id="payUser" type="text" maxlength="24" placeholder="@username" autocomplete="off"></label>
+        <label>Amount<input id="payAmount" type="number" min="1" step="1" value="15" required></label>
+        <div class="pay-error" id="payError" role="alert" hidden></div>
+        <button class="pay-submit" id="paySubmit" type="submit">Send points</button>
+      </form>
+      <p class="pay-balance" id="payBalance">Balance: 0 pts</p>
     </section>
   </div>
   <div class="account-modal" id="accountModal" hidden aria-hidden="true">
@@ -1011,10 +1029,10 @@
   <script src="js/games.js?v=23"></script>
   <script src="js/main.js?v=38"></script>
   <script src="js/ads.js?v=1"></script>
-  <script src="js/updates.js?v=54"></script>
-  <script src="js/account.js?v=18"></script>
+  <script src="js/updates.js?v=55"></script>
+  <script src="js/account.js?v=19"></script>
   <script src="js/music.js?v=2"></script>
-  <script src="js/chat.js?v=12"></script>
+  <script src="js/chat.js?v=13"></script>
   <script src="js/emulators.js?v=5"></script>
   <script>
     (function () {
