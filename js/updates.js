@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-14',
+            title: 'Million-plus balances read short',
+            items: [
+                'Balances of a million or more show as 1.25m or 3b in the header, the account panel and the pay box instead of a wall of digits.',
+                'Hover the header pill to see the exact number.'
+            ]
+        },
+        {
+            date: '2026-11-14',
             title: 'Short amounts: 1k, 1m, 1b',
             items: [
                 'Token amounts can be typed short: 1k is 1000, 2.5m is 2,500,000, 1b is a billion. Commas and spaces are ignored.',

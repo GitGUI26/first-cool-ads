@@ -282,6 +282,15 @@
     if (syncButton) syncButton.disabled = local || !configured;
   }
 
+  function shortenTokens(value) {
+    var n = Number(value);
+    if (!Number.isFinite(n) || n < 1000000) return String(Number.isFinite(n) ? n : 0);
+    var scale = n >= 1000000000 ? 1000000000 : 1000000;
+    var suffix = scale === 1000000000 ? 'b' : 'm';
+    var scaled = Math.round((n / scale) * 100) / 100;
+    return String(scaled).replace(/(\.\d*?)0+$/, '$1').replace(/\.$/, '') + suffix;
+  }
+
   function renderPoints() {
     var card = $('accountPointsCard');
     var user = currentUser();
@@ -291,11 +300,13 @@
     if (!canShow) return;
     var balance = Number(pointsState.balance);
     if (!Number.isFinite(balance) || balance < 0) balance = 0;
-    if ($('headerPointsValue')) $('headerPointsValue').textContent = balance + (balance === 1 ? ' token' : ' tokens');
+    if ($('headerPointsValue')) $('headerPointsValue').textContent = shortenTokens(balance) + (balance === 1 ? ' token' : ' tokens');
+    var headerPill = $('headerPoints');
+    if (headerPill) headerPill.setAttribute('title', balance.toLocaleString() + ' tokens — click to send');
     if ($('payModal') && !$('payModal').hidden) renderPayModal();
     var daily = Number(pointsState.dailyAmount) || 15;
-    if ($('accountPointsBalance')) $('accountPointsBalance').textContent = String(balance);
-    if ($('accountPointsPill')) $('accountPointsPill').textContent = balance + (balance === 1 ? ' token' : ' tokens');
+    if ($('accountPointsBalance')) $('accountPointsBalance').textContent = shortenTokens(balance);
+    if ($('accountPointsPill')) $('accountPointsPill').textContent = shortenTokens(balance) + (balance === 1 ? ' token' : ' tokens');
     var claim = $('accountClaimPoints');
     if (claim) {
       claim.disabled = pointsState.loading || pointsState.claimedToday;
@@ -440,7 +451,7 @@
     if (balance) {
       balance.textContent = pointsState.loading
         ? 'Checking your balance…'
-        : 'Balance: ' + (Number(pointsState.balance) || 0) + ' tokens';
+        : 'Balance: ' + shortenTokens(Number(pointsState.balance) || 0) + ' tokens';
     }
   }
 
