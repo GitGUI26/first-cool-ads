@@ -514,6 +514,10 @@
         showError('payError', 'Choose a whole number of tokens to add.');
         return;
       }
+      if (amount > 1000000000) {
+        showError('payError', 'The most you can add at once is 1b tokens.');
+        return;
+      }
       setBusy(form, true, 'Adding…');
       var adminResult = await Store.adminAdjustPoints(me.id, me.username, amount);
       setBusy(form, false);
@@ -532,6 +536,10 @@
     }
     if (!Number.isInteger(amount) || amount < 1) {
       showError('payError', 'Choose a whole number of tokens to send.');
+      return;
+    }
+    if (amount > 1000000) {
+      showError('payError', 'You can send up to 1m tokens in one payment.');
       return;
     }
     setBusy(form, true, 'Sending…');

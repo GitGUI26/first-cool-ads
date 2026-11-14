@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-14',
+            title: 'Bigger owner top-ups',
+            items: [
+                'Owner top-ups can now go up to 1b tokens at once instead of being treated like a normal transfer.',
+                'Members sending a payment over the 1m limit now get a clear message instead of a vague error.'
+            ]
+        },
+        {
+            date: '2026-11-14',
             title: 'Million-plus balances read short',
             items: [
                 'Balances of a million or more show as 1.25m or 3b in the header, the account panel and the pay box instead of a wall of digits.',

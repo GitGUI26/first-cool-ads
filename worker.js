@@ -117,11 +117,11 @@ function cleanId(value) {
   return id.length <= 80 && /^[A-Za-z0-9_-]+$/.test(id) ? id : '';
 }
 
-function cleanPointsAmount(value, allowNegative) {
+function cleanPointsAmount(value, allowNegative, limit) {
   const amount = Number(value);
   if (!Number.isFinite(amount) || Math.floor(amount) !== amount || amount === 0) return null;
   if (!allowNegative && amount < 0) return null;
-  if (Math.abs(amount) > MAX_POINT_TRANSFER) return null;
+  if (Math.abs(amount) > (limit || MAX_POINT_TRANSFER)) return null;
   return amount;
 }
 
@@ -460,7 +460,12 @@ export class ChatRoom {
 
   async pointsPay(user, isAdmin, data) {
     const amount = cleanPointsAmount(data && data.amount, false);
-    if (!amount) return json({ error: 'Choose a whole number of tokens to send.' }, 400);
+    if (!amount) {
+      if (Math.abs(Number(data && data.amount)) > MAX_POINT_TRANSFER) {
+        return json({ error: 'You can send up to ' + MAX_POINT_TRANSFER.toLocaleString('en-US') + ' tokens in one payment.' }, 400);
+      }
+      return json({ error: 'Choose a whole number of tokens to send.' }, 400);
+    }
     const target = await this.findDirectoryUser(data && (data.to || data.username));
     if (!target) {
       return json({ error: 'That username is not in the member directory yet. They need to open the site once.' }, 404);
@@ -501,7 +506,7 @@ export class ChatRoom {
   }
 
   async pointsAdmin(user, data) {
-    const amount = cleanPointsAmount(data && data.amount, true);
+    const amount = cleanPointsAmount(data && data.amount, true, MAX_POINTS);
     if (!amount) return json({ error: 'Choose a non-zero whole number of tokens.' }, 400);
     const targetId = cleanId(data && data.targetId);
     const rawTargetName = String(data && (data.targetUsername || data.target) || '').trim().replace(/^@+/, '');
