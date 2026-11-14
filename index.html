@@ -838,7 +838,7 @@
       <p class="pay-target" id="payTargetLine" hidden></p>
       <form class="pay-form" id="payForm">
         <label id="payUserField">Username<input id="payUser" type="text" maxlength="24" placeholder="@username" autocomplete="off"></label>
-        <label>Amount<input id="payAmount" type="number" min="1" step="1" value="15" required></label>
+        <label>Amount<input id="payAmount" type="text" inputmode="decimal" value="15" placeholder="15, 1k, 2.5m" autocomplete="off" required></label>
         <div class="pay-error" id="payError" role="alert" hidden></div>
         <button class="pay-submit" id="paySubmit" type="submit">Send tokens</button>
       </form>
@@ -919,7 +919,7 @@
               <p class="account-inline-message" id="accountPointsMessage" role="status"></p>
               <form class="account-points-form" id="accountPayForm">
                 <label>Pay username<input id="accountPayUser" type="text" maxlength="24" placeholder="@username" autocomplete="off" required></label>
-                <label>Amount<input id="accountPayAmount" type="number" min="1" step="1" value="15" required></label>
+                <label>Amount<input id="accountPayAmount" type="text" inputmode="decimal" value="15" placeholder="15, 1k, 2.5m" autocomplete="off" required></label>
                 <button class="account-secondary" type="submit">Send tokens</button>
               </form>
               <p class="account-points-note" id="accountPointsPayNote">Payments come out of your balance. Regular members cannot send more tokens than they have.</p>
@@ -929,7 +929,7 @@
                 <p>Give or take tokens from a member. Leave the username blank to adjust your own balance.</p>
                 <form class="account-points-form" id="accountPointsAdminForm">
                   <label>Username<input id="accountPointsTarget" type="text" maxlength="24" placeholder="@username (or blank for you)" autocomplete="off"></label>
-                  <label>Amount<input id="accountPointsAdminAmount" type="number" min="1" step="1" value="15" required></label>
+                  <label>Amount<input id="accountPointsAdminAmount" type="text" inputmode="decimal" value="15" placeholder="15, 1k, 2.5m" autocomplete="off" required></label>
                   <label>Action<select id="accountPointsDirection"><option value="give">Give</option><option value="take">Take</option></select></label>
                   <button class="account-secondary" type="submit">Apply</button>
                 </form>
@@ -1029,8 +1029,8 @@
   <script src="js/games.js?v=23"></script>
   <script src="js/main.js?v=38"></script>
   <script src="js/ads.js?v=1"></script>
-  <script src="js/updates.js?v=58"></script>
-  <script src="js/account.js?v=23"></script>
+  <script src="js/updates.js?v=59"></script>
+  <script src="js/account.js?v=24"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=14"></script>
   <script src="js/emulators.js?v=5"></script>

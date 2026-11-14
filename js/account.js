@@ -372,12 +372,22 @@
     await loadPoints(true);
   }
 
+  function parseAmount(value) {
+    var raw = String(value == null ? '' : value).trim().toLowerCase().replace(/[\s,_]/g, '');
+    var match = raw.match(/^([+-]?)(\d+(?:\.\d+)?)([kmb])?$/);
+    if (!match) return null;
+    var scale = match[3] === 'k' ? 1e3 : match[3] === 'm' ? 1e6 : match[3] === 'b' ? 1e9 : 1;
+    var amount = Math.round(Number(match[2]) * scale);
+    if (!Number.isFinite(amount)) return null;
+    return match[1] === '-' ? -amount : amount;
+  }
+
   async function payPoints(event) {
     event.preventDefault();
     var form = $('accountPayForm');
     var target = $('accountPayUser') ? $('accountPayUser').value.trim() : '';
     var amountField = $('accountPayAmount');
-    var amount = Number(amountField ? amountField.value : 0);
+    var amount = parseAmount(amountField ? amountField.value : '');
     showError('accountPayError', '');
     if (!target) {
       showError('accountPayError', 'Enter the username you want to pay.');
@@ -475,7 +485,7 @@
     var form = $('payForm');
     var me = currentUser();
     var target = payTarget ? payTarget.name : ($('payUser') ? $('payUser').value.trim().replace(/^@+/, '') : '');
-    var amount = Number($('payAmount') ? $('payAmount').value : 0);
+    var amount = parseAmount($('payAmount') ? $('payAmount').value : '');
     var selfTarget = !!me && (!target || target.toLowerCase() === String(me.username || '').toLowerCase() ||
       (payTarget && payTarget.id && String(payTarget.id) === String(me.id)));
     showError('payError', '');
@@ -535,7 +545,7 @@
     var form = $('accountPointsAdminForm');
     var target = $('accountPointsTarget') ? $('accountPointsTarget').value.trim().replace(/^@+/, '') : '';
     var amountField = $('accountPointsAdminAmount');
-    var amount = Number(amountField ? amountField.value : 0);
+    var amount = parseAmount(amountField ? amountField.value : '');
     var direction = $('accountPointsDirection') ? $('accountPointsDirection').value : 'give';
     showError('accountPointsAdminError', '');
     if (!Number.isInteger(amount) || amount < 1) {
@@ -564,7 +574,7 @@
   async function adjustOwnerPoints(id, username) {
     var raw = window.prompt('Tokens for @' + username + '.\nPositive gives tokens; negative takes tokens.', '15');
     if (raw === null) return;
-    var amount = Number(String(raw).trim());
+    var amount = parseAmount(raw);
     if (!Number.isInteger(amount) || amount === 0) {
       showError('accountOwnerMessage', 'Enter a non-zero whole number of tokens.');
       return;

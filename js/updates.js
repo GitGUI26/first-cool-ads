@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-14',
+            title: 'Short amounts: 1k, 1m, 1b',
+            items: [
+                'Token amounts can be typed short: 1k is 1000, 2.5m is 2,500,000, 1b is a billion. Commas and spaces are ignored.',
+                'It works in the pay box, the account panel form and the owner token controls.'
+            ]
+        },
+        {
+            date: '2026-11-14',
             title: 'Owners can top themselves up, @cool is safe',
             items: [
                 'Owners can leave the username blank in the pay box to add tokens straight to their own balance.',
