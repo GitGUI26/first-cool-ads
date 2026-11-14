@@ -247,8 +247,8 @@
             src="images/logo.webp?v=5" fetchpriority="high" decoding="async">
         </div>
         <div class="top-nav-actions">
-          <button class="nav-points" id="headerPoints" type="button" onclick="openPayModal()" aria-label="Your points — send points" title="Your points — send points" hidden>
-            <i class="fas fa-coins" aria-hidden="true"></i><span id="headerPointsValue">0 pts</span>
+          <button class="nav-points" id="headerPoints" type="button" onclick="openPayModal()" aria-label="Your tokens — send tokens" title="Your tokens — send tokens" hidden>
+            <i class="fas fa-coins" aria-hidden="true"></i><span id="headerPointsValue">0 tokens</span>
           </button>
           <div class="nav-tabs">
             <button class="nav-tab active" id="lessonsTab" type="button" onclick="switchTab('lessons')" aria-current="page">GAMES</button>
@@ -832,17 +832,17 @@
     <div class="pay-backdrop" data-pay-close></div>
     <section class="pay-card" role="dialog" aria-modal="true" aria-labelledby="payTitle">
       <button class="pay-close" type="button" data-pay-close aria-label="Close payment"><i class="fas fa-xmark" aria-hidden="true"></i></button>
-      <span class="pay-kicker">Cool / Points</span>
-      <h3 id="payTitle">Send points</h3>
-      <p class="pay-lede" id="payLede">Type the username and how many points to send from your balance.</p>
+      <span class="pay-kicker">Cool / Tokens</span>
+      <h3 id="payTitle">Send tokens</h3>
+      <p class="pay-lede" id="payLede">Type the username and how many tokens to send from your balance.</p>
       <p class="pay-target" id="payTargetLine" hidden></p>
       <form class="pay-form" id="payForm">
         <label id="payUserField">Username<input id="payUser" type="text" maxlength="24" placeholder="@username" autocomplete="off"></label>
         <label>Amount<input id="payAmount" type="number" min="1" step="1" value="15" required></label>
         <div class="pay-error" id="payError" role="alert" hidden></div>
-        <button class="pay-submit" id="paySubmit" type="submit">Send points</button>
+        <button class="pay-submit" id="paySubmit" type="submit">Send tokens</button>
       </form>
-      <p class="pay-balance" id="payBalance">Balance: 0 pts</p>
+      <p class="pay-balance" id="payBalance">Balance: 0 tokens</p>
     </section>
   </div>
   <div class="account-modal" id="accountModal" hidden aria-hidden="true">
@@ -907,26 +907,26 @@
             <section class="account-card account-card-wide account-points-card" id="accountPointsCard" hidden>
               <div class="account-card-head">
                 <div>
-                  <h4>Points</h4>
-                  <p>Collect 15 points each day you visit. Send points to other members, or use Owner tools to adjust balances.</p>
+                  <h4>Tokens</h4>
+                  <p>Collect 15 tokens each day you visit. Send tokens to other members, or use Owner tools to adjust balances.</p>
                 </div>
-                <span class="account-sync-pill is-synced" id="accountPointsPill">0 pts</span>
+                <span class="account-sync-pill is-synced" id="accountPointsPill">0 tokens</span>
               </div>
               <div class="account-points-hero">
-                <div class="account-points-balance"><b id="accountPointsBalance">0</b><span>points available</span></div>
-                <button class="account-primary" id="accountClaimPoints" type="button">Claim 15 points</button>
+                <div class="account-points-balance"><b id="accountPointsBalance">0</b><span>tokens available</span></div>
+                <button class="account-primary" id="accountClaimPoints" type="button">Claim 15 tokens</button>
               </div>
               <p class="account-inline-message" id="accountPointsMessage" role="status"></p>
               <form class="account-points-form" id="accountPayForm">
                 <label>Pay username<input id="accountPayUser" type="text" maxlength="24" placeholder="@username" autocomplete="off" required></label>
                 <label>Amount<input id="accountPayAmount" type="number" min="1" step="1" value="15" required></label>
-                <button class="account-secondary" type="submit">Send points</button>
+                <button class="account-secondary" type="submit">Send tokens</button>
               </form>
-              <p class="account-points-note" id="accountPointsPayNote">Payments come out of your balance. Regular members cannot send more points than they have.</p>
+              <p class="account-points-note" id="accountPointsPayNote">Payments come out of your balance. Regular members cannot send more tokens than they have.</p>
               <div class="account-error" id="accountPayError" role="alert" hidden></div>
               <div class="account-points-admin" id="accountPointsAdmin" hidden>
-                <h5>Owner points controls</h5>
-                <p>Give or take points from a member. Leave the username blank to adjust your own balance.</p>
+                <h5>Owner tokens controls</h5>
+                <p>Give or take tokens from a member. Leave the username blank to adjust your own balance.</p>
                 <form class="account-points-form" id="accountPointsAdminForm">
                   <label>Username<input id="accountPointsTarget" type="text" maxlength="24" placeholder="@username (or blank for you)" autocomplete="off"></label>
                   <label>Amount<input id="accountPointsAdminAmount" type="number" min="1" step="1" value="15" required></label>
@@ -1024,13 +1024,13 @@
   </div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=3"></script>
-  <script src="js/account-store.js?v=22"></script>
+  <script src="js/account-store.js?v=23"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=23"></script>
   <script src="js/main.js?v=38"></script>
   <script src="js/ads.js?v=1"></script>
-  <script src="js/updates.js?v=55"></script>
-  <script src="js/account.js?v=19"></script>
+  <script src="js/updates.js?v=56"></script>
+  <script src="js/account.js?v=20"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=13"></script>
   <script src="js/emulators.js?v=5"></script>

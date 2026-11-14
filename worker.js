@@ -299,9 +299,9 @@ async function isSiteAdmin(request, env) {
 
 async function forwardPoints(request, env, action, adminOnly) {
   if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
-  if (!env.CHAT_ROOM) return json({ error: 'Points are not available.' }, 503);
+  if (!env.CHAT_ROOM) return json({ error: 'Tokens are not available.' }, 503);
   const user = await verifySupabaseUser(request, env);
-  if (!user) return json({ error: 'Sign in with an online account to use points.' }, 401);
+  if (!user) return json({ error: 'Sign in with an online account to use tokens.' }, 401);
   const admin = await isSiteAdmin(request, env);
   if (adminOnly && !admin) return json({ error: 'Owner access required.' }, 403);
   const headers = pointsHeaders(request);
@@ -313,7 +313,7 @@ async function forwardPoints(request, env, action, adminOnly) {
   try {
     return await room.fetch(new Request(request, { headers }));
   } catch (error) {
-    return json({ error: 'Points could not be updated. Try again.' }, 500);
+    return json({ error: 'Tokens could not be updated. Try again.' }, 500);
   }
 }
 
@@ -460,7 +460,7 @@ export class ChatRoom {
 
   async pointsPay(user, isAdmin, data) {
     const amount = cleanPointsAmount(data && data.amount, false);
-    if (!amount) return json({ error: 'Choose a whole number of points to send.' }, 400);
+    if (!amount) return json({ error: 'Choose a whole number of tokens to send.' }, 400);
     const target = await this.findDirectoryUser(data && (data.to || data.username));
     if (!target) {
       return json({ error: 'That username is not in the member directory yet. They need to open the site once.' }, 404);
@@ -473,7 +473,7 @@ export class ChatRoom {
       const state = await this.readPointsState();
       const balance = this.pointsBalance(state, senderId);
       if (!isAdmin && balance < amount) {
-        return json({ error: 'You do not have enough points for that payment.' }, 400);
+        return json({ error: 'You do not have enough tokens for that payment.' }, 400);
       }
       if (!isAdmin) state.balances[senderId] = balance - amount;
       state.balances[targetId] = this.pointsBalance(state, targetId) + amount;
@@ -490,7 +490,7 @@ export class ChatRoom {
 
   async pointsAdmin(user, data) {
     const amount = cleanPointsAmount(data && data.amount, true);
-    if (!amount) return json({ error: 'Choose a non-zero whole number of points.' }, 400);
+    if (!amount) return json({ error: 'Choose a non-zero whole number of tokens.' }, 400);
     const targetId = cleanId(data && data.targetId);
     const rawTargetName = String(data && (data.targetUsername || data.target) || '').trim().replace(/^@+/, '');
     const targetName = rawTargetName ? cleanName(rawTargetName) : '';
@@ -532,7 +532,7 @@ export class ChatRoom {
       if (!isAdmin) return json({ error: 'Owner access required.' }, 403);
       return this.pointsAdmin(user, data);
     }
-    return json({ error: 'Unknown points action.' }, 404);
+    return json({ error: 'Unknown tokens action.' }, 404);
   }
 
   async resolveMentions(text, sender) {

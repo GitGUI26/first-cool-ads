@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-14',
+            title: 'Points are now tokens',
+            items: [
+                'Every balance, payment and daily bonus now reads in tokens instead of points.',
+                'Nothing else changed: your balance carried over and you still collect 15 each day.'
+            ]
+        },
+        {
+            date: '2026-11-14',
             title: 'Send points without leaving the page',
             items: [
                 'Clicking the points pill in the header opens a payment box: type a username and an amount.',

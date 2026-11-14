@@ -291,32 +291,32 @@
     if (!canShow) return;
     var balance = Number(pointsState.balance);
     if (!Number.isFinite(balance) || balance < 0) balance = 0;
-    if ($('headerPointsValue')) $('headerPointsValue').textContent = balance + (balance === 1 ? ' pt' : ' pts');
+    if ($('headerPointsValue')) $('headerPointsValue').textContent = balance + (balance === 1 ? ' token' : ' tokens');
     if ($('payModal') && !$('payModal').hidden) renderPayModal();
     var daily = Number(pointsState.dailyAmount) || 15;
     if ($('accountPointsBalance')) $('accountPointsBalance').textContent = String(balance);
-    if ($('accountPointsPill')) $('accountPointsPill').textContent = balance + (balance === 1 ? ' pt' : ' pts');
+    if ($('accountPointsPill')) $('accountPointsPill').textContent = balance + (balance === 1 ? ' token' : ' tokens');
     var claim = $('accountClaimPoints');
     if (claim) {
       claim.disabled = pointsState.loading || pointsState.claimedToday;
       claim.textContent = pointsState.loading && !pointsState.loaded
         ? 'Loading…'
-        : (pointsState.claimedToday ? 'Claimed today' : 'Claim ' + daily + ' points');
+        : (pointsState.claimedToday ? 'Claimed today' : 'Claim ' + daily + ' tokens');
     }
     setHidden($('accountPointsAdmin'), !pointsState.isAdmin);
     if ($('accountPointsPayNote')) {
       $('accountPointsPayNote').textContent = pointsState.isAdmin
         ? 'Owner sends do not use your balance. Use Give or Take below to adjust balances.'
-        : 'Payments come out of your balance. Regular members cannot send more points than they have.';
+        : 'Payments come out of your balance. Regular members cannot send more tokens than they have.';
     }
     if (pointsState.loading && !pointsState.loaded) {
       showMessage('accountPointsMessage', 'Loading your points…', true);
     } else if (pointsState.error) {
       showError('accountPointsMessage', pointsState.error);
     } else if (pointsState.claimedToday) {
-      showSuccess('accountPointsMessage', 'Daily ' + daily + ' points claimed. Resets at midnight UTC.');
+      showSuccess('accountPointsMessage', 'Daily ' + daily + ' tokens claimed. Resets at midnight UTC.');
     } else {
-      showSuccess('accountPointsMessage', 'Claim ' + daily + ' points once each UTC day.');
+      showSuccess('accountPointsMessage', 'Claim ' + daily + ' tokens once each UTC day.');
     }
   }
 
@@ -356,14 +356,14 @@
     }
     pointsState.loading = false;
     if (!result || !result.ok) {
-      pointsState.error = (result && result.error) || 'Points could not be loaded.';
+      pointsState.error = (result && result.error) || 'Tokens could not be loaded.';
       renderPoints();
       return;
     }
     applyPoints(result.data);
     renderPoints();
     if (claim && result.data && result.data.claimedNow) {
-      showToast('Daily ' + (Number(result.data.dailyAmount) || 15) + ' points claimed.');
+      showToast('Daily ' + (Number(result.data.dailyAmount) || 15) + ' tokens claimed.');
     }
   }
 
@@ -384,7 +384,7 @@
       return;
     }
     if (!Number.isInteger(amount) || amount < 1) {
-      showError('accountPayError', 'Choose a whole number of points to send.');
+      showError('accountPayError', 'Choose a whole number of tokens to send.');
       return;
     }
     setBusy(form, true, 'Sending…');
@@ -401,22 +401,22 @@
     renderPoints();
     var name = (data.recipient && data.recipient.name) || target;
     var note = data.isAdmin ? ' Owner payments do not use your balance.' : '';
-    showSuccess('accountPointsMessage', 'Sent ' + amount + ' point' + (amount === 1 ? '' : 's') + ' to @' + name + '.' + note);
+    showSuccess('accountPointsMessage', 'Sent ' + amount + ' token' + (amount === 1 ? '' : 's') + ' to @' + name + '.' + note);
     if ($('accountPayUser')) $('accountPayUser').value = '';
     if ($('accountPayAmount')) $('accountPayAmount').value = '15';
-    showToast('Sent ' + amount + ' points to @' + name + '.');
+    showToast('Sent ' + amount + ' tokens to @' + name + '.');
   }
 
   var payTarget = null;
 
   function renderPayModal() {
     var title = $('payTitle');
-    if (title) title.textContent = payTarget ? 'Pay @' + payTarget.name : 'Send points';
+    if (title) title.textContent = payTarget ? 'Pay @' + payTarget.name : 'Send tokens';
     var lede = $('payLede');
     if (lede) {
       lede.textContent = payTarget
-        ? 'Enter how many points to send. The amount is all we need.'
-        : 'Type the username and how many points to send from your balance.';
+        ? 'Enter how many tokens to send. The amount is all we need.'
+        : 'Type the username and how many tokens to send from your balance.';
     }
     var field = $('payUserField');
     if (field) field.hidden = !!payTarget;
@@ -429,14 +429,14 @@
     if (balance) {
       balance.textContent = pointsState.loading
         ? 'Checking your balance…'
-        : 'Balance: ' + (Number(pointsState.balance) || 0) + ' pts';
+        : 'Balance: ' + (Number(pointsState.balance) || 0) + ' tokens';
     }
   }
 
   function openPayModal(options) {
     var user = currentUser();
     if (!user || isLocalUser(user)) {
-      showToast('Sign in with an online account to send points.');
+      showToast('Sign in with an online account to send tokens.');
       openAccount();
       return false;
     }
@@ -480,7 +480,7 @@
       return;
     }
     if (!Number.isInteger(amount) || amount < 1) {
-      showError('payError', 'Choose a whole number of points to send.');
+      showError('payError', 'Choose a whole number of tokens to send.');
       return;
     }
     setBusy(form, true, 'Sending…');
@@ -496,7 +496,7 @@
     pointsState.error = '';
     renderPoints();
     var name = (data.recipient && data.recipient.name) || target;
-    showToast('Sent ' + amount + ' point' + (amount === 1 ? '' : 's') + ' to @' + name + '.');
+    showToast('Sent ' + amount + ' token' + (amount === 1 ? '' : 's') + ' to @' + name + '.');
     closePayModal();
   }
 
@@ -509,7 +509,7 @@
     var direction = $('accountPointsDirection') ? $('accountPointsDirection').value : 'give';
     showError('accountPointsAdminError', '');
     if (!Number.isInteger(amount) || amount < 1) {
-      showError('accountPointsAdminError', 'Choose a whole number of points.');
+      showError('accountPointsAdminError', 'Choose a whole number of tokens.');
       return;
     }
     var signed = direction === 'take' ? -amount : amount;
@@ -527,16 +527,16 @@
     pointsState.error = '';
     renderPoints();
     var name = targetData.name || target || 'yourself';
-    showSuccess('accountPointsMessage', (signed > 0 ? 'Gave ' : 'Took ') + amount + ' point' + (amount === 1 ? '' : 's') + ' ' + (signed > 0 ? 'to' : 'from') + ' @' + name + '.');
-    showToast((signed > 0 ? 'Gave ' : 'Took ') + amount + ' points ' + (signed > 0 ? 'to' : 'from') + ' @' + name + '.');
+    showSuccess('accountPointsMessage', (signed > 0 ? 'Gave ' : 'Took ') + amount + ' token' + (amount === 1 ? '' : 's') + ' ' + (signed > 0 ? 'to' : 'from') + ' @' + name + '.');
+    showToast((signed > 0 ? 'Gave ' : 'Took ') + amount + ' tokens ' + (signed > 0 ? 'to' : 'from') + ' @' + name + '.');
   }
 
   async function adjustOwnerPoints(id, username) {
-    var raw = window.prompt('Points for @' + username + '.\nPositive gives points; negative takes points.', '15');
+    var raw = window.prompt('Tokens for @' + username + '.\nPositive gives tokens; negative takes tokens.', '15');
     if (raw === null) return;
     var amount = Number(String(raw).trim());
     if (!Number.isInteger(amount) || amount === 0) {
-      showError('accountOwnerMessage', 'Enter a non-zero whole number of points.');
+      showError('accountOwnerMessage', 'Enter a non-zero whole number of tokens.');
       return;
     }
     var result = await Store.adminAdjustPoints(id, username, amount);
@@ -544,7 +544,7 @@
       showError('accountOwnerMessage', result.error);
       return;
     }
-    showSuccess('accountOwnerMessage', (amount > 0 ? 'Gave ' + amount : 'Took ' + Math.abs(amount)) + ' point' + (Math.abs(amount) === 1 ? '' : 's') + ' ' + (amount > 0 ? 'to' : 'from') + ' @' + username + '.');
+    showSuccess('accountOwnerMessage', (amount > 0 ? 'Gave ' + amount : 'Took ' + Math.abs(amount)) + ' token' + (Math.abs(amount) === 1 ? '' : 's') + ' ' + (amount > 0 ? 'to' : 'from') + ' @' + username + '.');
     loadPoints(false);
   }
 
@@ -613,7 +613,7 @@
       var meta = account.isAdmin ? 'Owner' : (account.lastSignInAt ? 'Last seen ' + formatDate(account.lastSignInAt) : 'Has not signed in yet');
       details.appendChild(item('span', '', meta));
       row.appendChild(details);
-      var points = item('button', 'account-secondary account-owner-button', 'Points');
+      var points = item('button', 'account-secondary account-owner-button', 'Tokens');
       points.type = 'button';
       points.setAttribute('data-owner-points', account.id);
       points.setAttribute('data-owner-name', account.username);
@@ -1120,7 +1120,7 @@
       $('accountOwnerList').addEventListener('click', function (event) {
         var points = event.target.closest('[data-owner-points]');
         if (points) {
-          adjustOwnerPoints(points.getAttribute('data-owner-points'), points.getAttribute('data-owner-name'));
+          adjustOwnerPoints(points.getAttribute('data-owner-points'), tokens.getAttribute('data-owner-name'));
           return;
         }
         var rename = event.target.closest('[data-owner-rename]');
