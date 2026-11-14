@@ -414,9 +414,10 @@
     if (title) title.textContent = payTarget ? 'Pay @' + payTarget.name : 'Send tokens';
     var lede = $('payLede');
     if (lede) {
-      lede.textContent = payTarget
+      var adminNote = pointsState.isAdmin ? ' Owners can leave the username blank to add tokens to their own balance.' : '';
+      lede.textContent = (payTarget
         ? 'Enter how many tokens to send. The amount is all we need.'
-        : 'Type the username and how many tokens to send from your balance.';
+        : 'Type the username and how many tokens to send from your balance.') + adminNote;
     }
     var field = $('payUserField');
     if (field) field.hidden = !!payTarget;
@@ -472,11 +473,40 @@
   async function submitPayModal(event) {
     event.preventDefault();
     var form = $('payForm');
-    var target = payTarget ? payTarget.name : ($('payUser') ? $('payUser').value.trim() : '');
+    var me = currentUser();
+    var target = payTarget ? payTarget.name : ($('payUser') ? $('payUser').value.trim().replace(/^@+/, '') : '');
     var amount = Number($('payAmount') ? $('payAmount').value : 0);
+    var selfTarget = !!me && (!target || target.toLowerCase() === String(me.username || '').toLowerCase() ||
+      (payTarget && payTarget.id && String(payTarget.id) === String(me.id)));
     showError('payError', '');
     if (!target) {
-      showError('payError', 'Enter the username you want to pay.');
+      if (!pointsState.isAdmin) {
+        showError('payError', 'Enter the username you want to pay.');
+        return;
+      }
+    } else if (selfTarget && !pointsState.isAdmin) {
+      showError('payError', 'You cannot pay yourself.');
+      return;
+    }
+    if (selfTarget) {
+      if (!Number.isInteger(amount) || amount < 1) {
+        showError('payError', 'Choose a whole number of tokens to add.');
+        return;
+      }
+      setBusy(form, true, 'Adding…');
+      var adminResult = await Store.adminAdjustPoints(me.id, me.username, amount);
+      setBusy(form, false);
+      if (!adminResult.ok) {
+        showError('payError', adminResult.error);
+        return;
+      }
+      var adminData = adminResult.data || {};
+      pointsState.balance = Math.max(0, Number(adminData.balance) || 0);
+      pointsState.loaded = true;
+      pointsState.error = '';
+      renderPoints();
+      showToast('Added ' + amount + ' token' + (amount === 1 ? '' : 's') + ' to your balance.');
+      closePayModal();
       return;
     }
     if (!Number.isInteger(amount) || amount < 1) {
@@ -617,11 +647,17 @@
       points.type = 'button';
       points.setAttribute('data-owner-points', account.id);
       points.setAttribute('data-owner-name', account.username);
+      var protectedAccount = String(account.username || '').trim().toLowerCase() === 'cool';
       if (String(account.id) === String(user.id)) {
         row.appendChild(points);
         row.appendChild(item('span', 'account-owner-you', 'You'));
       } else {
         row.appendChild(points);
+        if (protectedAccount) {
+          row.appendChild(item('span', 'account-owner-you', 'Protected'));
+          list.appendChild(row);
+          return;
+        }
         var admin = item('button', 'account-secondary account-owner-button', account.isAdmin ? 'Remove admin' : 'Make admin');
         admin.type = 'button';
         admin.setAttribute('data-owner-admin', account.id);
@@ -715,6 +751,10 @@
   }
 
   async function deleteOwnerAccount(id, username) {
+    if (String(username || '').trim().toLowerCase() === 'cool') {
+      showError('accountOwnerMessage', 'The @cool account cannot be deleted.');
+      return;
+    }
     var confirmed = window.confirm('Permanently delete @' + username + ' and remove their chat data? This cannot be undone.');
     if (!confirmed) return;
     var result = await Store.adminDeleteAccount(id);

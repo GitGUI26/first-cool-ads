@@ -662,6 +662,14 @@ export class ChatRoom {
     if (!id) throw new Error('Missing user.');
 
     const state = await this.readState();
+    const directoryEntries = await this.readDirectory();
+    const knownAccount = directoryEntries.find(item => String(item && item.id) === id) ||
+      (state.members || []).find(item => String(item && item.id) === id);
+    if (knownAccount && nameKey(knownAccount.name) === 'cool') {
+      const error = new Error('The @cool account cannot be deleted.');
+      error.code = 'PROTECTED_ACCOUNT';
+      throw error;
+    }
     const history = state.history.filter(item => String(item && item.user && item.user.id) !== id);
     const members = state.members.filter(item => String(item && item.id) !== id);
     await this.ctx.storage.put('history', history);
@@ -1042,6 +1050,7 @@ export class ChatRoom {
       try {
         return json(await this.purgeUser(target));
       } catch (error) {
+        if (error && error.code === 'PROTECTED_ACCOUNT') return json({ error: error.message }, 400);
         return json({ error: 'Could not remove that account\u2019s chat data.' }, 500);
       }
     }
@@ -1051,6 +1060,7 @@ export class ChatRoom {
       try {
         return json(await this.purgeUser(user.id));
       } catch (error) {
+        if (error && error.code === 'PROTECTED_ACCOUNT') return json({ error: error.message }, 400);
         return json({ error: 'Could not remove chat messages.' }, 500);
       }
     }

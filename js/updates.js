@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-14',
+            title: 'Owners can top themselves up, @cool is safe',
+            items: [
+                'Owners can leave the username blank in the pay box to add tokens straight to their own balance.',
+                'The @cool account can no longer be renamed or deleted from the owner tools.'
+            ]
+        },
+        {
+            date: '2026-11-14',
             title: 'Know the moment tokens land',
             items: [
                 'When someone sends you tokens you get a toast with the amount and sender, and your header balance updates on the spot.',
