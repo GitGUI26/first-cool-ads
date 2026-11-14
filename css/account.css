@@ -1263,10 +1263,10 @@ a.account-history-title:hover {
 }
 
 .account-toast {
-  position: absolute;
+  position: fixed;
   right: 22px;
   bottom: 20px;
-  z-index: 3;
+  z-index: 1600;
   max-width: min(420px, calc(100% - 44px));
   padding: 10px 13px;
   border: 1px solid rgba(var(--primary-accent-rgb), 0.36);

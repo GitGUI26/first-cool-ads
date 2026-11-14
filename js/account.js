@@ -1171,6 +1171,22 @@
       if (event.key === 'Escape' && modal && !modal.hidden) closeAccount();
       if (event.key === 'Escape') closePayModal();
     });
+    document.addEventListener('cuh-tokens-received', function (event) {
+      var detail = (event && event.detail) || {};
+      var amount = Number(detail.amount) || 0;
+      var from = detail.from && detail.from.name ? String(detail.from.name) : '';
+      var balance = Number(detail.balance);
+      if (Number.isFinite(balance) && balance >= 0) {
+        pointsState.balance = balance;
+        pointsState.loaded = true;
+        renderPoints();
+      } else if (currentUser()) {
+        loadPoints();
+      }
+      if (amount > 0) {
+        showToast('Received ' + amount + (amount === 1 ? ' token' : ' tokens') + (from ? ' from @' + from : '') + '.');
+      }
+    });
     document.addEventListener('change', queuePreferenceSave, true);
     document.addEventListener('click', queuePreferenceSave, true);
     window.addEventListener('beforeunload', function () {

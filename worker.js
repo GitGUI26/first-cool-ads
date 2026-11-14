@@ -478,6 +478,18 @@ export class ChatRoom {
       if (!isAdmin) state.balances[senderId] = balance - amount;
       state.balances[targetId] = this.pointsBalance(state, targetId) + amount;
       await this.savePointsState(state);
+      const recipientBalance = this.pointsBalance(state, targetId);
+      await this.addNotification(targetId, {
+        type: 'tokens',
+        actor: profileOf(user),
+        text: 'sent you ' + amount + (amount === 1 ? ' token.' : ' tokens.')
+      }).catch(() => {});
+      this.sendToUser(targetId, {
+        type: 'tokens-received',
+        from: profileOf(user),
+        amount: amount,
+        balance: recipientBalance
+      });
       return json({
         ok: true,
         amount,

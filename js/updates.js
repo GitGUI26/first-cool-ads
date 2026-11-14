@@ -6,6 +6,14 @@
     var updates = [
         {
             date: '2026-11-14',
+            title: 'Know the moment tokens land',
+            items: [
+                'When someone sends you tokens you get a toast with the amount and sender, and your header balance updates on the spot.',
+                'The notification bell also keeps a Tokens entry so you can look back at recent payments.'
+            ]
+        },
+        {
+            date: '2026-11-14',
             title: 'Points are now tokens',
             items: [
                 'Every balance, payment and daily bonus now reads in tokens instead of points.',

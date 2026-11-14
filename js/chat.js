@@ -66,6 +66,7 @@
     if (type === 'reply') return 'Reply';
     if (type === 'friend-request') return 'Friend request';
     if (type === 'dm') return 'Direct message';
+    if (type === 'tokens') return 'Tokens';
     return 'Notification';
   }
 
@@ -1781,6 +1782,8 @@
           mergeSocial(data);
           mergeHistory(data.messages);
           mergeNotifications(data.notifications);
+        } else if (data.type === 'tokens-received') {
+          document.dispatchEvent(new CustomEvent('cuh-tokens-received', { detail: data }));
         } else if (data.type === 'notification') {
           addNotification(data.notification);
         } else if (data.type === 'notifications-read') {
