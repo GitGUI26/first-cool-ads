@@ -1703,10 +1703,6 @@ body.reduce-motion #allLessonsGrid .lesson-card {
   justify-content: center;
 }
 
-#settings-section .setting-ads .settings-toggle {
-  margin-top: 10px;
-}
-
 /* ------------------------------------------------------------------ pay modal */
 
 .pay-modal {

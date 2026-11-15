@@ -5,6 +5,14 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-15',
+            title: 'Google AdSense added',
+            items: [
+                'The home page now loads Google AdSense for the site’s publisher account.',
+                'The Ads section in Settings is gone, so ads are no longer switchable per browser.'
+            ]
+        },
+        {
             date: '2026-11-14',
             title: 'Bigger owner top-ups',
             items: [
