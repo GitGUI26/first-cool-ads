@@ -44,7 +44,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link href="css/style.css?v=9" rel="stylesheet">
+<link href="css/style.css?v=10" rel="stylesheet">
 <link href="css/refresh.css?v=17" rel="stylesheet">
 <link href="css/browser.css?v=3" rel="stylesheet">
   <link href="css/account.css?v=10" rel="stylesheet">
@@ -195,6 +195,17 @@
   ]
 }
   </script>
+  <script>
+    // Ad placements (Adsterra). Each slot writes its own atOptions + invoke pair
+    // while the page is parsing, so every unit is served at its own size.
+    function writeAd(key, width, height) {
+      var options = { key: key, format: 'iframe', height: height, width: width, params: {} };
+      document.write('<div class="ad-unit"><span class="ad-unit-label">Advertisement</span>' +
+        '<script>atOptions = ' + JSON.stringify(options) + ';<\/script>' +
+        '<script src="https://bauval.org/22/' + key + '"><\/script>' +
+        '</div>');
+    }
+  </script>
 </head>
 
 <body>
@@ -286,6 +297,16 @@
         </div>
       </div>
     </header>
+    <div class="ad-slot ad-slot-top">
+      <script>
+        if (window.innerWidth >= 768) {
+          writeAd('3dfb504a3be1a57a2b674ecf2bc0d2bd', 728, 90);
+        }
+        else {
+          writeAd('640192fb270e94b2eed0eb1ffc4bddac', 320, 50);
+        }
+      </script>
+    </div>
     <section id="home-section" aria-labelledby="siteTitle">
       <h1 class="visually-hidden" id="siteTitle">Cool Tutoring Hub - free games, brain breaks, and classroom tools</h1>
       <div class="home-hero">
@@ -383,12 +404,28 @@
           </div>
         </div>
       </div>
+      <div class="ad-slot ad-slot-rect">
+        <script>
+          writeAd('cf302e89f6a183752cc396043460fc22', 300, 250);
+        </script>
+      </div>
       <div class="lessons-layout">
         <div class="lessons-main">
           <div class="lessons-grid" id="allLessonsGrid"></div>
         </div>
       </div>
     </section>
+      <div class="ad-slot ad-slot-row">
+        <script>
+          writeAd('ff8b51f3e239de6830774a80d719e14d', 160, 600);
+          writeAd('301a368811a1568839aec19fa9f165e0', 160, 300);
+        </script>
+      </div>
+      <div class="ad-slot ad-slot-banner">
+        <script>
+          writeAd('3313fa7c1217bab1ba47f1e00e070586', 468, 60);
+        </script>
+      </div>
     <section id="chat-section" class="chat-page" hidden aria-hidden="true" aria-labelledby="chatTitle">
       <div class="chat-shell">
         <header class="chat-page-head">
@@ -712,6 +749,13 @@
         <div class="updates-list" id="updatesList"></div>
       </div>
     </section>
+    <div class="ad-slot ad-slot-native">
+      <script>
+        document.write('<div class="ad-unit"><span class="ad-unit-label">Advertisement</span>' +
+          '<div id="container-8e16e0b638c242dfb0dba220c537b6f2"></div></div>' +
+          '<script data-cfasync="false" src="https://bauval.org/21/8e16e0b638c242dfb0dba220c537b6f2"><\/script>');
+      </script>
+    </div>
     <footer class="site-footer">
       <div class="site-footer-left">
         <p>© 2026 Cool Tutoring Hub.</p>
@@ -1009,7 +1053,7 @@
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=23"></script>
   <script src="js/main.js?v=38"></script>
-  <script src="js/updates.js?v=63"></script>
+  <script src="js/updates.js?v=64"></script>
   <script src="js/account.js?v=27"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=14"></script>

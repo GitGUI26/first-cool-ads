@@ -5,6 +5,14 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-15',
+            title: 'Adsterra banners are back',
+            items: [
+                'The leaderboard, 300x250, 160x600, 160x300, 468x60 and native banner units are placed around the games page again.',
+                'Popunder and popup ads stay off, so nothing opens over the page.'
+            ]
+        },
+        {
             date: '2026-11-14',
             title: 'Bigger owner top-ups',
             items: [
