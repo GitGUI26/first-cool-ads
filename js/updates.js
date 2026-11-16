@@ -5,6 +5,14 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-16',
+            title: 'Game pages named after the games',
+            items: [
+                'Every game link now uses the game’s own name instead of a number, like games/deltarune-fixed.html instead of games/340.html.',
+                'Dice A Million now loads the updated build.'
+            ]
+        },
+        {
             date: '2026-11-15',
             title: 'Adsterra banners are back',
             items: [
