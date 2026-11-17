@@ -5,6 +5,20 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-17',
+            title: 'Dice A Million hidden while its build is offline',
+            items: [
+                'The game’s web build was pulled from its CDN, so the card is hidden instead of opening a black screen.'
+            ]
+        },
+        {
+            date: '2026-11-16',
+            title: 'Cleaner game pages',
+            items: [
+                'Dice A Million’s page no longer carries a third-party download watermark or an injected obfuscated script.'
+            ]
+        },
+        {
             date: '2026-11-16',
             title: 'Game pages named after the games',
             items: [
