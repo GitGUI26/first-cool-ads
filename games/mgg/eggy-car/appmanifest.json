@@ -1,7 +1,7 @@
 {
 	"name": "Eggy Car",
 	"short_name": "Eggy Car",
-	"start_url": "index.html",
+	"start_url": "eggy-car.html",
 	"display": "fullscreen",
 	"orientation": "landscape",
 	"icons": [{

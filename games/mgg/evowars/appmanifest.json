@@ -1,7 +1,7 @@
 {
 	"name": "EvoWars",
 	"short_name": "EvoWars",
-	"start_url": "index.html",
+	"start_url": "evowars.html",
 	"display": "fullscreen",
 	"orientation": "landscape",
 	"icons": [{
