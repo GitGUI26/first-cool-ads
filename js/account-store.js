@@ -1034,6 +1034,16 @@
     if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
     var target = String(targetId || '').trim();
     if (!target) return { ok: false, error: 'Choose an account.' };
+    // Renaming rewrites the display name but not the hidden login address, so
+    // the renamed member can only sign in while the username resolver exists.
+    // Without it a rename silently locks them out of their own account.
+    var canResolve = await loginResolverAvailable(auth);
+    if (!canResolve) {
+      return {
+        ok: false,
+        error: 'Renaming is paused: it would lock @' + target + ' out of sign-in until the username resolver is added to the database. Run supabase/migrations/20261118000000_login_resolver.sql first.'
+      };
+    }
     var result;
     try {
       result = await auth.rpc('site_admin_change_username', { target: target, candidate: check.username });

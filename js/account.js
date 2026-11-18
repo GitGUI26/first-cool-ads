@@ -1189,7 +1189,7 @@
       $('accountOwnerList').addEventListener('click', function (event) {
         var points = event.target.closest('[data-owner-points]');
         if (points) {
-          adjustOwnerPoints(points.getAttribute('data-owner-points'), tokens.getAttribute('data-owner-name'));
+          adjustOwnerPoints(points.getAttribute('data-owner-points'), points.getAttribute('data-owner-name'));
           return;
         }
         var rename = event.target.closest('[data-owner-rename]');
