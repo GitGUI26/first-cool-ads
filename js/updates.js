@@ -6,10 +6,10 @@
     var updates = [
         {
             date: '2026-11-19',
-            title: 'Accounts and chat carry to a new domain',
+            title: 'One sign-in across every domain',
             items: [
-                'Accounts, chat, history and saved profile data live on the server, so every address that serves this site shows the same thing.',
-                'Account settings can now make a one-time sign-in link for a new domain; it signs the account in there and expires after 10 minutes.'
+                'Account settings can now share a sign-in with another address of the site, and both addresses stay signed in.',
+                'The site server refreshes the session for every domain, so a share link keeps working instead of signing the other address out.'
             ]
         },
         {

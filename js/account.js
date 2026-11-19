@@ -1320,36 +1320,36 @@
     if (currentUser()) loadPoints(true);
   }
 
-  function setupCarry() {
-    var button = $('carryCreate');
-    var target = $('carryTarget');
+  function setupShare() {
+    var button = $('shareCreate');
+    var target = $('shareTarget');
     if (!button || !target) return;
-    var error = $('carryError');
-    var result = $('carryResult');
-    var link = $('carryLink');
+    var error = $('shareError');
+    var result = $('shareResult');
+    var link = $('shareLink');
 
-    function clearCarry() {
+    function clearShare() {
       if (error) { error.textContent = ''; error.hidden = true; }
       if (result) result.hidden = true;
     }
 
     button.addEventListener('click', async function () {
-      clearCarry();
+      clearShare();
       var store = window.CoolAccountStore;
-      if (!store || typeof store.createCarryLink !== 'function') return;
+      if (!store || typeof store.createShareLink !== 'function') return;
       button.disabled = true;
-      var outcome = await store.createCarryLink(target.value);
+      var outcome = await store.createShareLink(target.value);
       button.disabled = false;
       if (!outcome || !outcome.ok) {
-        if (error) { error.textContent = (outcome && outcome.error) || 'Could not create a sign-in link.'; error.hidden = false; }
+        if (error) { error.textContent = (outcome && outcome.error) || 'Could not create a share link.'; error.hidden = false; }
         return;
       }
       if (link) link.value = outcome.link;
       if (result) result.hidden = false;
-      showToast('Sign-in link ready. It works once and expires in 10 minutes.');
+      showToast('Share link ready. Open it on the other address.');
     });
 
-    var copy = $('carryCopy');
+    var copy = $('shareCopy');
     if (copy) copy.addEventListener('click', function () {
       if (!link || !link.value) return;
       try { link.select(); } catch (e) {}
@@ -1364,21 +1364,21 @@
       }
     });
 
-    var carried = window.__coolCarryResult;
-    if (carried) {
-      window.__coolCarryResult = null;
-      if (carried.ok) showToast('Signed in from your other address.');
-      else if (carried.error) showToast(carried.error);
+    var shared = window.__coolShareResult;
+    if (shared) {
+      window.__coolShareResult = null;
+      if (shared.ok) showToast('Signed in from your other address.');
+      else if (shared.error) showToast(shared.error);
     }
   }
 
-  window.addEventListener('cool-carry', function (event) {
+  window.addEventListener('cool-share', function (event) {
     var detail = event.detail || {};
     if (detail.ok) showToast('Signed in from your other address.');
     else if (detail.error) showToast(detail.error);
   });
 
-  setupCarry();
+  setupShare();
 
   window.openAccount = function () {
     openAccount();

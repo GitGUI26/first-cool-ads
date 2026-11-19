@@ -1545,10 +1545,16 @@
       pushProfileNow(user);
     }
     clearSession();
+    var shared = readShareCode();
     var auth = authClient();
     if (auth) {
-      try { Promise.resolve(auth.auth.signOut()).catch(function () {}); } catch (error) {}
+      try {
+        Promise.resolve(shared ? auth.auth.signOut({ scope: 'local' }) : auth.auth.signOut()).catch(function () {});
+      } catch (error) {}
     }
+    // Signing out here must not sign the account out of the other domains that
+    // use the same share, so only this device drops the key.
+    if (shared) writeShareCode('');
     applyGuestPreferences();
     emitChange('signout');
   }
@@ -1677,18 +1683,42 @@
     }
   }
 
-  // Creates a one-time link that signs this account in on another domain. The
-  // account, chat and profile data already live on the server, so the session is
-  // the only thing that has to move.
-  async function createCarryLink(target) {
+  // A share keeps one account signed in on several domains. The Worker owns the
+  // refresh token, so only it ever rotates it; every domain asks the Worker for
+  // the current access token instead of refreshing on its own and invalidating
+  // the others.
+  var SHARE_CODE_KEY = 'cuh_share_v1';
+  var shareSyncedAt = 0;
+  var shareTimer = 0;
+  var shareBound = false;
+
+  function readShareCode() {
+    try { return String(localStorage.getItem(SHARE_CODE_KEY) || ''); } catch (error) { return ''; }
+  }
+
+  function writeShareCode(code) {
+    try {
+      if (code) localStorage.setItem(SHARE_CODE_KEY, String(code).toUpperCase());
+      else localStorage.removeItem(SHARE_CODE_KEY);
+    } catch (error) {}
+  }
+
+  function stopClientRefresh() {
+    var auth = authClient();
+    try {
+      if (auth && auth.auth && typeof auth.auth.stopAutoRefresh === 'function') auth.auth.stopAutoRefresh();
+    } catch (error) {}
+  }
+
+  async function createShareLink(target) {
     var auth = authClient();
     var user = getCurrentUser();
     if (!auth || !user || isLocalUser(user)) {
       return { ok: false, error: 'Sign in with an online account first.' };
     }
     var site = siteOrigin(target);
-    if (!site) return { ok: false, error: 'Enter the new site address, like new-site.example.com.' };
-    if (site === location.origin) return { ok: false, error: 'That is this site. Enter the address you are moving to.' };
+    if (!site) return { ok: false, error: 'Enter the other site address, like new-site.example.com.' };
+    if (site === location.origin) return { ok: false, error: 'That is this site. Enter the address you want to share with.' };
     var session = null;
     try {
       var current = await auth.auth.getSession();
@@ -1700,64 +1730,104 @@
     var response = null;
     var payload = null;
     try {
-      response = await fetch(location.origin + '/api/session/carry', {
+      response = await fetch(location.origin + '/api/session/share', {
         method: 'POST',
         headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token },
-        body: JSON.stringify({ refresh_token: session.refresh_token })
+        body: JSON.stringify({
+          access_token: session.access_token,
+          refresh_token: session.refresh_token,
+          expires_at: session.expires_at
+        })
       });
       payload = await response.json();
     } catch (error) {
       return { ok: false, error: 'Could not reach the site server. Check your connection and try again.' };
     }
     if (!response.ok || !payload || !payload.code) {
-      return { ok: false, error: (payload && payload.error) || 'Could not create a sign-in link.' };
+      return { ok: false, error: (payload && payload.error) || 'Could not create a share link.' };
     }
-    return { ok: true, code: payload.code, link: site + '/#carry=' + payload.code };
+    // This device switches to the shared session too, so both sides stay valid.
+    writeShareCode(payload.code);
+    stopClientRefresh();
+    scheduleShareSync();
+    return { ok: true, code: payload.code, link: site + '/#share=' + payload.code };
   }
 
-  async function redeemCarry(code) {
+  async function syncSharedSession(reason) {
+    var code = readShareCode();
     var auth = authClient();
-    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
-    var clean = String(code || '').trim().toUpperCase();
-    if (!/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(clean)) {
-      return { ok: false, error: 'That sign-in link is not valid.' };
-    }
+    if (!code || !auth) return { ok: false, error: 'No shared sign-in is active here.' };
     var response = null;
     var payload = null;
     try {
-      response = await fetch(location.origin + '/api/session/redeem', {
+      response = await fetch(location.origin + '/api/session/open', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ code: clean })
+        body: JSON.stringify({ code: code })
       });
       payload = await response.json();
     } catch (error) {
-      return { ok: false, error: 'Could not reach the site server. Check your connection and try again.' };
+      return { ok: false, error: 'Could not reach the site server. Check your connection.' };
     }
-    if (!response.ok || !payload || !payload.refresh_token) {
-      return { ok: false, error: (payload && payload.error) || 'That sign-in link is not valid any more.' };
+    if (!response.ok || !payload || !payload.access_token) {
+      if (response && (response.status === 401 || response.status === 404)) {
+        writeShareCode('');
+        clearSession();
+        applyGuestPreferences();
+        emitChange('signout');
+      }
+      return { ok: false, error: (payload && payload.error) || 'That shared sign-in is not valid any more.' };
     }
+    shareSyncedAt = Date.now();
     var result = null;
     try {
-      result = await auth.auth.refreshSession({ refresh_token: payload.refresh_token });
+      result = await auth.auth.setSession({
+        access_token: payload.access_token,
+        refresh_token: payload.refresh_token
+      });
     } catch (error) {
       return { ok: false, error: friendlyAuthError(error) };
     }
     if (!result || result.error) return { ok: false, error: friendlyAuthError(result && result.error) };
+    stopClientRefresh();
     var authUser = result.data && result.data.user ? result.data.user : null;
-    if (authUser) await adoptSession(authUser, 'signin');
-    var signedIn = getCurrentUser();
-    return signedIn ? { ok: true, user: signedIn } : { ok: false, error: 'That account could not be restored.' };
+    var known = getCurrentUser();
+    if (authUser && (!known || known.id !== authUser.id)) {
+      await adoptSession(authUser, reason === 'link' ? 'signin' : 'restore');
+    }
+    return { ok: true, user: getCurrentUser() };
   }
 
-  function redeemCarryFromUrl() {
-    var match = /(?:^|[#&])carry=([A-Za-z0-9-]{4,40})/.exec(location.hash || '');
-    if (!match) return;
-    try { history.replaceState(null, '', location.pathname + location.search); } catch (error) {}
-    redeemCarry(match[1]).then(function (outcome) {
-      window.__coolCarryResult = outcome;
-      try { window.dispatchEvent(new CustomEvent('cool-carry', { detail: outcome })); } catch (error) {}
-      if (outcome && outcome.ok) emitChange('signin');
+  function scheduleShareSync() {
+    if (!shareTimer) {
+      shareTimer = window.setInterval(function () {
+        if (document.hidden || !readShareCode()) return;
+        syncSharedSession('poll').catch(function () {});
+      }, 20 * 60 * 1000);
+    }
+    if (!shareBound) {
+      shareBound = true;
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden || !readShareCode()) return;
+        if (Date.now() - shareSyncedAt < 10 * 60 * 1000) return;
+        syncSharedSession('visible').catch(function () {});
+      });
+    }
+  }
+
+  function applyShareFromUrl() {
+    var match = /(?:^|[#&])share=([A-Za-z0-9-]{4,40})/.exec(location.hash || '');
+    if (match) {
+      writeShareCode(match[1]);
+      try { history.replaceState(null, '', location.pathname + location.search); } catch (error) {}
+    }
+    if (!readShareCode()) return;
+    stopClientRefresh();
+    scheduleShareSync();
+    syncSharedSession(match ? 'link' : 'boot').then(function (outcome) {
+      window.__coolShareResult = outcome;
+      try { window.dispatchEvent(new CustomEvent('cool-share', { detail: outcome })); } catch (error) {}
+      if (outcome && outcome.ok && match) emitChange('signin');
     }).catch(function () {});
   }
 
@@ -1796,8 +1866,9 @@
     adminDeleteAccount: adminDeleteAccount,
     adminDeleteMessage: adminDeleteMessage,
     isCloudConfigured: isCloudConfigured,
-    createCarryLink: createCarryLink,
-    redeemCarry: redeemCarry,
+    createShareLink: createShareLink,
+    syncSharedSession: syncSharedSession,
+    shareCode: readShareCode,
     getAccessToken: getAccessToken,
     syncNow: syncNow,
     getGameProgress: getGameProgress,
@@ -1822,5 +1893,5 @@
   } catch (error) {}
 
   try { authClient(); } catch (error) {}
-  try { redeemCarryFromUrl(); } catch (error) {}
+  try { applyShareFromUrl(); } catch (error) {}
 })();

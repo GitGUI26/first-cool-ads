@@ -41,20 +41,24 @@ Signed-in users get an Account settings panel for their username, profile pictur
 
 Signed-in users can permanently delete their account from Account settings. Deletion removes the Supabase auth user, synced profile, posted room and direct chat messages, notifications, friendships, friend requests, the chat directory entry, saved history, sites, app handles, game progress, and the local session. The Worker purges the user's chat data before the auth deletion; if that purge fails, the account is not deleted. There is no undo.
 
-### Moving to a new domain
+### Sharing a sign-in across domains
 
 Accounts, chat messages, notifications, friendships, browsing history, saved sites, app handles, preferences, avatars and
 game progress all live on the server (Supabase plus the chat Durable Object), so any domain that serves this Worker shows
-the same data. The only per-origin piece is the signed-in session, because browsers keep it in that origin's storage.
+the same data. The only per-origin piece is the session, because browsers keep it in that origin's storage.
 
-Account settings has **Move this sign-in to another domain**. It posts the session's refresh token to
-`POST /api/session/carry`, which verifies the account and stores the token in the `SESSION_HANDOFF` Durable Object
-behind a one-time code that expires after 10 minutes. The link it produces (`https://new-site/#carry=CODE`) calls
-`POST /api/session/redeem`, receives the refresh token once, and mints a fresh session on the new origin. Codes are
-deleted on first use; once the new origin refreshes, the old origin's copy stops working, so treat it as moving rather
-than sharing.
+Account settings has **Share this sign-in with another domain**. It stores the session in the `SESSION_HANDOFF` Durable
+Object behind a reusable code and returns `https://other-site/#share=CODE`. Any address that opens that link (or simply
+loads with the code remembered) is signed in to the same account, and the address that created it stays signed in.
 
-Chat history is shared only when the new domain serves this same Worker (a custom domain or route). A separate Worker
+The share works because the Worker is the only client that refreshes: Supabase rotates refresh tokens on use, so two
+domains refreshing the same token would sign each other out. Instead, `POST /api/session/open` returns the current
+access token to every domain, refreshing centrally inside the Durable Object when it is within two minutes of expiry.
+Each domain runs with `autoRefreshToken` disabled once it is sharing and re-syncs from the Worker every 20 minutes and
+when the tab becomes visible again. Signing out on one address only clears that address; the others keep their session.
+Share codes are cleaned up after 30 idle days.
+
+Chat history is shared only when the other domain serves this same Worker (a custom domain or route). A separate Worker
 deployment has its own Durable Object and therefore its own chat room.
 
 ### Chat

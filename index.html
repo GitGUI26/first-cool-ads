@@ -998,15 +998,15 @@
               </form>
             </section>
             <section class="account-card account-card-wide">
-              <div class="account-card-head"><div><h4>Move this sign-in to another domain</h4><p>Accounts, chat, history and saved profile data live on the server already. This makes a one-time link that signs this account in on a new address; it expires in 10 minutes.</p></div></div>
+              <div class="account-card-head"><div><h4>Share this sign-in with another domain</h4><p>Makes a link that keeps this account signed in on another address of the site. This address stays signed in too, and both read the same session.</p></div></div>
               <div class="account-inline-form">
-                <input id="carryTarget" type="text" inputmode="url" placeholder="new-site.example.com" aria-label="New site address">
-                <button class="account-primary" id="carryCreate" type="button">Create link</button>
+                <input id="shareTarget" type="text" inputmode="url" placeholder="new-site.example.com" aria-label="Other site address">
+                <button class="account-primary" id="shareCreate" type="button">Create share link</button>
               </div>
-              <div class="account-error" id="carryError" role="alert" hidden></div>
-              <div class="account-inline-form" id="carryResult" hidden>
-                <input id="carryLink" type="text" readonly aria-label="Sign-in link">
-                <button class="account-secondary" id="carryCopy" type="button">Copy</button>
+              <div class="account-error" id="shareError" role="alert" hidden></div>
+              <div class="account-inline-form" id="shareResult" hidden>
+                <input id="shareLink" type="text" readonly aria-label="Share link">
+                <button class="account-secondary" id="shareCopy" type="button">Copy</button>
               </div>
             </section>
             <section class="account-card">
@@ -1061,12 +1061,12 @@
   <div class="account-toast" id="accountToast" role="status" hidden></div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=3"></script>
-  <script src="js/account-store.js?v=25"></script>
+  <script src="js/account-store.js?v=26"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=26"></script>
   <script src="js/main.js?v=38"></script>
-  <script src="js/updates.js?v=68"></script>
-  <script src="js/account.js?v=29"></script>
+  <script src="js/updates.js?v=69"></script>
+  <script src="js/account.js?v=30"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=14"></script>
   <script src="js/emulators.js?v=5"></script>

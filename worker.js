@@ -1470,10 +1470,12 @@ async function handleRomRequest(request, env, ctx) {
   return response;
 }
 
-// One-time, short-lived handoff so a signed-in account can move to another
-// domain. Only the refresh token is stored, and it is destroyed on first use.
-const SESSION_CARRY_TTL = 10 * 60 * 1000;
+// A share link lets one account stay signed in on several domains at once.
+// The Worker is the only place that refreshes the Supabase session, so the
+// rotating refresh token never gets used twice; every domain asks here for the
+// current access token instead of refreshing on its own.
 const SESSION_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+const SESSION_SHARE_IDLE = 30 * 24 * 60 * 60 * 1000;
 
 function sessionHandoffCode() {
   const bytes = crypto.getRandomValues(new Uint8Array(12));
@@ -1483,8 +1485,30 @@ function sessionHandoffCode() {
 }
 
 export class SessionHandoff {
-  constructor(state) {
+  constructor(state, env) {
     this.state = state;
+    this.env = env;
+  }
+
+  async refresh(record) {
+    const supabaseUrl = String(this.env.SUPABASE_URL || DEFAULT_SUPABASE_URL).replace(/\/+$/, '');
+    const anonKey = String(this.env.SUPABASE_ANON_KEY || DEFAULT_SUPABASE_ANON_KEY);
+    let response;
+    try {
+      response = await fetch(supabaseUrl + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST',
+        headers: { apikey: anonKey, 'content-type': 'application/json' },
+        body: JSON.stringify({ refresh_token: record.refresh_token })
+      });
+    } catch (error) {
+      return null;
+    }
+    if (!response.ok) return null;
+    let data = null;
+    try { data = await response.json(); } catch (error) { return null; }
+    if (!data || !data.access_token || !data.refresh_token) return null;
+    const expiresAt = Number(data.expires_at) || Math.floor(Date.now() / 1000) + Number(data.expires_in || 3600);
+    return { refresh_token: data.refresh_token, access_token: data.access_token, expires_at: expiresAt, at: Date.now() };
   }
 
   async fetch(request) {
@@ -1492,34 +1516,44 @@ export class SessionHandoff {
     if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
     let body = {};
     try { body = await request.json(); } catch (error) {}
+    const code = String(body.code || '').toUpperCase();
+    const key = 'share:' + code;
 
-    if (pathname === '/put') {
-      const code = String(body.code || '').toUpperCase();
+    if (pathname === '/share-put') {
       const refresh = String(body.refresh_token || '');
-      if (!code || !refresh || refresh.length < 10 || refresh.length > 4000) {
+      const access = String(body.access_token || '');
+      const expires = Number(body.expires_at) || 0;
+      if (!code || !refresh || refresh.length > 4000 || !access || access.length > 8000) {
         return json({ error: 'Bad request.' }, 400);
       }
-      // Drop anything that was created and never used so storage cannot grow.
       try {
-        const stored = await this.state.storage.list({ prefix: 'code:' });
-        for (const [key, value] of stored) {
-          if (!value || !value.at || Date.now() - value.at > SESSION_CARRY_TTL) await this.state.storage.delete(key);
+        const stored = await this.state.storage.list({ prefix: 'share:' });
+        for (const [name, value] of stored) {
+          if (!value || !value.at || Date.now() - value.at > SESSION_SHARE_IDLE) await this.state.storage.delete(name);
         }
       } catch (error) {}
-      await this.state.storage.put('code:' + code, { refresh_token: refresh, at: Date.now() });
+      await this.state.storage.put(key, { refresh_token: refresh, access_token: access, expires_at: expires, at: Date.now() });
       return json({ ok: true });
     }
 
-    if (pathname === '/take') {
-      const code = String(body.code || '').toUpperCase();
-      const key = 'code:' + code;
+    if (pathname === '/share-get') {
       const record = await this.state.storage.get(key);
-      if (!record) return json({ error: 'That sign-in link was already used or has expired.' }, 404);
-      await this.state.storage.delete(key);
-      if (!record.at || Date.now() - record.at > SESSION_CARRY_TTL) {
-        return json({ error: 'That sign-in link has expired. Create a new one.' }, 410);
+      if (!record) return json({ error: 'That share link is no longer valid. Create a new one.' }, 404);
+      if (!record.expires_at || record.expires_at - 120 < Math.floor(Date.now() / 1000)) {
+        const fresh = await this.refresh(record);
+        if (!fresh) {
+          await this.state.storage.delete(key);
+          return json({ error: 'That shared sign-in has expired. Sign in again and share it.' }, 401);
+        }
+        await this.state.storage.put(key, fresh);
+        return json({ access_token: fresh.access_token, refresh_token: fresh.refresh_token, expires_at: fresh.expires_at });
       }
-      return json({ refresh_token: record.refresh_token });
+      return json({ access_token: record.access_token, refresh_token: record.refresh_token, expires_at: record.expires_at });
+    }
+
+    if (pathname === '/share-drop') {
+      await this.state.storage.delete(key);
+      return json({ ok: true });
     }
 
     return json({ error: 'Not found.' }, 404);
@@ -1576,51 +1610,67 @@ export default {
       return response;
     }
 
-    if (pathname === '/api/session/carry') {
+    if (pathname === '/api/session/share') {
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
       if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
-      if (!env.SESSION_HANDOFF) return json({ error: 'Sign-in handoff is not configured.' }, 503);
+      if (!env.SESSION_HANDOFF) return json({ error: 'Sharing a sign-in is not configured.' }, 503);
       const user = await verifySupabaseUser(request, env);
       if (!user) return json({ error: 'Sign in with an online account first.' }, 401);
       let body = {};
       try { body = await request.json(); } catch (error) {}
       const refresh = String(body.refresh_token || '');
-      if (!refresh || refresh.length < 10 || refresh.length > 4000) {
-        return json({ error: 'That session cannot be handed off.' }, 400);
+      const access = String(body.access_token || '');
+      if (!refresh || refresh.length < 10 || refresh.length > 4000 || !access || access.length > 8000) {
+        return json({ error: 'That session cannot be shared.' }, 400);
       }
       const code = sessionHandoffCode();
       const stub = env.SESSION_HANDOFF.get(env.SESSION_HANDOFF.idFromName('global'));
-      const stored = await stub.fetch('https://session-handoff/put', {
+      const stored = await stub.fetch('https://session-handoff/share-put', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ code: code, refresh_token: refresh })
+        body: JSON.stringify({ code: code, access_token: access, refresh_token: refresh, expires_at: Number(body.expires_at) || 0 })
       });
-      if (!stored.ok) return json({ error: 'Could not create a sign-in link.' }, 502);
-      return json({ code: code, expiresIn: SESSION_CARRY_TTL / 1000 });
+      if (!stored.ok) return json({ error: 'Could not create a share link.' }, 502);
+      return json({ code: code });
     }
 
-    if (pathname === '/api/session/redeem') {
+    if (pathname === '/api/session/open') {
       if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
       if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
-      if (!env.SESSION_HANDOFF) return json({ error: 'Sign-in handoff is not configured.' }, 503);
+      if (!env.SESSION_HANDOFF) return json({ error: 'Sharing a sign-in is not configured.' }, 503);
       let body = {};
       try { body = await request.json(); } catch (error) {}
       const code = String(body.code || '').toUpperCase();
       if (!/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code)) {
-        return json({ error: 'That sign-in link is not valid.' }, 400);
+        return json({ error: 'That share link is not valid.' }, 400);
       }
       const stub = env.SESSION_HANDOFF.get(env.SESSION_HANDOFF.idFromName('global'));
-      const taken = await stub.fetch('https://session-handoff/take', {
+      const opened = await stub.fetch('https://session-handoff/share-get', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ code: code })
       });
       let payload = null;
-      try { payload = await taken.json(); } catch (error) {}
-      if (!taken.ok || !payload || !payload.refresh_token) {
-        return json({ error: (payload && payload.error) || 'That sign-in link is not valid any more.' }, taken.status === 200 ? 502 : taken.status);
+      try { payload = await opened.json(); } catch (error) {}
+      if (!opened.ok || !payload || !payload.access_token) {
+        return json({ error: (payload && payload.error) || 'That share link is not valid any more.' }, opened.status === 200 ? 502 : opened.status);
       }
-      return json({ refresh_token: payload.refresh_token });
+      return json({ access_token: payload.access_token, refresh_token: payload.refresh_token, expires_at: payload.expires_at });
+    }
+
+    if (pathname === '/api/session/close') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (!env.SESSION_HANDOFF) return json({ error: 'Sharing a sign-in is not configured.' }, 503);
+      let body = {};
+      try { body = await request.json(); } catch (error) {}
+      const stub = env.SESSION_HANDOFF.get(env.SESSION_HANDOFF.idFromName('global'));
+      await stub.fetch('https://session-handoff/share-drop', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code: String(body.code || '') })
+      });
+      return json({ ok: true });
     }
 
     if (pathname === '/api/chat/health') {
