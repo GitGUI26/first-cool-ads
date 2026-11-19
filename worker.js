@@ -1,4 +1,4 @@
-import proxy from './proxy/index.js';
+import bare from './proxy/bare.js';
 
 const DEFAULT_SUPABASE_URL = 'https://wpefdqygzqoipbsborqk.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY = 'sb_publishable_IJ6zRJBgC7HLhcFCLpZn9g_rKEl2npg';
@@ -1701,8 +1701,8 @@ export default {
       return room.fetch(new Request(request, { headers }));
     }
 
-    if (pathname === '/p' || pathname.startsWith('/p/')) {
-      return proxy.fetch(request, env, ctx);
+    if (pathname === '/bare' || pathname.startsWith('/bare/')) {
+      return bare.fetch(request, env, ctx);
     }
     if (pathname === '/' || pathname.endsWith('/')) {
       const target = new URL(request.url);

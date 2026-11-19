@@ -1,29 +1,27 @@
 # Site + private browser
 
 ## Run it
-    python3 -m http.server 8300  # static site; the BROWSER tab falls back to Render
-    # open http://localhost:8300
+    npx wrangler dev        # whole site, including the browser's /bare/ endpoint
+    # open http://localhost:8787
 
-Or run the Node server for a self-hosted local proxy:
-    node server.js            # Node 18+, no npm install needed
-    # open http://localhost:8080; the browser uses this same origin automatically
+A plain static server can render the site, but the BROWSER tab needs the Worker: the proxy engine asks `/bare/` on the
+same origin for every page it fetches, and a static host has no such endpoint.
 
-Optional: `PROXY_KEY=somesecret node server.js` makes the local proxy ask for a key. `PORT=3000` changes its port.
+## Browser (Ultraviolet)
 
-Hosting: the BROWSER tab sends proxy traffic to whatever origin served the page (`/p/...` on the same host), then to
-any relay origins configured in the **Proxy network** panel or `PROXY_RELAYS`. No relay is hard-coded: the previous
-Render mirror was suspended by its host, and a dead default is worse than none. If the site has no `/p` endpoint and no
-relay answers, the browser says so instead of silently failing.
+The BROWSER tab runs [Ultraviolet](https://github.com/titaniumnetwork-dev/Ultraviolet), the proxy engine from the
+Zaluea project, in place of the old `/p/` page rewriter. `browser/index.html` registers a service worker scoped to
+`/browser/service/`, and every request the browser makes under that prefix is fetched by `/bare/` (`proxy/bare.js`)
+and rewritten by Ultraviolet before it reaches the frame. `browser/uv/` holds the Ultraviolet build from Zaluea; the
+only edit is the two `importScripts` paths in `uv.sw.js`, pointed at `/browser/uv/`.
 
-## Optional: deploy a Node relay
+What it does: pages are fetched by this Worker, so sites see Cloudflare's address instead of the visitor's; the target
+origin is encoded into the path rather than shown; loopback and private hosts are refused; response bodies, cookies,
+redirects and WebSocket frames are tunnelled back through `/bare/`.
 
-A relay gives the proxy a second network identity, which is the only thing that clears a site blocking Cloudflare's
-egress. Any Node host works (Render, Fly, Koyeb, Railway, a VPS); `render.yaml` is a ready Render blueprint, and
-`server.js` exposes the relay protocol at `GET /p/raw?u=<url>`.
-1. Push this folder to GitHub.
-2. render.com -> New -> Blueprint (it reads `render.yaml`) or New -> Web Service (Runtime Node, Start Command `node server.js`, Free plan).
-3. Set the `PROXY_KEY` environment variable (the blueprint generates one; find it under Environment). Visitors to the BROWSER tab are asked for it once.
-Free instances sleep after ~15 min idle, so the first load can take about a minute.
+What it does not do: it is not a VPN. A site that blocks Cloudflare's egress, or a device that cannot reach this site,
+still fails, and sites that fingerprint browsers or demand a captcha will not work. Only the browser's own scope is
+proxied; the rest of the site is served unchanged.
 
 ## Accounts (Supabase)
 
@@ -107,41 +105,15 @@ The UPDATES tab is generated from `js/updates.js`. Every change to the site adds
 Duplicates are detected by normalized title and by identical file contents, against your existing games and
 within the new ones. Re-running is safe.
 
-## What the proxy does / doesn't do
-Does: sites see the proxy server's network instead of your device; target URLs are base64url-encoded in `/p/<target>`
-so hostnames do not appear in the browser's URL bar or request path; cookies + referrers are stripped; private/local
-addresses are blocked.
+## The bare endpoint
 
-Doesn't: make the proxy host reachable when the network blocks the site or proxy domain. A proxy is not a VPN: a VPN
-changes the network your device sits on, while this proxy only changes the network the page is fetched from, and the
-browser must still be able to reach the proxy. Nothing inside this repo can move a device onto another network, and a
-Cloudflare Worker cannot choose its own egress IP.
+`/bare/` is the only network-facing part of the browser. It accepts the Bare v1 request headers, refuses loopback and
+private addresses, strips hop-by-hop headers, and returns the upstream status, headers and body so Ultraviolet can
+rewrite them. `GET /bare/` answers with a small version banner and is what the browser uses as a health check.
+WebSocket upgrades on the same path are tunnelled frame by frame.
 
-### Route ladder
-
-Every page request walks a ladder and stops at the first route that returns a real page (`proxy/index.js`):
-
-1. **Direct** — the Worker fetches the site itself, with a browser profile and a no-cache request. Most sites answer here.
-2. **Relay** — if the site answers with a block page or 401/403/407/429/451/503, the same URL is fetched through every
-   origin listed in the `PROXY_RELAYS` variable (comma-separated), using its `GET /p/raw?u=<url>` endpoint. A relay is a
-   different machine on a different network, which is what clears an IP-level block. `server.js` speaks this protocol;
-   deploy it on Render, Fly, Koyeb, Railway or any Node host and put its origin in `PROXY_RELAYS`, e.g.
-   `npx wrangler deploy --var PROXY_RELAYS:"https://relay-a.example.com,https://relay-b.example.com"`.
-3. **Reader** — if no relay answers, the page is fetched through a text-only gateway and rendered as readable text with a
-   banner, so a block page never replaces the content. `/p/reader/<encoded-url>` opens that view directly, and
-   `/p/diag` lists the configured routes.
-
-Sites that fingerprint browsers or demand a captcha (Cloudflare's "Just a moment", Google sign-in) cannot be solved at
-this layer; they need the relay from step 2. Heavy apps (YouTube playback, Google login, anything that builds URLs in
-complex JS) may still not work. For better compatibility swap in Ultraviolet or Scramjet on the same proxy.
-
-### Relays in the browser UI
-
-The BROWSER tab's **Proxy network** panel accepts one or more relay origins, comma-separated, or `?relay=` in the URL.
-Routes are health-checked before use, tried in order, and skipped when they stop answering, so a suspended relay no
-longer breaks the browser. The old Render mirror is gone (the service was suspended), so no relay is hard-coded —
-without `PROXY_RELAYS` a blocked site falls through to the reader view. Whoever runs a relay can see the traffic that
-passes through it.
+Because the Worker is the client, the site being browsed sees Cloudflare's egress rather than the visitor's. Whoever
+runs this site can see the traffic that passes through the proxy; it is a convenience feature, not an anonymity tool.
 
 ## Ads
 

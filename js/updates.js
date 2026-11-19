@@ -5,6 +5,15 @@
     // Dates are ISO (YYYY-MM-DD); entries are rendered newest first.
     var updates = [
         {
+            date: '2026-11-19',
+            title: 'New browser, built on Ultraviolet',
+            items: [
+                'The BROWSER tab now runs the Ultraviolet proxy engine, so pages are rewritten by a service worker instead of the old page rewriter.',
+                'The address bar, back, forward and reload buttons in the site overlay drive the new browser.',
+                'Proxy traffic now goes to /bare/ on this site; the old /p/ routes and the Render relay are gone.'
+            ]
+        },
+        {
             date: '2026-11-17',
             title: 'Dice A Million hidden while its build is offline',
             items: [

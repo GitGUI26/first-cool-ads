@@ -6,14 +6,11 @@
     "directory": ".",
     "binding": "ASSETS",
     "html_handling": "none",
-    "run_worker_first": ["/p", "/p/*", "/api", "/api/*"]
+    "run_worker_first": ["/bare", "/bare/*", "/api", "/api/*"]
   },
   "vars": {
     "SUPABASE_URL": "https://wpefdqygzqoipbsborqk.supabase.co",
-    "SUPABASE_ANON_KEY": "sb_publishable_IJ6zRJBgC7HLhcFCLpZn9g_rKEl2npg",
-    // Comma-separated relay origins tried when a site blocks Cloudflare's
-    // egress. Each one must expose GET /p/raw?u=<url>, which server.js does.
-    "PROXY_RELAYS": ""
+    "SUPABASE_ANON_KEY": "sb_publishable_IJ6zRJBgC7HLhcFCLpZn9g_rKEl2npg"
   },
   "durable_objects": {
     "bindings": [
