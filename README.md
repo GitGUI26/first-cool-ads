@@ -41,6 +41,22 @@ Signed-in users get an Account settings panel for their username, profile pictur
 
 Signed-in users can permanently delete their account from Account settings. Deletion removes the Supabase auth user, synced profile, posted room and direct chat messages, notifications, friendships, friend requests, the chat directory entry, saved history, sites, app handles, game progress, and the local session. The Worker purges the user's chat data before the auth deletion; if that purge fails, the account is not deleted. There is no undo.
 
+### Moving to a new domain
+
+Accounts, chat messages, notifications, friendships, browsing history, saved sites, app handles, preferences, avatars and
+game progress all live on the server (Supabase plus the chat Durable Object), so any domain that serves this Worker shows
+the same data. The only per-origin piece is the signed-in session, because browsers keep it in that origin's storage.
+
+Account settings has **Move this sign-in to another domain**. It posts the session's refresh token to
+`POST /api/session/carry`, which verifies the account and stores the token in the `SESSION_HANDOFF` Durable Object
+behind a one-time code that expires after 10 minutes. The link it produces (`https://new-site/#carry=CODE`) calls
+`POST /api/session/redeem`, receives the refresh token once, and mints a fresh session on the new origin. Codes are
+deleted on first use; once the new origin refreshes, the old origin's copy stops working, so treat it as moving rather
+than sharing.
+
+Chat history is shared only when the new domain serves this same Worker (a custom domain or route). A separate Worker
+deployment has its own Durable Object and therefore its own chat room.
+
 ### Chat
 
 CHAT is one shared room for the whole site. It uses a Cloudflare Durable Object named `global` and requires a

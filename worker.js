@@ -1470,6 +1470,62 @@ async function handleRomRequest(request, env, ctx) {
   return response;
 }
 
+// One-time, short-lived handoff so a signed-in account can move to another
+// domain. Only the refresh token is stored, and it is destroyed on first use.
+const SESSION_CARRY_TTL = 10 * 60 * 1000;
+const SESSION_CODE_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+
+function sessionHandoffCode() {
+  const bytes = crypto.getRandomValues(new Uint8Array(12));
+  let code = '';
+  for (let i = 0; i < bytes.length; i += 1) code += SESSION_CODE_ALPHABET[bytes[i] % SESSION_CODE_ALPHABET.length];
+  return code.slice(0, 4) + '-' + code.slice(4, 8) + '-' + code.slice(8, 12);
+}
+
+export class SessionHandoff {
+  constructor(state) {
+    this.state = state;
+  }
+
+  async fetch(request) {
+    const { pathname } = new URL(request.url);
+    if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+    let body = {};
+    try { body = await request.json(); } catch (error) {}
+
+    if (pathname === '/put') {
+      const code = String(body.code || '').toUpperCase();
+      const refresh = String(body.refresh_token || '');
+      if (!code || !refresh || refresh.length < 10 || refresh.length > 4000) {
+        return json({ error: 'Bad request.' }, 400);
+      }
+      // Drop anything that was created and never used so storage cannot grow.
+      try {
+        const stored = await this.state.storage.list({ prefix: 'code:' });
+        for (const [key, value] of stored) {
+          if (!value || !value.at || Date.now() - value.at > SESSION_CARRY_TTL) await this.state.storage.delete(key);
+        }
+      } catch (error) {}
+      await this.state.storage.put('code:' + code, { refresh_token: refresh, at: Date.now() });
+      return json({ ok: true });
+    }
+
+    if (pathname === '/take') {
+      const code = String(body.code || '').toUpperCase();
+      const key = 'code:' + code;
+      const record = await this.state.storage.get(key);
+      if (!record) return json({ error: 'That sign-in link was already used or has expired.' }, 404);
+      await this.state.storage.delete(key);
+      if (!record.at || Date.now() - record.at > SESSION_CARRY_TTL) {
+        return json({ error: 'That sign-in link has expired. Create a new one.' }, 410);
+      }
+      return json({ refresh_token: record.refresh_token });
+    }
+
+    return json({ error: 'Not found.' }, 404);
+  }
+}
+
 export default {
   async fetch(request, env, ctx) {
     const { pathname } = new URL(request.url);
@@ -1518,6 +1574,53 @@ export default {
         ctx.waitUntil(cache.put(cacheKey, response.clone()).catch(function () {}));
       }
       return response;
+    }
+
+    if (pathname === '/api/session/carry') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (!env.SESSION_HANDOFF) return json({ error: 'Sign-in handoff is not configured.' }, 503);
+      const user = await verifySupabaseUser(request, env);
+      if (!user) return json({ error: 'Sign in with an online account first.' }, 401);
+      let body = {};
+      try { body = await request.json(); } catch (error) {}
+      const refresh = String(body.refresh_token || '');
+      if (!refresh || refresh.length < 10 || refresh.length > 4000) {
+        return json({ error: 'That session cannot be handed off.' }, 400);
+      }
+      const code = sessionHandoffCode();
+      const stub = env.SESSION_HANDOFF.get(env.SESSION_HANDOFF.idFromName('global'));
+      const stored = await stub.fetch('https://session-handoff/put', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code: code, refresh_token: refresh })
+      });
+      if (!stored.ok) return json({ error: 'Could not create a sign-in link.' }, 502);
+      return json({ code: code, expiresIn: SESSION_CARRY_TTL / 1000 });
+    }
+
+    if (pathname === '/api/session/redeem') {
+      if (request.method !== 'POST') return json({ error: 'Method not allowed.' }, 405);
+      if (!sameOrigin(request)) return json({ error: 'Origin not allowed.' }, 403);
+      if (!env.SESSION_HANDOFF) return json({ error: 'Sign-in handoff is not configured.' }, 503);
+      let body = {};
+      try { body = await request.json(); } catch (error) {}
+      const code = String(body.code || '').toUpperCase();
+      if (!/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(code)) {
+        return json({ error: 'That sign-in link is not valid.' }, 400);
+      }
+      const stub = env.SESSION_HANDOFF.get(env.SESSION_HANDOFF.idFromName('global'));
+      const taken = await stub.fetch('https://session-handoff/take', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code: code })
+      });
+      let payload = null;
+      try { payload = await taken.json(); } catch (error) {}
+      if (!taken.ok || !payload || !payload.refresh_token) {
+        return json({ error: (payload && payload.error) || 'That sign-in link is not valid any more.' }, taken.status === 200 ? 502 : taken.status);
+      }
+      return json({ refresh_token: payload.refresh_token });
     }
 
     if (pathname === '/api/chat/health') {

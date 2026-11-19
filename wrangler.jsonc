@@ -17,6 +17,10 @@
       {
         "name": "CHAT_ROOM",
         "class_name": "ChatRoom"
+      },
+      {
+        "name": "SESSION_HANDOFF",
+        "class_name": "SessionHandoff"
       }
     ]
   },
@@ -24,6 +28,10 @@
     {
       "tag": "v1",
       "new_sqlite_classes": ["ChatRoom"]
+    },
+    {
+      "tag": "v2",
+      "new_sqlite_classes": ["SessionHandoff"]
     }
   ]
 }

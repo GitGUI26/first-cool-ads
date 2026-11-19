@@ -1664,6 +1664,103 @@
     });
   }
 
+  function siteOrigin(value) {
+    var raw = String(value || '').trim().replace(/\/+$/, '');
+    if (!raw) return '';
+    if (!/^https?:\/\//i.test(raw)) raw = 'https://' + raw;
+    try {
+      var url = new URL(raw);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return '';
+      return url.origin;
+    } catch (error) {
+      return '';
+    }
+  }
+
+  // Creates a one-time link that signs this account in on another domain. The
+  // account, chat and profile data already live on the server, so the session is
+  // the only thing that has to move.
+  async function createCarryLink(target) {
+    var auth = authClient();
+    var user = getCurrentUser();
+    if (!auth || !user || isLocalUser(user)) {
+      return { ok: false, error: 'Sign in with an online account first.' };
+    }
+    var site = siteOrigin(target);
+    if (!site) return { ok: false, error: 'Enter the new site address, like new-site.example.com.' };
+    if (site === location.origin) return { ok: false, error: 'That is this site. Enter the address you are moving to.' };
+    var session = null;
+    try {
+      var current = await auth.auth.getSession();
+      session = current && current.data ? current.data.session : null;
+    } catch (error) {}
+    if (!session || !session.refresh_token) {
+      return { ok: false, error: 'Your session expired. Sign in again and retry.' };
+    }
+    var response = null;
+    var payload = null;
+    try {
+      response = await fetch(location.origin + '/api/session/carry', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json', authorization: 'Bearer ' + session.access_token },
+        body: JSON.stringify({ refresh_token: session.refresh_token })
+      });
+      payload = await response.json();
+    } catch (error) {
+      return { ok: false, error: 'Could not reach the site server. Check your connection and try again.' };
+    }
+    if (!response.ok || !payload || !payload.code) {
+      return { ok: false, error: (payload && payload.error) || 'Could not create a sign-in link.' };
+    }
+    return { ok: true, code: payload.code, link: site + '/#carry=' + payload.code };
+  }
+
+  async function redeemCarry(code) {
+    var auth = authClient();
+    if (!auth) return { ok: false, error: 'Online accounts are not configured yet.' };
+    var clean = String(code || '').trim().toUpperCase();
+    if (!/^[A-Z2-9]{4}-[A-Z2-9]{4}-[A-Z2-9]{4}$/.test(clean)) {
+      return { ok: false, error: 'That sign-in link is not valid.' };
+    }
+    var response = null;
+    var payload = null;
+    try {
+      response = await fetch(location.origin + '/api/session/redeem', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ code: clean })
+      });
+      payload = await response.json();
+    } catch (error) {
+      return { ok: false, error: 'Could not reach the site server. Check your connection and try again.' };
+    }
+    if (!response.ok || !payload || !payload.refresh_token) {
+      return { ok: false, error: (payload && payload.error) || 'That sign-in link is not valid any more.' };
+    }
+    var result = null;
+    try {
+      result = await auth.auth.refreshSession({ refresh_token: payload.refresh_token });
+    } catch (error) {
+      return { ok: false, error: friendlyAuthError(error) };
+    }
+    if (!result || result.error) return { ok: false, error: friendlyAuthError(result && result.error) };
+    var authUser = result.data && result.data.user ? result.data.user : null;
+    if (authUser) await adoptSession(authUser, 'signin');
+    var signedIn = getCurrentUser();
+    return signedIn ? { ok: true, user: signedIn } : { ok: false, error: 'That account could not be restored.' };
+  }
+
+  function redeemCarryFromUrl() {
+    var match = /(?:^|[#&])carry=([A-Za-z0-9-]{4,40})/.exec(location.hash || '');
+    if (!match) return;
+    try { history.replaceState(null, '', location.pathname + location.search); } catch (error) {}
+    redeemCarry(match[1]).then(function (outcome) {
+      window.__coolCarryResult = outcome;
+      try { window.dispatchEvent(new CustomEvent('cool-carry', { detail: outcome })); } catch (error) {}
+      if (outcome && outcome.ok) emitChange('signin');
+    }).catch(function () {});
+  }
+
   window.CoolAccountStore = {
     keys: {
       accounts: PROFILES_KEY,
@@ -1699,6 +1796,8 @@
     adminDeleteAccount: adminDeleteAccount,
     adminDeleteMessage: adminDeleteMessage,
     isCloudConfigured: isCloudConfigured,
+    createCarryLink: createCarryLink,
+    redeemCarry: redeemCarry,
     getAccessToken: getAccessToken,
     syncNow: syncNow,
     getGameProgress: getGameProgress,
@@ -1723,4 +1822,5 @@
   } catch (error) {}
 
   try { authClient(); } catch (error) {}
+  try { redeemCarryFromUrl(); } catch (error) {}
 })();

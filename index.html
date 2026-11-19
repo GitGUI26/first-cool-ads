@@ -997,6 +997,18 @@
                 <div class="account-error" id="accountBioError" role="alert" hidden></div>
               </form>
             </section>
+            <section class="account-card account-card-wide">
+              <div class="account-card-head"><div><h4>Move this sign-in to another domain</h4><p>Accounts, chat, history and saved profile data live on the server already. This makes a one-time link that signs this account in on a new address; it expires in 10 minutes.</p></div></div>
+              <div class="account-inline-form">
+                <input id="carryTarget" type="text" inputmode="url" placeholder="new-site.example.com" aria-label="New site address">
+                <button class="account-primary" id="carryCreate" type="button">Create link</button>
+              </div>
+              <div class="account-error" id="carryError" role="alert" hidden></div>
+              <div class="account-inline-form" id="carryResult" hidden>
+                <input id="carryLink" type="text" readonly aria-label="Sign-in link">
+                <button class="account-secondary" id="carryCopy" type="button">Copy</button>
+              </div>
+            </section>
             <section class="account-card">
               <h4>Account snapshot</h4>
               <div class="account-stats">
@@ -1049,12 +1061,12 @@
   <div class="account-toast" id="accountToast" role="status" hidden></div>
   <script src="js/vendor/supabase.js?v=1"></script>
   <script src="js/auth-config.js?v=3"></script>
-  <script src="js/account-store.js?v=24"></script>
+  <script src="js/account-store.js?v=25"></script>
   <script src="scripts/starfield.js?v=3"></script>
   <script src="js/games.js?v=26"></script>
   <script src="js/main.js?v=38"></script>
-  <script src="js/updates.js?v=67"></script>
-  <script src="js/account.js?v=28"></script>
+  <script src="js/updates.js?v=68"></script>
+  <script src="js/account.js?v=29"></script>
   <script src="js/music.js?v=2"></script>
   <script src="js/chat.js?v=14"></script>
   <script src="js/emulators.js?v=5"></script>

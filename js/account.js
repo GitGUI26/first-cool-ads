@@ -1320,6 +1320,66 @@
     if (currentUser()) loadPoints(true);
   }
 
+  function setupCarry() {
+    var button = $('carryCreate');
+    var target = $('carryTarget');
+    if (!button || !target) return;
+    var error = $('carryError');
+    var result = $('carryResult');
+    var link = $('carryLink');
+
+    function clearCarry() {
+      if (error) { error.textContent = ''; error.hidden = true; }
+      if (result) result.hidden = true;
+    }
+
+    button.addEventListener('click', async function () {
+      clearCarry();
+      var store = window.CoolAccountStore;
+      if (!store || typeof store.createCarryLink !== 'function') return;
+      button.disabled = true;
+      var outcome = await store.createCarryLink(target.value);
+      button.disabled = false;
+      if (!outcome || !outcome.ok) {
+        if (error) { error.textContent = (outcome && outcome.error) || 'Could not create a sign-in link.'; error.hidden = false; }
+        return;
+      }
+      if (link) link.value = outcome.link;
+      if (result) result.hidden = false;
+      showToast('Sign-in link ready. It works once and expires in 10 minutes.');
+    });
+
+    var copy = $('carryCopy');
+    if (copy) copy.addEventListener('click', function () {
+      if (!link || !link.value) return;
+      try { link.select(); } catch (e) {}
+      try {
+        navigator.clipboard.writeText(link.value).then(function () {
+          showToast('Link copied.');
+        }, function () {
+          showToast('Select the link and copy it.');
+        });
+      } catch (e) {
+        showToast('Select the link and copy it.');
+      }
+    });
+
+    var carried = window.__coolCarryResult;
+    if (carried) {
+      window.__coolCarryResult = null;
+      if (carried.ok) showToast('Signed in from your other address.');
+      else if (carried.error) showToast(carried.error);
+    }
+  }
+
+  window.addEventListener('cool-carry', function (event) {
+    var detail = event.detail || {};
+    if (detail.ok) showToast('Signed in from your other address.');
+    else if (detail.error) showToast(detail.error);
+  });
+
+  setupCarry();
+
   window.openAccount = function () {
     openAccount();
   };
